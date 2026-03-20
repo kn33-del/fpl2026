@@ -59,6 +59,11 @@ We welcome and are interested in any ML and DL approaches.  We recognize the nee
 For the final submission, only the last submission made before the [final submission deadline](index.html#important-dates) will be accepted.
 Prior to this, as part of the alpha/beta submission processes we intend to work with contestants to ensure that their submission runs as expected on the validation platform.
 
+### During submission evaluation, who provides the OpenRouter API key, the team or the contest organizers?
+
+During evaluation of a team's submission, the contest organizers will provide the API key (see [LLM Access](runtime.html#llm-access)).  Teams will be responsible for reading the appropriate environment variable for which the API key will be provided in the evaluation envrionment.
+
+
 ## More Questions?
 
 Please post questions in our [Discussion](https://github.com/Xilinx/fpl26_optimization_contest/discussions) forum.
