@@ -299,33 +299,44 @@ class DCPOptimizerBase:
     
     async def get_clock_period(self, call_tool_fn) -> Optional[float]:
         """
-        Query the clock period from Vivado in nanoseconds.
+        Query the clock period of the critical (worst-slack) clock from Vivado in nanoseconds.
+        
+        Uses a Tcl script that finds the endpoint clock of the worst setup timing path
+        and returns its period. This should improve handling of multi-clock designs.
         
         Args:
             call_tool_fn: Function to call Vivado tools, should accept (tool_name, arguments)
         
-        Returns the period of the first clock found, or None if no clocks.
+        Returns the period of the critical clock, or None if no clocks.
         """
+        # Get the period of the endpoint clock on the worst setup timing path
+        tcl_cmd = (
+            "set tp [get_timing_paths -max_paths 1 -setup]; "
+            "if {$tp ne {}} { "
+            "  set clk [get_property ENDPOINT_CLOCK $tp]; "
+            "  if {$clk ne {}} { "
+            "    puts [get_property PERIOD [get_clocks $clk]]; "
+            "  } "
+            "}"
+        )
         try:
-            result = await call_tool_fn("run_tcl", {"command": "get_property PERIOD [get_clocks]"})
+            result = await call_tool_fn("run_tcl", {"command": tcl_cmd})
             
-            lines = result.strip().split('\n')
-            for line in lines:
-                line = line.strip()
-                if line and not line.startswith('ERROR') and not line.startswith('WARNING'):
-                    try:
-                        period = float(line)
-                        logger.info(f"Clock period: {period:.3f} ns")
+            for token in result.strip().split():
+                if token.startswith('ERROR') or token.startswith('WARNING'):
+                    continue
+                try:
+                    period = float(token)
+                    if period > 0:
+                        logger.info(f"Critical clock period: {period:.3f} ns")
                         return period
-                    except ValueError:
-                        continue
-            
-            logger.warning("Could not parse clock period from Vivado")
-            return None
-            
+                except ValueError:
+                    continue
         except Exception as e:
-            logger.error(f"Failed to get clock period: {e}")
-            return None
+            logger.warning(f"Failed to get critical clock period: {e}")
+        
+        logger.warning("Could not determine critical clock period from Vivado")
+        return None
     
     def parse_high_fanout_nets(self, report: str) -> list[tuple[str, int, int]]:
         """
@@ -363,42 +374,45 @@ class DCPOptimizerBase:
                         continue
         
         return nets
-    
-    def format_timing_summary(
+
+    def _format_fmax_results(
         self,
         clock_period: Optional[float],
         initial_wns: Optional[float],
-        final_wns: Optional[float],
-        title: str = "TIMING RESULTS"
-    ) -> str:
-        """Format timing results for display."""
-        lines = [f"\n{title}:"]
+        result_wns: Optional[float],
+        result_label: str = "Final",
+    ) -> list[str]:
+        """Format Fmax/WNS results block as a list of lines.
         
-        if clock_period is not None:
+        """
+        initial_fmax = self.calculate_fmax(initial_wns, clock_period)
+        result_fmax = self.calculate_fmax(result_wns, clock_period)
+        result_fmax_label = f"{result_label} Fmax:"
+        result_wns_label = f"{result_label} WNS:"
+        
+        lines: list[str] = []
+        if initial_fmax is not None and result_fmax is not None:
             target_fmax = 1000.0 / clock_period
-            lines.append(f"  Clock period:        {clock_period:8.3f} ns (target: {target_fmax:.2f} MHz)")
+            fmax_change = result_fmax - initial_fmax
+            lines.append(f"  {'Target Fmax:':<21s}{target_fmax:8.2f} MHz  (clock period: {clock_period:.3f} ns)")
+            lines.append(f"  {'Initial Fmax:':<21s}{initial_fmax:8.2f} MHz  (WNS: {initial_wns:.3f} ns)")
+            lines.append(f"  {result_fmax_label:<21s}{result_fmax:8.2f} MHz  (WNS: {result_wns:.3f} ns)")
+            lines.append(f"  {'Fmax Improvement:':<21s}{fmax_change:+8.2f} MHz  (WNS: {result_wns - initial_wns:+.3f} ns)")
+        else:
+            if clock_period is not None:
+                target_fmax = 1000.0 / clock_period
+                lines.append(f"  {'Clock period:':<21s}{clock_period:8.3f} ns (target: {target_fmax:.2f} MHz)")
+            if initial_wns is not None:
+                fmax_str = f"  (fmax: {initial_fmax:.2f} MHz)" if initial_fmax else ""
+                lines.append(f"  {'Initial WNS:':<21s}{initial_wns:8.3f} ns{fmax_str}")
+            if result_wns is not None:
+                fmax_str = f"  (fmax: {result_fmax:.2f} MHz)" if result_fmax else ""
+                lines.append(f"  {result_wns_label:<21s}{result_wns:8.3f} ns{fmax_str}")
+            if initial_wns is not None and result_wns is not None:
+                lines.append(f"  {'WNS Improvement:':<21s}{result_wns - initial_wns:+8.3f} ns")
         
-        if initial_wns is not None:
-            initial_fmax = self.calculate_fmax(initial_wns, clock_period)
-            fmax_str = f" (fmax: {initial_fmax:7.2f} MHz)" if initial_fmax else ""
-            lines.append(f"  Initial WNS:         {initial_wns:8.3f} ns{fmax_str}")
-        
-        if final_wns is not None:
-            final_fmax = self.calculate_fmax(final_wns, clock_period)
-            fmax_str = f" (fmax: {final_fmax:7.2f} MHz)" if final_fmax else ""
-            lines.append(f"  Final WNS:           {final_wns:8.3f} ns{fmax_str}")
-        
-        if initial_wns is not None and final_wns is not None:
-            improvement = final_wns - initial_wns
-            initial_fmax = self.calculate_fmax(initial_wns, clock_period)
-            final_fmax = self.calculate_fmax(final_wns, clock_period)
-            fmax_str = ""
-            if initial_fmax is not None and final_fmax is not None:
-                fmax_improvement = final_fmax - initial_fmax
-                fmax_str = f" (fmax: {fmax_improvement:+7.2f} MHz)"
-            lines.append(f"  WNS Improvement:     {improvement:+8.3f} ns{fmax_str}")
-        
-        return "\n".join(lines)
+        return lines
+    
     
     def print_wns_change(
         self,
@@ -406,23 +420,25 @@ class DCPOptimizerBase:
         final_wns: Optional[float],
         clock_period: Optional[float]
     ):
-        """Print WNS change comparison with improvement/regression status."""
+        """Print Fmax/WNS change comparison with improvement/regression status."""
         if final_wns is None or initial_wns is None:
             return
         
-        improvement = final_wns - initial_wns
-        print(f"\n*** WNS Change: {improvement:+.3f} ns ***")
-        
         initial_fmax = self.calculate_fmax(initial_wns, clock_period)
         final_fmax = self.calculate_fmax(final_wns, clock_period)
+        wns_improvement = final_wns - initial_wns
+        
         if initial_fmax is not None and final_fmax is not None:
             fmax_improvement = final_fmax - initial_fmax
-            print(f"*** Fmax Change: {fmax_improvement:+.2f} MHz ***")
+            print(f"\n*** Fmax Change: {fmax_improvement:+.2f} MHz ({initial_fmax:.2f} -> {final_fmax:.2f} MHz) ***")
+            print(f"*** WNS Change: {wns_improvement:+.3f} ns ({initial_wns:.3f} -> {final_wns:.3f} ns) ***")
+        else:
+            print(f"\n*** WNS Change: {wns_improvement:+.3f} ns ***")
         
-        if improvement > 0:
-            print(f"IMPROVEMENT: Timing improved by {improvement:.3f} ns")
-        elif improvement < 0:
-            print(f"REGRESSION: Timing got worse by {-improvement:.3f} ns")
+        if wns_improvement > 0:
+            print(f"IMPROVEMENT: Timing improved by {wns_improvement:.3f} ns")
+        elif wns_improvement < 0:
+            print(f"REGRESSION: Timing got worse by {-wns_improvement:.3f} ns")
         else:
             print("NO CHANGE: Timing is the same")
     
@@ -441,31 +457,10 @@ class DCPOptimizerBase:
         print("="*70)
         print(f"Total runtime: {elapsed_seconds:.2f} seconds ({elapsed_seconds/60:.2f} minutes)")
         
-        if clock_period is not None:
-            target_fmax = 1000.0 / clock_period
-            print(f"\nClock period: {clock_period:.3f} ns (target fmax: {target_fmax:.2f} MHz)")
-        
-        print(f"\nTiming Results:")
-        if initial_wns is not None:
-            print(f"  Initial WNS: {initial_wns:.3f} ns")
-            initial_fmax = self.calculate_fmax(initial_wns, clock_period)
-            if initial_fmax is not None:
-                print(f"  Initial fmax: {initial_fmax:.2f} MHz")
-        
-        if final_wns is not None:
-            print(f"  Final WNS:   {final_wns:.3f} ns")
-            final_fmax = self.calculate_fmax(final_wns, clock_period)
-            if final_fmax is not None:
-                print(f"  Final fmax:   {final_fmax:.2f} MHz")
-        
-        if initial_wns is not None and final_wns is not None:
-            wns_change = final_wns - initial_wns
-            print(f"  WNS Change:  {wns_change:+.3f} ns")
-            initial_fmax = self.calculate_fmax(initial_wns, clock_period)
-            final_fmax = self.calculate_fmax(final_wns, clock_period)
-            if initial_fmax is not None and final_fmax is not None:
-                fmax_change = final_fmax - initial_fmax
-                print(f"  Fmax Change: {fmax_change:+.2f} MHz")
+        result_lines = self._format_fmax_results(clock_period, initial_wns, final_wns)
+        if result_lines:
+            print(f"\nFmax Results:")
+            print("\n".join(result_lines))
         
         if extra_info:
             print(f"\n{extra_info}")
@@ -1018,10 +1013,11 @@ class DCPOptimizer(DCPOptimizerBase):
             
             # Print summary even for early exit
             print("\n=== No Optimization Required ===")
-            print(f"Design already meets timing (WNS: {self.initial_wns:.3f} ns)")
             initial_fmax = self.calculate_fmax(self.initial_wns, self.clock_period)
             if initial_fmax is not None:
-                print(f"Achievable fmax: {initial_fmax:.2f} MHz")
+                print(f"Design already meets timing - Fmax: {initial_fmax:.2f} MHz (WNS: {self.initial_wns:.3f} ns)")
+            else:
+                print(f"Design already meets timing (WNS: {self.initial_wns:.3f} ns)")
             print(f"Total runtime: {total_runtime:.2f} seconds ({total_runtime/60:.2f} minutes)")
             print(f"LLM API calls: 0 (analysis performed without LLM)")
             print(f"Estimated cost: $0.00")
@@ -1159,35 +1155,13 @@ Proceed with optimization strategy based on the analysis above. Do NOT reload th
             total_runtime = (self.end_time or time.time()) - self.start_time
             print(f"\nTOTAL RUNTIME: {total_runtime:.2f} seconds ({total_runtime/60:.2f} minutes)")
         
-        # Timing results
-        print(f"\nTIMING RESULTS:")
-        if self.clock_period is not None:
-            target_fmax = 1000.0 / self.clock_period
-            print(f"  Clock period:        {self.clock_period:8.3f} ns (target: {target_fmax:.2f} MHz)")
-        
-        if self.initial_wns is not None:
-            initial_fmax = self.calculate_fmax(self.initial_wns, self.clock_period)
-            print(f"  Initial WNS:         {self.initial_wns:8.3f} ns", end="")
-            if initial_fmax is not None:
-                print(f" (fmax: {initial_fmax:7.2f} MHz)")
-            else:
-                print()
-        
-        best_fmax = self.calculate_fmax(self.best_wns, self.clock_period) if self.best_wns > float('-inf') else None
-        print(f"  Best WNS:            {self.best_wns:8.3f} ns", end="")
-        if best_fmax is not None:
-            print(f" (fmax: {best_fmax:7.2f} MHz)")
-        else:
-            print()
-        
-        if self.initial_wns is not None and self.best_wns > float('-inf'):
-            improvement = self.best_wns - self.initial_wns
-            print(f"  WNS Improvement:     {improvement:+8.3f} ns", end="")
-            if initial_fmax is not None and best_fmax is not None:
-                fmax_improvement = best_fmax - initial_fmax
-                print(f" (fmax: {fmax_improvement:+7.2f} MHz)")
-            else:
-                print()
+        best_wns = self.best_wns if self.best_wns > float('-inf') else None
+        result_lines = self._format_fmax_results(
+            self.clock_period, self.initial_wns, best_wns, result_label="Best"
+        )
+        if result_lines:
+            print(f"\nFMAX RESULTS:")
+            print("\n".join(result_lines))
         
         # Iteration stats
         print(f"\nITERATION STATS:")
