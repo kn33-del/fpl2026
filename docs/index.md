@@ -8,6 +8,11 @@ Given a fully placed and routed design checkpoint (DCP), create a new DCP that i
 
 Achieving FPGA timing closure can often be challenging and time-consuming. Long place and route compile times, coupled with the frustration of missing timing, often by narrow margins, demands new automated approaches. To address this bottleneck, we present the Agentic FPGA Backend Optimization Competition at FPL 2026. This contest leverages Agentic AI, open-source CAD frameworks ([RapidWright](http://rapidwright.io)), and commercial tools ([AMD Vivado™](https://www.amd.com/en/products/software/adaptive-socs-and-fpgas/vivado.html)) to democratize implementation improvements and timing closure techniques previously only possible by the most experienced engineers.
 
+<video width="100%" controls preload="metadata">
+  <source src="assets/ContestPromo3.mp4" type="video/mp4">
+  Your browser does not support the video tag.
+</video>
+
 Contest participants can utilize Large Language Models (LLMs) and Model Context Protocol (MCP) servers to architect autonomous agents capable of analyzing existing placed-and-routed designs, formulating optimization strategies, and applying ECO-like modifications to iteratively converge onto improved implementation results. 
 
 Teams will differentiate their solutions in three key areas: 
