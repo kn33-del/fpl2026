@@ -1,0 +1,13 @@
+0ef2383b9e017ecaa344d06d93a53801  amd_mini-isp_2025.1.dcp
+ea23d955c7ab45d951dc60f59342af42  boom_soc_2025.1.dcp
+093dc00ca6b21231b66ff3da32e1b22d  corescore_500_mod_2025.1.dcp
+1a3ef39455daa99ef14dbe42523031f2  finn_radioml_2025.1.dcp
+ab88908774e8f04310cb22e024ad99f3  ispd16_example2_2025.1.dcp
+0ec8727ae7454b7d0aa364d822e197ae  LICENSE-BENCHMARKS.txt
+4d2bdb3c4d601b5debc5e2a60f48d34b  logicnets_jscl_2025.1.dcp
+1863afc6251a87fba6014027ed51b744  rosetta_3d-rendering_2025.1.dcp
+332470b79bbfd8ce70fd237d0205acd5  rosetta_digit-recognition_2025.1.dcp
+30ceb13d2362a12389b61ee1a6727f26  rosetta_optical-flow_2025.1.dcp
+8bc0adfc2ff89ecca1d219a228bf0486  rosetta_spam-filter_2025.1.dcp
+d965368d886e8364ff1e7a5624c52a00  vexriscv_re-place_2025.1.dcp
+81de3e65a51bedd79f58f26880d8b54c  vtr_mcml_2025.1.dcp

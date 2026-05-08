@@ -1,0 +1,783 @@
+#!/usr/bin/env bash
+# FPL'26 Contest Instance Manager — Team Helper Script
+# Usage: ./fpl26contest start | stop | status | ssh
+#
+# Set your token:  export FPL26CONTEST_TOKEN=your_token_here
+
+set -euo pipefail
+
+SERVER="https://fpl26contest.rapidwright.io"
+
+die() { echo "ERROR: $*" >&2; exit 1; }
+
+# Extract a value from simple JSON. Handles both "key": "string" and "key": number.
+# Only works on flat / predictable server responses — not a general JSON parser.
+json_val() { echo "$1" | grep -o "\"$2\"[[:space:]]*:[[:space:]]*\"[^\"]*\"" | head -1 | sed 's/.*:[[:space:]]*"//;s/"$//' || true ; }
+json_num() { echo "$1" | grep -o "\"$2\"[[:space:]]*:[[:space:]]*[0-9.]*" | head -1 | sed 's/.*:[[:space:]]*//' || true ; }
+json_bool(){ echo "$1" | grep -o "\"$2\"[[:space:]]*:[[:space:]]*\(true\|false\)" | head -1 | sed 's/.*:[[:space:]]*//' || true ; }
+
+# Convert decimal hours (e.g., "28.50") to "28h30m" format.
+fmt_hours() {
+    local val="${1:-}"
+    [ -z "$val" ] && echo "?" && return
+    local total_min
+    total_min=$(awk -v h="$val" 'BEGIN {printf "%.0f", h * 60}' 2>/dev/null) || { echo "${val}h"; return; }
+    local h=$((total_min / 60))
+    local m=$((total_min % 60))
+    if [ "$h" -eq 0 ]; then
+        echo "${m}m"
+    elif [ "$m" -eq 0 ]; then
+        echo "${h}h"
+    else
+        echo "${h}h${m}m"
+    fi
+}
+
+[ -z "${FPL26CONTEST_TOKEN:-}" ] && die "FPL26CONTEST_TOKEN is not set. Run:  export FPL26CONTEST_TOKEN=your_token_here"
+
+AUTH="Authorization: Bearer $FPL26CONTEST_TOKEN"
+
+cmd_start() {
+    echo "Starting instance... (this takes ~60 seconds)"
+    echo ""
+
+    # Stream progress dots while curl runs in the background.
+    # Write to a temp file first so an existing fpl26contest-key.pem is not clobbered on error.
+    tmpfile=$(mktemp)
+    tmpkey=$(mktemp)
+    trap 'rm -f "$tmpfile" "${tmpfile}.code" "$tmpkey"' EXIT
+
+    curl -s -o "$tmpkey" -D "$tmpfile" -w "%{http_code}" -X POST \
+        "$SERVER/instance/start" -H "$AUTH" > "${tmpfile}.code" 2>/dev/null &
+    pid=$!
+
+    elapsed=0
+    while kill -0 "$pid" 2>/dev/null; do
+        sleep 2
+        elapsed=$((elapsed + 2))
+        printf "\r  Waiting... %ds" "$elapsed"
+    done
+    wait "$pid" || true
+    printf "\r                    \r"
+
+    code=$(cat "${tmpfile}.code" 2>/dev/null || echo "000")
+    rm -f "${tmpfile}.code"
+
+    if [ "$code" != "200" ]; then
+        error=$(cat "$tmpkey" 2>/dev/null)
+        rm -f "$tmpkey"
+        case "$code" in
+            401) die "Invalid token." ;;
+            402) die "Budget exhausted. $error" ;;
+            403)
+                reason=$(json_val "$error" "reason")
+                paused_at=$(json_val "$error" "paused_at")
+                msg="Team instance launches are temporarily paused by the contest organizers."
+                [ -n "$reason" ]    && msg="$msg Reason: $reason."
+                [ -n "$paused_at" ] && msg="$msg (paused at $paused_at)"
+                die "$msg" ;;
+            409) die "Instance already running. Use: ./fpl26contest status" ;;
+            *)   die "Start failed (HTTP $code). $error" ;;
+        esac
+    fi
+
+    mv "$tmpkey" fpl26contest-key.pem
+    chmod 600 fpl26contest-key.pem
+
+    ip=$(grep -i '^X-Public-IP:' "$tmpfile" | tr -d '\r' | awk '{print $2}')
+    iid=$(grep -i '^X-Instance-Id:' "$tmpfile" | tr -d '\r' | awk '{print $2}')
+    budget=$(grep -i '^X-Budget-Remaining-Hours:' "$tmpfile" | tr -d '\r' | awk '{print $2}')
+    region=$(grep -i '^X-Region:' "$tmpfile" | tr -d '\r' | awk '{print $2}')
+
+    echo ""
+    echo "  SSH key saved: fpl26contest-key.pem"
+    echo ""
+
+    # Wait for the instance to finish booting before presenting SSH instructions
+    printf "  Waiting for instance to be ready..."
+    for i in $(seq 1 55); do
+        sleep 1
+        printf "."
+    done
+    printf " ready!\n"
+
+    echo ""
+    echo "  ╔${_B}╗"
+    printf '  ║%8s%-62s║\n' '' "Agentic FPGA Backend Optimization Competition @ FPL'26"
+    echo "  ╠${_B}╣"
+    printf '  ║  %-68s║\n' \
+        '' \
+        "Instance ID:  $iid" \
+        "Region:       $region" \
+        "Public IP:    $ip" \
+        "Budget left:  $(fmt_hours "$budget")" \
+        "SSH key:      fpl26contest-key.pem (saved to current directory)" \
+        '' \
+        'SSH command:  ./fpl26contest ssh' \
+        "          or: ssh -i fpl26contest-key.pem ubuntu@$ip" \
+        '' \
+        'If SSH is blocked on your network, use a jump host:' \
+        '  ./fpl26contest ssh -J user@jumphost' \
+        '  export FPL26CONTEST_JUMP=user@jumphost  (to set permanently)' \
+        ''
+    echo "  ╠${_B}╣"
+    printf '  ║  %-68s║\n' \
+        '' \
+        'This instance is provided exclusively for contest participation' \
+        'and submission validation. Any use outside the scope of the' \
+        'competition is strictly prohibited and will result in' \
+        'disqualification.' \
+        '' \
+        'IDLE SHUTDOWN: Your instance will be automatically terminated if' \
+        'idle for 2 hours (no SSH sessions + CPU < 5%). Keep a session' \
+        'open or a job running to prevent this.' \
+        '' \
+        'WARNING: All files on the instance will be IRRECOVERABLY DELETED' \
+        'when the instance stops -- whether by ./fpl26contest stop, budget' \
+        'exhaustion, idle timeout, or any other downtime.' \
+        'Copy results off before stopping.' \
+        '' \
+        'Stop when done:  ./fpl26contest stop' \
+        ''
+    echo "  ╚${_B}╝"
+}
+
+cmd_stop() {
+    # Skip confirmation with -y or --force
+    if [ "${1:-}" != "-y" ] && [ "${1:-}" != "--force" ]; then
+        printf "This will terminate your instance and DELETE ALL FILES on it. Continue? [y/N] "
+        read -r confirm
+        case "$confirm" in
+            [yY]|[yY][eE][sS]) ;;
+            *) echo "Aborted."; exit 0 ;;
+        esac
+    fi
+
+    echo "Stopping instance..."
+    resp=$(curl -s -w "\n%{http_code}" -X POST "$SERVER/instance/stop" -H "$AUTH")
+    code=$(echo "$resp" | tail -1)
+    body=$(echo "$resp" | sed '$d')
+
+    if [ "$code" != "200" ]; then
+        case "$code" in
+            401) die "Invalid token." ;;
+            404) die "No running instance." ;;
+            *)   die "Stop failed (HTTP $code). $body" ;;
+        esac
+    fi
+
+    duration=$(json_num "$body" "duration_this_session_hours")
+    budget=$(json_num "$body" "budget_remaining_hours")
+
+    echo "Instance terminated."
+    echo ""
+    echo "  Session duration:  $(fmt_hours "$duration")"
+    echo "  Budget remaining:  $(fmt_hours "$budget")"
+    echo ""
+    echo "  WARNING: All files on the instance have been deleted."
+}
+
+cmd_status() {
+    resp=$(curl -s -w "\n%{http_code}" "$SERVER/status" -H "$AUTH")
+    code=$(echo "$resp" | tail -1)
+    body=$(echo "$resp" | sed '$d')
+
+    if [ "$code" != "200" ]; then
+        die "Status failed (HTTP $code). $body"
+    fi
+
+    team=$(json_val "$body" "team")
+    region=$(json_val "$body" "region")
+    budget=$(json_num "$body" "budget_remaining_hours")
+    status=$(json_val "$body" "status")
+    iid=$(json_val "$body" "instance_id")
+    ip=$(json_val "$body" "public_ip")
+    session=$(json_num "$body" "session_duration_hours")
+    paused=$(json_bool "$body" "blocks_this_team")
+    pause_reason=$(json_val "$body" "reason")
+    pause_at=$(json_val "$body" "paused_at")
+
+    if [ "$paused" = "true" ]; then
+        echo "  ┌──────────────────────────────────────────────────────────────────────┐"
+        echo "  │  NOTICE: Team instance launches are currently PAUSED.                │"
+        if [ -n "$pause_reason" ]; then
+            printf '  │  Reason: %-60s│\n' "$pause_reason"
+        fi
+        if [ -n "$pause_at" ]; then
+            printf '  │  Paused at: %-57s│\n' "$pause_at"
+        fi
+        echo "  │  ./fpl26contest start will be rejected until launches resume.        │"
+        echo "  └──────────────────────────────────────────────────────────────────────┘"
+        echo ""
+    fi
+
+    echo "Team:    ${team:-?}"
+    echo "Region:  ${region:-?}"
+    echo "Budget:  $(fmt_hours "$budget") remaining"
+
+    # Warn if budget is low and an instance is running
+    if [ "$status" = "running" ]; then
+        budget_int=$(printf '%.0f' "${budget:-99}" 2>/dev/null || echo "99")
+        if [ "$budget_int" -le 1 ] 2>/dev/null; then
+            echo ""
+            echo "  WARNING: Budget is nearly exhausted. Your instance will be terminated"
+            echo "  when the budget runs out. Save your work and copy results off now."
+        fi
+    fi
+
+    if [ "$status" = "running" ]; then
+        echo ""
+        echo "Instance:  ${iid:-?} (running)"
+        echo "Public IP: ${ip:-?}"
+        echo "Session:   $(fmt_hours "$session")"
+        echo ""
+        echo "SSH: ./fpl26contest ssh"
+    else
+        echo ""
+        echo "No instance running."
+    fi
+}
+
+_resolve_ip() {
+    local resp ip
+    resp=$(curl -s "$SERVER/status" -H "$AUTH")
+    ip=$(json_val "$resp" "public_ip")
+    [ -z "$ip" ] && die "No running instance. Start one first:  ./fpl26contest start"
+    [ ! -f fpl26contest-key.pem ] && die "fpl26contest-key.pem not found in current directory. Did you start the instance from here?"
+    echo "$ip"
+}
+
+SSH_OPTS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+_B='══════════════════════════════════════════════════════════════════════'
+
+# Parse -J/--jump from the front of the argument list.
+# Falls back to FPL26CONTEST_JUMP env var if set.
+JUMP_HOST="${FPL26CONTEST_JUMP:-}"
+_parse_jump() {
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            -J|--jump)
+                [ -z "${2:-}" ] && die "Missing argument for $1"
+                JUMP_HOST="$2"; shift 2 ;;
+            -J*)
+                JUMP_HOST="${1#-J}"; shift ;;
+            --jump=*)
+                JUMP_HOST="${1#--jump=}"; shift ;;
+            *) break ;;
+        esac
+    done
+    REMAINING_ARGS=("$@")
+}
+
+_jump_opts() {
+    if [ -n "$JUMP_HOST" ]; then
+        echo "-J $JUMP_HOST"
+    fi
+}
+
+cmd_ssh() {
+    _parse_jump "$@"
+    local ip
+    ip=$(_resolve_ip)
+    echo "  ╔${_B}╗"
+    printf '  ║%8s%-62s║\n' '' "Agentic FPGA Backend Optimization Competition @ FPL'26"
+    echo "  ╠${_B}╣"
+    printf '  ║  %-68s║\n' \
+        '' \
+        'FOR CONTEST USE ONLY. Use for any other purpose is prohibited.' \
+        '' \
+        'NOTE: Instance auto-terminates after 2 hours idle (no SSH sessions' \
+        '+ CPU < 5%). All files are deleted on termination.' \
+        '' \
+        'If this connection times out, try using a jump host:' \
+        '  ./fpl26contest ssh -J user@jumphost' \
+        ''
+    echo "  ╚${_B}╝"
+    echo ""
+    if [ -n "$JUMP_HOST" ]; then
+        echo "  Using jump host: $JUMP_HOST"
+        echo ""
+    fi
+    ssh $SSH_OPTS $(_jump_opts) -i fpl26contest-key.pem "ubuntu@$ip"
+    rc=$?
+    if [ $rc -ne 0 ] && [ -z "$JUMP_HOST" ]; then
+        echo ""
+        echo "  SSH connection failed. If your network blocks outbound SSH, try a jump host:"
+        echo "    ./fpl26contest ssh -J user@jumphost"
+        echo "    export FPL26CONTEST_JUMP=user@jumphost   (to set permanently)"
+    fi
+    exit $rc
+}
+
+cmd_scp() {
+    _parse_jump "$@"
+    set -- "${REMAINING_ARGS[@]}"
+
+    if [ $# -eq 0 ]; then
+        echo "Usage: ./fpl26contest scp [-J jump_host] <local-file> :<remote-path>"
+        echo "       ./fpl26contest scp [-J jump_host] :<remote-file> <local-path>"
+        echo ""
+        echo "The ':' prefix maps to ubuntu@<instance>: automatically."
+        echo ""
+        echo "Options:"
+        echo "  -J, --jump user@host   Connect via a jump/bastion server (ProxyJump)"
+        echo "                         Can also be set via: export FPL26CONTEST_JUMP=user@host"
+        echo ""
+        echo "Examples:"
+        echo "  ./fpl26contest scp design.dcp :~/          # upload to instance"
+        echo "  ./fpl26contest scp :~/results.tar.gz .     # download from instance"
+        echo "  ./fpl26contest scp -r :~/output ./output   # download directory"
+        echo "  ./fpl26contest scp -J user@bastion design.dcp :~/   # via jump host"
+        exit 1
+    fi
+
+    local ip
+    ip=$(_resolve_ip)
+
+    # Rewrite args: replace leading ':' with ubuntu@ip:
+    local args=()
+    for arg in "$@"; do
+        if [ "${arg:0:1}" = ":" ]; then
+            args+=("ubuntu@${ip}${arg}")
+        else
+            args+=("$arg")
+        fi
+    done
+
+    if [ -n "$JUMP_HOST" ]; then
+        echo "  Using jump host: $JUMP_HOST"
+    fi
+    exec scp $SSH_OPTS $(_jump_opts) -i fpl26contest-key.pem "${args[@]}"
+}
+
+cmd_submit() {
+    local file="${1:-}"
+    if [ -z "$file" ]; then
+        echo "Usage: ./fpl26contest submit <file.zip>"
+        echo ""
+        echo "Submit your solution for the current round."
+        echo "The active round and deadline are determined automatically."
+        exit 1
+    fi
+
+    if [ ! -f "$file" ]; then
+        die "File not found: $file"
+    fi
+
+    # Get file size (Linux stat -c, macOS stat -f)
+    local size
+    size=$(stat -c '%s' "$file" 2>/dev/null || stat -f '%z' "$file" 2>/dev/null) \
+        || die "Cannot determine file size"
+
+    # Check file size (4 GB limit, must fit in a single S3 PUT)
+    local max_size=4294967296  # 4 GB
+    if [ "$size" -gt "$max_size" ]; then
+        local max_mb
+        max_mb=$(awk -v s="$max_size" 'BEGIN {printf "%.0f", s / 1048576}')
+        die "File is too large ($(awk -v s="$size" 'BEGIN {printf "%.0f", s / 1048576}') MB). Maximum submission size is ${max_mb} MB (4 GB)."
+    fi
+
+    # Compute MD5
+    echo "Computing file checksum..."
+    local md5
+    md5=$(md5sum "$file" 2>/dev/null | awk '{print $1}') \
+        || md5=$(md5 -q "$file" 2>/dev/null) \
+        || die "Cannot compute MD5. Install md5sum or md5."
+    [ -z "$md5" ] && die "Failed to compute MD5 checksum"
+
+    local filename
+    filename=$(basename "$file")
+    case "$filename" in
+        *[\"\\]*) die "Filename must not contain quotes or backslashes" ;;
+    esac
+    case "$filename" in
+        *.tar.gz|*.zip) ;;
+        *) die "File must be .zip or .tar.gz" ;;
+    esac
+
+    # Verify file content matches the declared type (catch renamed files early)
+    local magic
+    magic=$(head -c 4 "$file" | od -A n -t x1 | tr -d ' \n')
+    case "$filename" in
+        *.zip)
+            # ZIP local file header: PK\x03\x04
+            case "$magic" in
+                504b0304*) ;;
+                *) die "File does not appear to be a valid ZIP archive (wrong magic bytes)." ;;
+            esac
+            ;;
+        *.tar.gz)
+            # gzip header: \x1f\x8b\x08
+            case "$magic" in
+                1f8b08*) ;;
+                *) die "File does not appear to be a valid tar.gz archive (wrong magic bytes)." ;;
+            esac
+            ;;
+    esac
+
+    local size_mb
+    size_mb=$(awk -v s="$size" 'BEGIN {printf "%.1f", s / 1048576}')
+
+    echo ""
+    echo "  File:     $filename"
+    echo "  Size:     ${size_mb} MB"
+    echo "  MD5:      $md5"
+    echo ""
+
+    # Step 1: Request presigned URL from server
+    echo "Requesting upload URL..."
+    local resp code body
+    local curl_rc
+    set +e
+    resp=$(curl -s -w "\n%{http_code}" -X POST "$SERVER/submission/upload" \
+        -H "$AUTH" -H "Content-Type: application/json" \
+        -d "{\"filename\":\"$filename\",\"size\":$size,\"md5\":\"$md5\"}")
+    curl_rc=$?
+    set -e
+    if [ "$curl_rc" -ne 0 ]; then
+        die "Failed to contact the submission server. Check your network connection and try again."
+    fi
+    code=$(echo "$resp" | tail -1)
+    body=$(echo "$resp" | sed '$d')
+
+    if [ "$code" != "200" ]; then
+        local error
+        error=$(json_val "$body" "error")
+        case "$code" in
+            401) die "Invalid token." ;;
+            403) die "$error" ;;
+            400) die "$error" ;;
+            *)   die "Upload request failed (HTTP $code). $error" ;;
+        esac
+    fi
+
+    local presigned_url round deadline content_type upload_id
+    presigned_url=$(json_val "$body" "presigned_url")
+    round=$(json_val "$body" "round")
+    deadline=$(json_val "$body" "deadline")
+    content_type=$(json_val "$body" "content_type")
+    upload_id=$(json_val "$body" "upload_id")
+
+    [ -z "$upload_id" ] && die "Server returned empty upload ID"
+
+    echo "  Round:    $round"
+    echo "  Deadline: $deadline"
+    echo ""
+
+    # Step 2: Upload file to S3 using presigned URL (skipped if file already in S3)
+    if [ -n "$presigned_url" ]; then
+        echo "Uploading ${size_mb} MB to S3..."
+        echo ""
+
+        # Compute base64-encoded MD5 for Content-MD5 header
+        # (S3 requires base64 of the raw 16-byte MD5, not hex)
+        local md5_b64
+        md5_b64=$(printf '%b' "$(printf '%s' "$md5" | sed 's/../\\x&/g')" | base64)
+
+        # curl --progress-bar outputs the bar to stderr.
+        # -w writes the HTTP code to stdout. Capture stdout to a temp file.
+        local upload_tmpcode
+        upload_tmpcode=$(mktemp)
+
+        set +e
+        curl -X PUT \
+            --progress-bar \
+            -H "Content-Type: $content_type" \
+            -H "Content-MD5: $md5_b64" \
+            -H "x-amz-meta-upload-id: $upload_id" \
+            -T "$file" \
+            -o /dev/null \
+            -w "%{http_code}" \
+            "$presigned_url" > "$upload_tmpcode"
+        curl_rc=$?
+        set -e
+
+        local upload_code
+        upload_code=$(cat "$upload_tmpcode")
+        rm -f "$upload_tmpcode"
+
+        echo ""
+
+        if [ "$curl_rc" -ne 0 ]; then
+            die "Upload to S3 failed before completion. Check your network connection and try again."
+        fi
+        if [ "$upload_code" != "200" ]; then
+            die "Upload to S3 failed (HTTP $upload_code). The presigned URL may have expired. Try again."
+        fi
+
+        echo "Upload complete. Confirming with server..."
+    else
+        echo "File already uploaded to S3 (matching checksum). Skipping upload."
+        echo ""
+        echo "Confirming with server..."
+    fi
+
+    # Step 3: Confirm upload with server
+    set +e
+    resp=$(curl -s -w "\n%{http_code}" -X POST "$SERVER/submission/confirm" \
+        -H "$AUTH" -H "Content-Type: application/json" \
+        -d "{\"round\":\"$round\"}")
+    curl_rc=$?
+    set -e
+    if [ "$curl_rc" -ne 0 ]; then
+        die "Upload completed, but confirmation failed because the submission server could not be reached. Re-run submit to verify the latest upload."
+    fi
+    code=$(echo "$resp" | tail -1)
+    body=$(echo "$resp" | sed '$d')
+
+    if [ "$code" != "200" ]; then
+        local error
+        error=$(json_val "$body" "error")
+        die "Confirmation failed (HTTP $code). $error"
+    fi
+
+    local confirmed_size submitted_at
+    confirmed_size=$(json_num "$body" "size")
+    submitted_at=$(json_val "$body" "submitted_at")
+
+    local confirmed_mb
+    confirmed_mb=$(awk -v s="${confirmed_size:-0}" 'BEGIN {printf "%.1f", s / 1048576}')
+
+    echo ""
+    echo "  ╔${_B}╗"
+    printf '  ║  %-68s║\n' \
+        '' \
+        'Submission confirmed!' \
+        '' \
+        "  Round:        $round" \
+        "  File:         $filename" \
+        "  Size:         ${confirmed_mb} MB" \
+        "  MD5:          $md5" \
+        "  Submitted at: $submitted_at" \
+        '' \
+        'You can re-submit at any time before the deadline.' \
+        'Only your latest submission for each round counts.' \
+        ''
+    echo "  ╚${_B}╝"
+}
+
+cmd_submission_status() {
+    local resp code body
+    resp=$(curl -s -w "\n%{http_code}" "$SERVER/submission/status" -H "$AUTH")
+    code=$(echo "$resp" | tail -1)
+    body=$(echo "$resp" | sed '$d')
+
+    if [ "$code" != "200" ]; then
+        case "$code" in
+            401) die "Invalid token." ;;
+            *)   die "Submission status failed (HTTP $code). $body" ;;
+        esac
+    fi
+
+    local active_round deadline
+    active_round=$(json_val "$body" "active_round")
+    deadline=$(json_val "$body" "active_round_deadline")
+
+    local lines=()
+    lines+=('')
+    lines+=('Submission Status')
+    lines+=('')
+    if [ -n "$active_round" ]; then
+        lines+=("  Active round: $active_round (deadline: $deadline)")
+    else
+        lines+=('  No round currently active.')
+    fi
+    lines+=('')
+
+    for rnd in alpha beta final; do
+        local st ts md5
+        st=$(json_val "$body" "${rnd}_status")
+        ts=$(json_val "$body" "${rnd}_submitted_at")
+        md5=$(json_val "$body" "${rnd}_md5")
+        if [ "$st" = "confirmed" ]; then
+            lines+=("  $rnd: submitted ($ts)")
+            lines+=("        md5: $md5")
+        else
+            lines+=("  $rnd: no submission")
+        fi
+    done
+    lines+=('')
+
+    echo "  ╔${_B}╗"
+    for line in "${lines[@]}"; do
+        printf '  ║  %-68s║\n' "$line"
+    done
+    echo "  ╚${_B}╝"
+}
+
+cmd_results() {
+    # ./fpl26contest results <round> [flags]
+    #
+    # Fetches the published validation bundle for a round. Default behavior
+    # downloads scorecard.json only — the small per-round summary teams check
+    # most often. Logs and DCP archives are large, so they're opt-in.
+    #
+    # Flags:
+    #   --list            Print the available artifacts (no download)
+    #   --scorecard-only  Download scorecard.json (default)
+    #   --with-dcps       Download scorecard + dcp_results
+    #   --all             Download scorecard + logs + dcp_results
+    #   --output-dir DIR  Where to save (default: results/<round>/)
+    #   --quiet           Suppress per-file progress messages
+
+    local round="" mode="scorecard-only" outdir="" quiet=0
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --list)            mode="list"; shift ;;
+            --scorecard-only)  mode="scorecard-only"; shift ;;
+            --with-dcps)       mode="with-dcps"; shift ;;
+            --all)             mode="all"; shift ;;
+            --output-dir)      outdir="${2:-}"; shift 2 ;;
+            --quiet|-q)        quiet=1; shift ;;
+            -*)                die "Unknown flag: $1 (see ./fpl26contest results --help)" ;;
+            *)
+                if [ -z "$round" ]; then round="$1"
+                else die "Too many arguments — expected just <round>"
+                fi
+                shift ;;
+        esac
+    done
+
+    [ -n "$round" ] || die "Usage: ./fpl26contest results <alpha|beta|final> [--list|--scorecard-only|--with-dcps|--all] [--output-dir DIR]"
+    case "$round" in alpha|beta|final) ;; *) die "Invalid round: $round" ;; esac
+    [ -n "$outdir" ] || outdir="results/$round"
+
+    local resp code body
+    resp=$(curl -s -w "\n%{http_code}" "$SERVER/submission/results?round=$round" -H "$AUTH")
+    code=$(echo "$resp" | tail -1)
+    body=$(echo "$resp" | sed '$d')
+
+    if [ "$code" != "200" ]; then
+        case "$code" in
+            400) die "Bad request: $body" ;;
+            401) die "Invalid token." ;;
+            *)   die "Results fetch failed (HTTP $code). $body" ;;
+        esac
+    fi
+
+    local status
+    status=$(json_val "$body" "status")
+    if [ "$status" = "not_yet_published" ]; then
+        echo "No results published yet for round $round."
+        echo "Try again after the contest team publishes scoring."
+        exit 0
+    fi
+
+    local vid score harness completed_at published_at
+    vid=$(json_val "$body" "validation_id")
+    harness=$(json_val "$body" "harness_version")
+    completed_at=$(json_val "$body" "completed_at")
+    published_at=$(json_val "$body" "published_at")
+    score=$(json_num "$body" "total_score")
+
+    if [ "$mode" = "list" ]; then
+        echo ""
+        echo "Round:           $round"
+        echo "Validation ID:   $vid"
+        echo "Harness version: $harness"
+        echo "Total score:     ${score:-n/a}"
+        echo "Completed at:    $completed_at"
+        echo "Published at:    $published_at"
+        echo ""
+        echo "Artifacts (use --scorecard-only / --with-dcps / --all to download):"
+        for art in scorecard logs dcp_results; do
+            # Crude presence check: the artifact is present iff its block
+            # contains a "url" field. We look at a bounded slice of the
+            # body — JSON parsing in pure bash is best-effort.
+            if echo "$body" | grep -q "\"$art\"[[:space:]]*:[[:space:]]*{"; then
+                echo "  - $art (available)"
+            else
+                echo "  - $art (not produced)"
+            fi
+        done
+        exit 0
+    fi
+
+    mkdir -p "$outdir" || die "Could not create $outdir"
+
+    # Build the artifact list to fetch from the chosen mode.
+    local artifacts=()
+    case "$mode" in
+        scorecard-only) artifacts=(scorecard) ;;
+        with-dcps)      artifacts=(scorecard dcp_results) ;;
+        all)            artifacts=(scorecard logs dcp_results) ;;
+    esac
+
+    local out_filename
+    for art in "${artifacts[@]}"; do
+        # Extract the URL for this artifact. Each artifact appears as
+        # "art":{"url":"...","expires_in":N} in the body.
+        local url
+        url=$(echo "$body" | python3 -c "
+import json, sys
+try:
+    d = json.loads(sys.stdin.read())
+    a = (d.get('results') or {}).get('$art')
+    print(a['url'] if a and a.get('url') else '')
+except Exception:
+    print('')
+")
+        case "$art" in
+            scorecard)   out_filename="scorecard.json" ;;
+            logs)        out_filename="logs.zip" ;;
+            dcp_results) out_filename="dcp_results.zip" ;;
+        esac
+
+        if [ -z "$url" ]; then
+            [ "$quiet" = "1" ] || echo "  $art: not produced — skipping"
+            continue
+        fi
+
+        [ "$quiet" = "1" ] || echo "  $art → $outdir/$out_filename"
+        if ! curl -sSfL -o "$outdir/$out_filename" "$url"; then
+            die "Download failed for $art (URL may have expired — re-run results)"
+        fi
+    done
+
+    [ "$quiet" = "1" ] || echo "Done. Score: ${score:-n/a}    Validation: $vid"
+}
+
+cmd="${1:-}"
+shift 2>/dev/null || true
+
+case "$cmd" in
+    start)             cmd_start ;;
+    stop)              cmd_stop "$@" ;;
+    status)            cmd_status ;;
+    ssh)               cmd_ssh "$@" ;;
+    scp)               cmd_scp "$@" ;;
+    submit)            cmd_submit "$@" ;;
+    submission-status) cmd_submission_status ;;
+    results)           cmd_results "$@" ;;
+    *)
+        echo "FPL'26 Contest Instance Manager"
+        echo ""
+        echo "Usage: ./fpl26contest <command>"
+        echo ""
+        echo "Commands:"
+        echo "  start               Launch an instance (takes 60-90s)"
+        echo "  stop                Terminate the running instance (-y to skip confirmation)"
+        echo "  status              Check budget and instance status"
+        echo "  ssh                 SSH into the running instance"
+        echo "  scp                 Copy files to/from the instance"
+        echo "  submit <file>       Submit a solution for the current round"
+        echo "  submission-status   Check submission status for all rounds"
+        echo "  results <round>     Download published validation results for a round"
+        echo ""
+        echo "Options for ssh/scp:"
+        echo "  -J, --jump user@host   Connect via a jump/bastion server"
+        echo ""
+        echo "Options for results:"
+        echo "  --list            Print available artifacts without downloading"
+        echo "  --scorecard-only  Download scorecard.json (default)"
+        echo "  --with-dcps       Download scorecard + dcp_results"
+        echo "  --all             Download scorecard + logs + dcp_results"
+        echo "  --output-dir DIR  Where to save (default: results/<round>/)"
+        echo "  --quiet           Suppress per-file progress"
+        echo ""
+        echo "Environment variables:"
+        echo "  FPL26CONTEST_TOKEN     Your team API token (required)"
+        echo "  FPL26CONTEST_JUMP      Default jump host for ssh/scp (optional)"
+        exit 1
+        ;;
+esac
