@@ -1,0 +1,53 @@
+{
+  "input_dcp": "/home/kn33/fpl26/fpl2026/fpl26_contest_benchmarks/amd_mini-isp_2025.1.dcp",
+  "clock_name": "clk_fpl26contest",
+  "clock_period_ns": 1.57,
+  "baseline_wns": -1.686,
+  "baseline_fmax_mhz": 307.12530712530713,
+  "best_wns": -1.686,
+  "best_fmax_mhz": 307.12530712530713,
+  "best_checkpoint": "/home/kn33/fpl26/fpl2026/fpl26_contest_benchmarks/amd_mini-isp_2025.1.dcp",
+  "current_iter": 1,
+  "stall_count": 1,
+  "cells_blacklisted": [],
+  "nets_blacklisted": [],
+  "iterations": [
+    {
+      "iter": 1,
+      "recipe": "place_design_explore",
+      "batch_size": 1,
+      "targets": [
+        "isp_int/demosaic_inst/linebuffer_inst/linebuffer_sdpram[3].sdpram/ram_reg_bram_1"
+      ],
+      "wns_before": -1.686,
+      "wns_after": null,
+      "fmax_before": 307.12530712530713,
+      "fmax_after": null,
+      "delta_fmax": 0.0,
+      "vivado_runtime_s": 0.0,
+      "status": "failed",
+      "reason": "{\n  \"success\": false,\n  \"error_type\": \"vivado_license_failure\",\n  \"command\": \"place_design -directive Explore\",\n  \"message\": \"Command: place_design -directive Explore\\r\\nAttempting to get a license for feature 'Implementation' and/or device 'xcvu3p'\\r\\nWARNING: [Common 17-348] Failed to get the license for feature 'Implementation' and/or device 'xcvu3p'. Explanation: The license feature Implementation could not be found.\\r\\nResolution: Check the status of your licenses in the Vivado License Manager. For debug help search Xilinx Support for \\\"Licensing FAQ\\\". \\r\\n0 Infos, 1 Warnings, 0 Critical Warnings and 1 Errors encountered.\\r\\nplace_design failed\\r\\nERROR: [Common 17-345] A valid license was not found for feature 'Implementation' and/or device 'xcvu3p'. Please run the Vivado License Manager for assistance in determining\\r\\nwhich features and devices are licensed for your system.\\r\\nResolution: Check the status of your licenses in the Vivado License Manager. For debug help search Xilinx Support for \\\"Licensing FAQ\\\". If you are using a license server, verify that the license server is up and running a version of the xilinx daemon that is compatible with the version of Xilinx software that you are using. Note: Vivado 2021.1 and later versions require upgrading your license server tools to the Flex 11.17.2.0 versions. Please confirm with your license admin that the correct version of the license server tools are installed.\"\n}\n\n{\n  \"success\": false,\n  \"error_type\": \"vivado_license_failure\",\n  \"command\": \"route_design -directive Explore\",\n  \"message\": \"Command: route_design -directive Explore\\r\\nAttempting to get a license for feature 'Implementation' and/or device 'xcvu3p'\\r\\nWARNING: [Common 17-348] Failed to get the license for feature 'Implementation' and/or device 'xcvu3p'. Explanation: The license feature Implementation could not be found.\\r\\nResolution: Check the status of your licenses in the Vivado License Manager. For debug help search Xilinx Support for \\\"Licensing FAQ\\\". \\r\\n0 Infos, 1 Warnings, 0 Critical Warnings and 1 Errors encountered.\\r\\nroute_design failed\\r\\nERROR: [Common 17-345] A valid license was not found for feature 'Implementation' and/or device 'xcvu3p'. Please run the Vivado License Manager for assistance in determining\\r\\nwhich features and devices are licensed for your system.\\r\\nResolution: Check the status of your licenses in the Vivado License Manager. For debug help search Xilinx Support for \\\"Licensing FAQ\\\". If you are using a license server, verify that the license server is up and running a version of the xilinx daemon that is compatible with the version of Xilinx software that you are using. Note: Vivado 2021.1 and later versions require upgrading your license server tools to the Flex 11.17.2.0 versions. Please confirm with your license admin that the correct version of the license server tools are installed.\"\n}",
+      "error_type": "vivado_license_failure",
+      "checkpoint": null,
+      "delay_class": "net_delay_bound",
+      "endpoint_type": "BRAM_CONTROL",
+      "allowed_actions": [
+        "pblock",
+        "replicate_register",
+        "place_design_explore",
+        "phys_opt_design"
+      ],
+      "forbidden_actions": [
+        "lut_opt",
+        "logic_restructure",
+        "fanout_split"
+      ],
+      "llm_chosen_action": "pblock",
+      "validation_result": "ok",
+      "reprompt_count": 0,
+      "why_not_top_forbidden_action": "fanout_split is forbidden because endpoint is BRAM_CONTROL and avg_tile_spread>30",
+      "raw_response": "{\n  \"delay_class_acknowledged\": \"net_delay_bound\",\n  \"endpoint_type_acknowledged\": \"BRAM_CONTROL\",\n  \"chosen_action\": \"pblock\",\n  \"action_parameters\": {\"target_nets\": [\"isp_int/demosaic_inst/linebuffer_inst/linebuffer_sdpram[3].sdpram/pipe_3_tvalid_reg\"], \"pblock_bounds\": \"auto_tight\"},\n  \"why_this_fits_delay_class\": \"net_pct=0.875 is >0.70 so primary action must be from placement/physical co-location group\",\n  \"why_not_top_forbidden_action\": \"fanout_split is forbidden because endpoint is BRAM_CONTROL and avg_tile_spread>30\",\n  \"confidence\": 4\n}"
+    }
+  ],
+  "started_at_epoch_s": 1782918211.207546
+}

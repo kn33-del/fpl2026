@@ -612,17 +612,31 @@ cmd_results() {
     # downloads scorecard.json only — the small per-round summary teams check
     # most often. Logs and DCP archives are large, so they're opt-in.
     #
+    # Results are split into two tracks:
+    #   official  the authoritative score (hidden benchmarks, admin-published)
+    #   preview   a pre-deadline sanity result on the PUBLIC benchmarks,
+    #             auto-published on every run (including failures). NOT official.
+    # The preview summary is always shown; downloads default to the official
+    # track. Pass --preview to act on the preview track instead. With --preview,
+    # the full attempt history is printed too, and --attempt N downloads an
+    # older attempt's artifacts (default: the latest published preview).
+    #
     # Flags:
+    #   --preview         Target the preview track (also prints attempt history)
+    #   --attempt N       With --preview: download attempt #N (from the history)
     #   --list            Print the available artifacts (no download)
     #   --scorecard-only  Download scorecard.json (default)
     #   --with-dcps       Download scorecard + dcp_results
     #   --all             Download scorecard + logs + dcp_results
-    #   --output-dir DIR  Where to save (default: results/<round>/)
+    #   --output-dir DIR  Where to save (default: results/<round>/[preview/[attempt-N/]])
     #   --quiet           Suppress per-file progress messages
 
-    local round="" mode="scorecard-only" outdir="" quiet=0
+    local round="" mode="scorecard-only" outdir="" quiet=0 sec="official" attempt=""
     while [ $# -gt 0 ]; do
         case "$1" in
+            --preview)         sec="preview"; shift ;;
+            --official)        sec="official"; shift ;;
+            --attempt)         attempt="${2:-}"; shift 2 ;;
             --list)            mode="list"; shift ;;
             --scorecard-only)  mode="scorecard-only"; shift ;;
             --with-dcps)       mode="with-dcps"; shift ;;
@@ -638,12 +652,29 @@ cmd_results() {
         esac
     done
 
-    [ -n "$round" ] || die "Usage: ./fpl26contest results <alpha|beta|final> [--list|--scorecard-only|--with-dcps|--all] [--output-dir DIR]"
+    [ -n "$round" ] || die "Usage: ./fpl26contest results <alpha|beta|final> [--preview [--attempt N]] [--list|--scorecard-only|--with-dcps|--all] [--output-dir DIR]"
     case "$round" in alpha|beta|final) ;; *) die "Invalid round: $round" ;; esac
-    [ -n "$outdir" ] || outdir="results/$round"
+    if [ -n "$attempt" ]; then
+        [ "$sec" = "preview" ] || die "--attempt only applies to the preview track (add --preview)"
+        case "$attempt" in (*[!0-9]*|'') die "--attempt must be a positive integer" ;; esac
+        [ "$attempt" -gt 0 ] || die "--attempt must be a positive integer"
+    fi
+    if [ -z "$outdir" ]; then
+        if [ "$sec" = "preview" ] && [ -n "$attempt" ]; then outdir="results/$round/preview/attempt-$attempt"
+        elif [ "$sec" = "preview" ]; then outdir="results/$round/preview"
+        else outdir="results/$round"; fi
+    fi
+
+    # Ask for preview attempt history whenever acting on the preview track —
+    # it's metadata-only server-side (cheap), and we both render it and use it
+    # to map --attempt N to a validation id.
+    local results_qs="round=$round"
+    if [ "$sec" = "preview" ]; then
+        results_qs="$results_qs&history=1"
+    fi
 
     local resp code body
-    resp=$(curl -s -w "\n%{http_code}" "$SERVER/submission/results?round=$round" -H "$AUTH")
+    resp=$(curl -s -w "\n%{http_code}" "$SERVER/submission/results?$results_qs" -H "$AUTH")
     code=$(echo "$resp" | tail -1)
     body=$(echo "$resp" | sed '$d')
 
@@ -655,42 +686,179 @@ cmd_results() {
         esac
     fi
 
+    # Pull one scalar field out of a named section ("preview"/"official").
+    # Returns empty string if the section or field is absent.
+    _section_field() {
+        echo "$body" | python3 -c "
+import json, sys
+try:
+    d = json.loads(sys.stdin.read())
+    s = d.get('$1') or {}
+    v = s.get('$2')
+    print('' if v is None else v)
+except Exception:
+    print('')
+"
+    }
+
+    # Always surface the PREVIEW result first (when present) so teams see the
+    # public-benchmark signal even when they're fetching the official bundle.
+    local prev_status
+    prev_status=$(_section_field preview status)
+    if [ -n "$prev_status" ]; then
+        local prev_vid prev_score prev_failure prev_md5 prev_latest
+        prev_vid=$(_section_field preview validation_id)
+        prev_score=$(_section_field preview total_score)
+        prev_failure=$(_section_field preview failure_reason)
+        prev_md5=$(_section_field preview submission_md5)
+        prev_latest=$(_section_field preview is_latest_submission)
+        echo ""
+        echo "PREVIEW result for round $round (PUBLIC benchmarks — NOT official):"
+        echo "  Run status:    $prev_status"
+        echo "  Total score:   ${prev_score:-n/a}"
+        if [ -n "$prev_failure" ]; then
+            echo "  Failure:       $prev_failure"
+        fi
+        echo "  Validation ID: $prev_vid"
+        echo "  Submission:    ${prev_md5:-n/a}"
+        # is_latest_submission comes back as Python's "True"/"False" (or empty
+        # when unknown). False means a newer upload exists with no preview yet.
+        if [ "$prev_latest" = "False" ]; then
+            echo "  STALE: a newer submission is pending preview — this result is for an older upload."
+        fi
+        echo "  Note: this is a pre-deadline sanity check, not your final score."
+        echo "  Download with: ./fpl26contest results $round --preview"
+        echo ""
+    fi
+
+    # Now resolve the section the user asked to act on (default official).
     local status
-    status=$(json_val "$body" "status")
-    if [ "$status" = "not_yet_published" ]; then
-        echo "No results published yet for round $round."
-        echo "Try again after the contest team publishes scoring."
+    status=$(_section_field "$sec" status)
+    if [ -z "$status" ]; then
+        if [ "$sec" = "preview" ]; then
+            echo "No preview results available yet for round $round."
+            echo "Preview runs publish automatically after each submission is scored."
+        else
+            echo "No official results published yet for round $round."
+            echo "Try again after the contest team publishes scoring."
+        fi
         exit 0
     fi
 
-    local vid score harness completed_at published_at
-    vid=$(json_val "$body" "validation_id")
-    harness=$(json_val "$body" "harness_version")
-    completed_at=$(json_val "$body" "completed_at")
-    published_at=$(json_val "$body" "published_at")
-    score=$(json_num "$body" "total_score")
+    local vid score harness completed_at published_at failure_reason sub_md5 is_latest
+    vid=$(_section_field "$sec" validation_id)
+    harness=$(_section_field "$sec" harness_version)
+    completed_at=$(_section_field "$sec" completed_at)
+    published_at=$(_section_field "$sec" published_at)
+    score=$(_section_field "$sec" total_score)
+    failure_reason=$(_section_field "$sec" failure_reason)
+    sub_md5=$(_section_field "$sec" submission_md5)
+    is_latest=$(_section_field "$sec" is_latest_submission)
+
+    # Preview attempt history (metadata only; requested via history=1 above).
+    # Shown for any --preview invocation so teams see all attempts and the
+    # attempt numbers they can pass to --attempt.
+    if [ "$sec" = "preview" ]; then
+        local hist
+        hist=$(echo "$body" | python3 -c "
+import json, sys
+try:
+    d = json.loads(sys.stdin.read())
+    rows = d.get('preview_history') or []
+except Exception:
+    rows = []
+if rows:
+    print('Preview attempt history (oldest first; metadata only):')
+    print('  %-4s  %-9s  %-10s  %-34s  %s' % ('#', 'status', 'score', 'submission_md5', 'completed_at'))
+    for r in rows:
+        score = r.get('total_score')
+        score = 'n/a' if score is None else score
+        print('  %-4s  %-9s  %-10s  %-34s  %s' % (
+            r.get('attempt_number', '?'),
+            (r.get('status') or '')[:9],
+            str(score)[:10],
+            (r.get('submission_md5') or 'n/a')[:34],
+            r.get('completed_at') or '',
+        ))
+    print('Download an attempt with: --preview --attempt <#>')
+")
+        if [ -n "$hist" ]; then
+            echo "$hist"
+            echo ""
+        fi
+    fi
 
     if [ "$mode" = "list" ]; then
         echo ""
+        echo "Track:           $sec"
         echo "Round:           $round"
         echo "Validation ID:   $vid"
         echo "Harness version: $harness"
         echo "Total score:     ${score:-n/a}"
+        if [ -n "$failure_reason" ]; then
+            echo "Failure reason:  $failure_reason"
+        fi
+        echo "Submission:      ${sub_md5:-n/a}"
+        if [ "$is_latest" = "False" ]; then
+            echo "Latest upload:   NO — a newer submission is pending $sec results"
+        fi
         echo "Completed at:    $completed_at"
         echo "Published at:    $published_at"
         echo ""
         echo "Artifacts (use --scorecard-only / --with-dcps / --all to download):"
         for art in scorecard logs dcp_results; do
-            # Crude presence check: the artifact is present iff its block
-            # contains a "url" field. We look at a bounded slice of the
-            # body — JSON parsing in pure bash is best-effort.
-            if echo "$body" | grep -q "\"$art\"[[:space:]]*:[[:space:]]*{"; then
+            local present
+            present=$(echo "$body" | python3 -c "
+import json, sys
+try:
+    d = json.loads(sys.stdin.read())
+    s = d.get('$sec') or {}
+    a = (s.get('results') or {}).get('$art')
+    print('yes' if a and a.get('url') else 'no')
+except Exception:
+    print('no')
+")
+            if [ "$present" = "yes" ]; then
                 echo "  - $art (available)"
             else
                 echo "  - $art (not produced)"
             fi
         done
         exit 0
+    fi
+
+    # --attempt N: map the attempt number to a validation id (from the history
+    # we already fetched), then re-fetch with validation_id so the server
+    # presigns THAT attempt's bundle into the preview section. Without this the
+    # body only carries the published attempt's URLs.
+    if [ -n "$attempt" ]; then
+        local target_vid
+        target_vid=$(echo "$body" | python3 -c "
+import json, sys
+try:
+    rows = (json.loads(sys.stdin.read()).get('preview_history') or [])
+except Exception:
+    rows = []
+vid = ''
+for r in rows:
+    if str(r.get('attempt_number')) == '$attempt':
+        vid = r.get('validation_id') or ''
+        break
+print(vid)
+")
+        [ -n "$target_vid" ] || die "No preview attempt #$attempt found for round $round (see ./fpl26contest results $round --preview)"
+        resp=$(curl -s -w "\n%{http_code}" "$SERVER/submission/results?round=$round&validation_id=$target_vid" -H "$AUTH")
+        code=$(echo "$resp" | tail -1)
+        body=$(echo "$resp" | sed '$d')
+        if [ "$code" != "200" ]; then
+            case "$code" in
+                404) die "Preview attempt #$attempt is no longer available." ;;
+                401) die "Invalid token." ;;
+                *)   die "Results fetch failed (HTTP $code). $body" ;;
+            esac
+        fi
+        vid=$(_section_field "$sec" validation_id)
+        score=$(_section_field "$sec" total_score)
     fi
 
     mkdir -p "$outdir" || die "Could not create $outdir"
@@ -705,14 +873,15 @@ cmd_results() {
 
     local out_filename
     for art in "${artifacts[@]}"; do
-        # Extract the URL for this artifact. Each artifact appears as
-        # "art":{"url":"...","expires_in":N} in the body.
+        # Extract the URL for this artifact from the chosen section. Each
+        # artifact appears as "art":{"url":"...","expires_in":N}.
         local url
         url=$(echo "$body" | python3 -c "
 import json, sys
 try:
     d = json.loads(sys.stdin.read())
-    a = (d.get('results') or {}).get('$art')
+    s = d.get('$sec') or {}
+    a = (s.get('results') or {}).get('$art')
     print(a['url'] if a and a.get('url') else '')
 except Exception:
     print('')
@@ -734,7 +903,7 @@ except Exception:
         fi
     done
 
-    [ "$quiet" = "1" ] || echo "Done. Score: ${score:-n/a}    Validation: $vid"
+    [ "$quiet" = "1" ] || echo "Done [$sec]. Score: ${score:-n/a}    Validation: $vid"
 }
 
 cmd="${1:-}"
