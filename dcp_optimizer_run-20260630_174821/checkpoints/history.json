@@ -1,0 +1,110 @@
+{
+  "input_dcp": "/home/kn33/fpl26/fpl2026/fpl26_contest_benchmarks/amd_mini-isp_2025.1.dcp",
+  "clock_name": "clk_fpl26contest",
+  "clock_period_ns": 1.57,
+  "baseline_wns": -1.686,
+  "baseline_fmax_mhz": 307.12530712530713,
+  "best_wns": -1.686,
+  "best_fmax_mhz": 307.12530712530713,
+  "best_checkpoint": "/home/kn33/fpl26/fpl2026/fpl26_contest_benchmarks/amd_mini-isp_2025.1.dcp",
+  "current_iter": 2,
+  "stall_count": 2,
+  "cells_blacklisted": [
+    "critical_cell_opt",
+    "isp_int/demosaic_inst/linebuffer_inst/linebuffer_sdpram[3].sdpram/ram_reg_bram_1"
+  ],
+  "nets_blacklisted": [],
+  "iterations": [
+    {
+      "iter": 1,
+      "recipe": "vivado_phys_opt",
+      "batch_size": 1,
+      "targets": [
+        "critical_cell_opt"
+      ],
+      "wns_before": -1.686,
+      "wns_after": -1.686,
+      "fmax_before": 307.12530712530713,
+      "fmax_after": 307.12530712530713,
+      "delta_fmax": 0.0,
+      "vivado_runtime_s": 0.5896737575531006,
+      "status": "no_improvement",
+      "checkpoint": "/home/kn33/fpl26/fpl2026/dcp_optimizer_run-20260630_174821/checkpoints/iter_001.dcp",
+      "target_tier": "tier1_violating_paths",
+      "target_candidate_count": 20,
+      "path_delay_classification": "net_delay_bound",
+      "path_delay_breakdown": {
+        "logic_pct": 0.12498,
+        "net_pct": 0.8750199999999999,
+        "logic_delay_ns": 0.361,
+        "net_delay_ns": 2.527
+      },
+      "clock_period_ns": 1.57,
+      "achieved_fmax_mhz": 307.12530712530713,
+      "delay_class": "net_delay_bound",
+      "endpoint_type": "BRAM_CONTROL",
+      "allowed_actions": [
+        "pblock",
+        "replicate_register",
+        "place_design_explore",
+        "phys_opt_design"
+      ],
+      "forbidden_actions": [
+        "lut_opt",
+        "logic_restructure",
+        "fanout_split"
+      ],
+      "llm_chosen_action": "replicate_register",
+      "validation_result": "ok",
+      "reprompt_count": 0,
+      "why_not_top_forbidden_action": "fanout_split is forbidden because routing to a hard-block control pin requires physical proximity rather than net splitting.",
+      "raw_response": "{\n  \"delay_class_acknowledged\": \"net_delay_bound\",\n  \"endpoint_type_acknowledged\": \"BRAM_CONTROL\",\n  \"chosen_action\": \"replicate_register\",\n  \"action_parameters\": {\"registers\": [\"isp_int/skidbuffer2_inst/skid_tvalid_reg\"], \"fanout_threshold\": 100},\n  \"why_this_fits_delay_class\": \"net_delay_bound (net_pct=0.875) is fixed by physical co-location actions such as replicate_register that reduce long routing to BRAM control pins.\",\n  \"why_not_top_forbidden_action\": \"fanout_split is forbidden because routing to a hard-block control pin requires physical proximity rather than net splitting.\",\n  \"confidence\": 4\n}"
+    },
+    {
+      "iter": 2,
+      "recipe": "place_design_explore",
+      "batch_size": 1,
+      "targets": [
+        "isp_int/demosaic_inst/linebuffer_inst/linebuffer_sdpram[3].sdpram/ram_reg_bram_1"
+      ],
+      "wns_before": -1.686,
+      "wns_after": -1.686,
+      "fmax_before": 307.12530712530713,
+      "fmax_after": 307.12530712530713,
+      "delta_fmax": 0.0,
+      "vivado_runtime_s": 0.5859134197235107,
+      "status": "no_improvement",
+      "checkpoint": "/home/kn33/fpl26/fpl2026/dcp_optimizer_run-20260630_174821/checkpoints/iter_002.dcp",
+      "target_tier": "tier1_violating_paths",
+      "target_candidate_count": 20,
+      "path_delay_classification": "net_delay_bound",
+      "path_delay_breakdown": {
+        "logic_pct": 0.12498,
+        "net_pct": 0.8750199999999999,
+        "logic_delay_ns": 0.361,
+        "net_delay_ns": 2.527
+      },
+      "clock_period_ns": 1.57,
+      "achieved_fmax_mhz": 307.12530712530713,
+      "delay_class": "net_delay_bound",
+      "endpoint_type": "BRAM_CONTROL",
+      "allowed_actions": [
+        "pblock",
+        "replicate_register",
+        "place_design_explore",
+        "phys_opt_design"
+      ],
+      "forbidden_actions": [
+        "lut_opt",
+        "logic_restructure",
+        "fanout_split"
+      ],
+      "llm_chosen_action": "pblock",
+      "validation_result": "ok",
+      "reprompt_count": 0,
+      "why_not_top_forbidden_action": "fanout_split is forbidden as primary action for BRAM_CONTROL endpoints because routing to hard block control pin requires physical proximity.",
+      "raw_response": "{\n  \"delay_class_acknowledged\": \"net_delay_bound\",\n  \"endpoint_type_acknowledged\": \"BRAM_CONTROL\",\n  \"chosen_action\": \"pblock\",\n  \"action_parameters\": {\"net\": \"isp_int/skidbuffer2_inst/skid_tvalid\", \"target_region\": \"near_BRAMs\", \"size\": \"medium\"},\n  \"why_this_fits_delay_class\": \"net_delay_bound (net_pct=0.875) with avg_tile_spread=56.88 requires placement action pblock to improve physical co-location to BRAM control pins.\",\n  \"why_not_top_forbidden_action\": \"fanout_split is forbidden as primary action for BRAM_CONTROL endpoints because routing to hard block control pin requires physical proximity.\",\n  \"confidence\": 4\n}"
+    }
+  ],
+  "started_at_epoch_s": 1782859749.100661
+}

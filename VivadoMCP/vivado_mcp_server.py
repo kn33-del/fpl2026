@@ -12,6 +12,7 @@ Usage:
 
 import argparse
 import atexit
+import json
 import logging
 import os
 import re
@@ -46,6 +47,42 @@ _vivado_log_file: Optional[str] = None
 _vivado_journal_file: Optional[str] = None
 _design_open: bool = False
 _command_pending: bool = False  # True if a command timed out and may still be running
+
+
+_VIVADO_FAILURE_PATTERNS = [
+    "phys_opt_design failed",
+    "ERROR:",
+    "valid license was not found",
+    "Failed to get the license",
+]
+
+
+def classify_vivado_failure(command: str, output: str) -> Optional[Dict[str, Any]]:
+    """Return a structured failure payload when Vivado rejected a command."""
+    text = output or ""
+    lower = text.lower()
+    if not any(pattern.lower() in lower for pattern in _VIVADO_FAILURE_PATTERNS):
+        return None
+
+    if "valid license was not found" in lower or "failed to get the license" in lower:
+        error_type = "vivado_license_failure"
+    else:
+        error_type = "vivado_command_failure"
+
+    return {
+        "success": False,
+        "error_type": error_type,
+        "command": command,
+        "message": text.strip(),
+    }
+
+
+def structured_or_text(command: str, output: str) -> str:
+    failure = classify_vivado_failure(command, output)
+    if failure:
+        logger.warning("Vivado command failed: %s", failure["error_type"])
+        return json.dumps(failure, indent=2)
+    return output
 
 
 def get_vivado_path() -> str:
@@ -1643,6 +1680,9 @@ async def call_tool(name: str, arguments: dict):
                 cmd += f" -directive {directive}"
             
             output = run_tcl_command(cmd, timeout=timeout)
+            failure = classify_vivado_failure(cmd, output)
+            if failure:
+                return [TextContent(type="text", text=json.dumps(failure, indent=2))]
             return [TextContent(type="text", text=f"Placement complete.\n\n{output}")]
         
         elif name == "route_design":
@@ -1654,12 +1694,18 @@ async def call_tool(name: str, arguments: dict):
                 cmd += f" -directive {directive}"
             
             output = run_tcl_command(cmd, timeout=timeout)
+            failure = classify_vivado_failure(cmd, output)
+            if failure:
+                return [TextContent(type="text", text=json.dumps(failure, indent=2))]
             return [TextContent(type="text", text=f"Routing complete.\n\n{output}")]
         
         elif name == "run_tcl":
             command = arguments["command"]
             timeout = arguments.get("timeout", 300)
             output = run_tcl_command(command, timeout=timeout)
+            failure = classify_vivado_failure(command, output)
+            if failure:
+                return [TextContent(type="text", text=json.dumps(failure, indent=2))]
             return [TextContent(type="text", text=output)]
         
         elif name == "restart_vivado":
@@ -1761,6 +1807,9 @@ async def call_tool(name: str, arguments: dict):
                     cmd += f" -path_groups {{{path_groups}}}"
             
             output = run_tcl_command(cmd, timeout=timeout)
+            failure = classify_vivado_failure(cmd, output)
+            if failure:
+                return [TextContent(type="text", text=json.dumps(failure, indent=2))]
             return [TextContent(type="text", text=f"Physical optimization complete.\n\n{output}")]
         
         else:
