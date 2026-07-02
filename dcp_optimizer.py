@@ -61,6 +61,32 @@ DECISION_NET_DELAY_BOUND_THRESHOLD = 0.70
 DECISION_LOGIC_DELAY_BOUND_THRESHOLD = 0.70
 DECISION_SPREAD_NET_THRESHOLD = 0.60
 DECISION_SPREAD_TILE_THRESHOLD = 30
+PHYS_OPT_MIN_USEFUL_WNS_NS = -0.5
+STUCK_ITERATION_THRESHOLD = 3
+WNS_IMPROVEMENT_EPSILON_NS = 1e-4
+RAPIDWRIGHT_STRUCTURAL_ACTIONS = [
+    "rapidwright_optimize_cell_placement",
+    "rapidwright_analyze_net_detour",
+    "rapidwright_analyze_fabric_for_pblock",
+    "rapidwright_convert_fabric_region_to_pblock",
+    "pblock",
+]
+RAPIDWRIGHT_PLACEMENT_ACTIONS = [
+    "rapidwright_optimize_cell_placement",
+    "rapidwright_analyze_net_detour",
+    "rapidwright_analyze_fabric_for_pblock",
+    "rapidwright_convert_fabric_region_to_pblock",
+    "pblock",
+]
+VIVADO_INCREMENTAL_IMPLEMENTATION_ACTIONS = {
+    "phys_opt_design",
+    "phys_opt_design_retime",
+    "replicate_register",
+    "place_design_explore",
+}
+DEFAULT_PBLOCK_TARGET_LUT_COUNT = 20000
+DEFAULT_PBLOCK_TARGET_FF_COUNT = 40000
+DEFAULT_PBLOCK_NAME_PREFIX = "pblock_net_delay"
 
 TIMING_DECISION_SYSTEM_PROMPT = """
 You are an FPGA timing optimization agent operating on AMD UltraScale+ xcvu3p designs.
@@ -71,9 +97,11 @@ a suboptimal action.
 
 RULE 1 - DELAY CLASS BINDING:
   If delay_class == "net_delay_bound" (net_pct > 0.70):
-    PRIMARY actions must be from: [phys_opt_design, place_design_explore, pblock, replicate_register]
+    PRIMARY actions must be from allowed_actions, especially RapidWright structural
+    placement actions such as rapidwright_optimize_cell_placement, pblock, and the
+    pblock range-analysis actions.
     FORBIDDEN as primary: [lut_opt, logic_restructure, fanout_split]
-    Rationale: routing-bound paths are not fixed by logic optimization.
+    Rationale: routing-bound paths need cell movement or placement constraints, not logic optimization.
 
   If delay_class == "logic_delay_bound" (logic_pct > 0.70):
     PRIMARY actions must be from: [lut_opt, phys_opt_design_retime, fanout_split]
@@ -91,7 +119,8 @@ RULE 2 - ENDPOINT BINDING:
 
 RULE 3 - SPREAD BINDING:
   If avg_tile_spread > 30 AND net_pct > 0.60:
-    First action must address placement. pblock or replicate_register required before any routing-only fix.
+    First action must address placement. Prefer rapidwright_optimize_cell_placement
+    or a pblock flow with computed ranges before any routing-only fix.
 
 You must not propose actions that contradict these rules. If you find yourself wanting to
 choose a forbidden action, that is a signal your reasoning has drifted from the timing data -
@@ -698,6 +727,11 @@ class DCPOptimizer(DCPOptimizerBase):
         self.last_timing_context: dict = {}
         self.last_llm_decision: dict = {}
         self.last_decision_trace: dict = {}
+        self.last_rapidwright_edit_summary: Optional[dict] = None
+        self.last_recorded_wns: Optional[float] = None
+        self.consecutive_no_improvement = 0
+        self.structural_override_active = False
+        self.phys_opt_retime_supported: Optional[bool] = None
         self.implementation_license_available: Optional[bool] = None
     
     async def start_servers(self):
@@ -1059,13 +1093,21 @@ class DCPOptimizer(DCPOptimizerBase):
         return parts[0] if parts else cell
 
     async def _run_phys_opt_with_policy(self, arguments: dict) -> str:
+        before_guard_wns = await self._get_current_wns()
+        if before_guard_wns is not None and before_guard_wns < PHYS_OPT_MIN_USEFUL_WNS_NS:
+            message = (
+                f"Skipping phys_opt_design because current WNS {before_guard_wns:.3f} ns is below "
+                f"{PHYS_OPT_MIN_USEFUL_WNS_NS:.3f} ns; use structural placement actions first."
+            )
+            logger.info(message)
+            return self._failure_json("phys_opt_below_useful_wns", message, command="phys_opt_design")
         if not await self._check_implementation_license():
             return self._failure_json(
                 "vivado_license_failure",
                 "Vivado Implementation license is unavailable; phys_opt_design disabled.",
                 command="phys_opt_design",
             )
-        before_wns = await self._get_current_wns()
+        before_wns = before_guard_wns
         directive = arguments.get("directive") or PHYS_OPT_PRIMARY_DIRECTIVE
         primary = await self._run_phys_opt_tcl(directive=directive, retime=True)
         if self._action_failure(primary, default_command="phys_opt_design").get("error_type") == "vivado_license_failure":
@@ -1112,18 +1154,30 @@ class DCPOptimizer(DCPOptimizerBase):
                 return "mixed path: phys_opt improved timing, pblock deferred\n\n" + phys
             logger.info("mixed path: phys_opt did not improve timing; proceeding with pblock")
 
-        return await self.call_tool("vivado_create_and_apply_pblock", arguments, internal=True)
+        timing_context = self.last_timing_context or {}
+        computed_args, error = await self._compute_pblock_ranges(dict(arguments), timing_context)
+        if error:
+            logger.error("pblock action aborted: %s", error)
+            return self._failure_json("pblock_range_computation_failed", error, command="pblock")
+        assert computed_args is not None
+        return await self.call_tool("vivado_create_and_apply_pblock", computed_args, internal=True)
 
     async def _run_phys_opt_tcl(self, directive: str = "Default", retime: bool = True) -> str:
+        if retime and self.phys_opt_retime_supported is False:
+            logger.info("Skipping phys_opt -retime because a previous retime attempt was rejected.")
+            retime = False
         retime_flag = " -retime" if retime else ""
         command = f"phys_opt_design -directive {directive}{retime_flag}"
         result = await self.call_tool("vivado_run_tcl", {"command": command, "timeout": 3600}, internal=True)
         if self._action_failure(result, default_command=command).get("error_type") == "vivado_license_failure":
             return result
         if self._vivado_output_has_error(result) and retime:
+            self.phys_opt_retime_supported = False
             logger.warning("phys_opt retime failed with directive %s; retrying without -retime", directive)
             command = f"phys_opt_design -directive {directive}"
             result = await self.call_tool("vivado_run_tcl", {"command": command, "timeout": 3600}, internal=True)
+        elif retime:
+            self.phys_opt_retime_supported = True
         return result
 
     def _vivado_output_has_error(self, text: str) -> bool:
@@ -1175,26 +1229,10 @@ class DCPOptimizer(DCPOptimizerBase):
         return {}
 
     async def _check_implementation_license(self) -> bool:
-        if self.implementation_license_available is not None:
-            return self.implementation_license_available
-        result = await self.call_tool(
-            "vivado_run_tcl",
-            {"command": "catch {get_license -feature Implementation} lic_status; puts $lic_status", "timeout": 30},
-            internal=True,
-        )
-        failure = self._action_failure(result, default_command="get_license -feature Implementation")
-        lower = result.lower()
-        unavailable = (
-            bool(failure)
-            or "valid license was not found" in lower
-            or "failed to get the license" in lower
-            or "denied" in lower
-            or "not found" in lower
-        )
-        self.implementation_license_available = not unavailable
-        if unavailable:
-            logger.warning("Vivado Implementation license unavailable; disabling phys_opt/place/route actions.")
-        return self.implementation_license_available
+        # Vivado 2025.1 Tcl does not reliably expose `get_license`; probing it
+        # can mark a usable analysis session as broken. Let implementation
+        # commands report structured failures when they are actually invoked.
+        return self.implementation_license_available is not False
 
     def _time_remaining_s(self) -> Optional[float]:
         if self.checkpoint_manager is None:
@@ -1348,6 +1386,9 @@ class DCPOptimizer(DCPOptimizerBase):
             persist()
 
     def _record_failed_action(self, failure: dict) -> None:
+        if failure.get("error_type") == "vivado_license_failure":
+            self.implementation_license_available = False
+            logger.warning("Vivado Implementation license failure observed; future implementation actions will be filtered.")
         if self.checkpoint_manager is None:
             return
         iteration = {
@@ -1365,10 +1406,13 @@ class DCPOptimizer(DCPOptimizerBase):
             "reason": failure.get("message", ""),
             "error_type": failure.get("error_type", "vivado_command_failure"),
             "checkpoint": None,
+            "rapidwright_edit_summary": self.last_rapidwright_edit_summary,
             **self.last_decision_trace,
         }
         self.checkpoint_manager.current_iter += 1
         self.checkpoint_manager.stall_count += 1
+        self.no_improvement_count += 1
+        self.consecutive_no_improvement += 1
         self.checkpoint_manager.iterations.append(iteration)
         persist = getattr(self.checkpoint_manager, "_persist_history", None)
         if callable(persist):
@@ -1401,6 +1445,10 @@ class DCPOptimizer(DCPOptimizerBase):
         self.messages.append({"role": "user", "content": prompt})
 
     def _build_timing_context(self, current_wns: Optional[float]) -> dict:
+        if self.checkpoint_manager is not None:
+            self.consecutive_no_improvement = self.checkpoint_manager.stall_count
+            self.no_improvement_count = self.checkpoint_manager.stall_count
+
         worst = self.current_target_candidates[0] if self.current_target_candidates else {}
         endpoint = str(worst.get("endpoint") or "")
         endpoint_type = self._classify_endpoint_type(endpoint)
@@ -1411,7 +1459,27 @@ class DCPOptimizer(DCPOptimizerBase):
         delay_class = self.path_delay_classification
         if delay_class == "unknown":
             delay_class = "mixed"
-        allowed, forbidden = self._allowed_forbidden_actions(delay_class, endpoint_type, net_pct, avg_spread)
+        allowed, forbidden = self._allowed_forbidden_actions(
+            delay_class,
+            endpoint_type,
+            net_pct,
+            avg_spread,
+            current_wns,
+        )
+        structural_override = self.consecutive_no_improvement >= STUCK_ITERATION_THRESHOLD
+        self.structural_override_active = structural_override
+        if structural_override:
+            structural_allowed = [action for action in RAPIDWRIGHT_STRUCTURAL_ACTIONS if action in allowed]
+            if structural_allowed:
+                allowed = structural_allowed
+                for action in RAPIDWRIGHT_STRUCTURAL_ACTIONS:
+                    if action in forbidden:
+                        forbidden.remove(action)
+                logger.warning(
+                    "Stuck detector: %d iterations without improvement, forcing structural action from: %s",
+                    self.consecutive_no_improvement,
+                    allowed,
+                )
         return {
             "iteration": self.iteration,
             "wns_ns": current_wns,
@@ -1433,6 +1501,9 @@ class DCPOptimizer(DCPOptimizerBase):
             },
             "delay_class": delay_class,
             "endpoint_type": endpoint_type,
+            "stuck_iterations": self.consecutive_no_improvement,
+            "consecutive_no_improvement": self.consecutive_no_improvement,
+            "structural_override_active": structural_override,
             "allowed_actions": allowed,
             "forbidden_actions": forbidden,
         }
@@ -1457,20 +1528,47 @@ class DCPOptimizer(DCPOptimizerBase):
         endpoint_type: str,
         net_pct: Optional[float],
         avg_spread: Optional[float],
+        current_wns: Optional[float],
     ) -> tuple[list[str], list[str]]:
         if delay_class == "net_delay_bound":
-            allowed = ["phys_opt_design", "place_design_explore", "pblock", "replicate_register"]
+            allowed = [
+                *RAPIDWRIGHT_STRUCTURAL_ACTIONS,
+                "place_design_explore",
+                "replicate_register",
+                "phys_opt_design",
+            ]
             forbidden = ["lut_opt", "logic_restructure", "fanout_split"]
         elif delay_class == "logic_delay_bound":
             allowed = ["lut_opt", "phys_opt_design_retime", "fanout_split"]
-            forbidden = ["pblock", "place_design_explore"]
+            forbidden = [
+                "pblock",
+                "place_design_explore",
+                "rapidwright_optimize_cell_placement",
+                "rapidwright_analyze_net_detour",
+                "rapidwright_analyze_fabric_for_pblock",
+                "rapidwright_convert_fabric_region_to_pblock",
+            ]
         else:
-            allowed = ["phys_opt_design_retime", "phys_opt_design", "pblock", "place_design_explore", "fanout_split", "lut_opt"]
+            allowed = [
+                *RAPIDWRIGHT_STRUCTURAL_ACTIONS,
+                "phys_opt_design_retime",
+                "phys_opt_design",
+                "place_design_explore",
+                "fanout_split",
+                "lut_opt",
+            ]
             forbidden = []
 
         if endpoint_type in {"BRAM_CONTROL", "DSP_CONTROL"}:
             allowed = [action for action in allowed if action != "fanout_split"]
-            for action in ["pblock", "replicate_register", "place_design_explore"]:
+            for action in [
+                "rapidwright_optimize_cell_placement",
+                "pblock",
+                "rapidwright_analyze_fabric_for_pblock",
+                "rapidwright_convert_fabric_region_to_pblock",
+                "replicate_register",
+                "place_design_explore",
+            ]:
                 if action not in allowed:
                     allowed.append(action)
             if "fanout_split" not in forbidden:
@@ -1482,20 +1580,182 @@ class DCPOptimizer(DCPOptimizerBase):
             and avg_spread > DECISION_SPREAD_TILE_THRESHOLD
             and net_pct > DECISION_SPREAD_NET_THRESHOLD
         ):
-            placement_first = [action for action in ["pblock", "replicate_register", "place_design_explore"] if action in allowed]
+            placement_first = [action for action in RAPIDWRIGHT_PLACEMENT_ACTIONS if action in allowed]
             allowed = placement_first + [action for action in allowed if action not in placement_first]
 
+        structural_available = any(action in allowed for action in RAPIDWRIGHT_STRUCTURAL_ACTIONS)
+        if (
+            current_wns is not None
+            and current_wns < PHYS_OPT_MIN_USEFUL_WNS_NS
+            and structural_available
+        ):
+            phys_actions = set(VIVADO_INCREMENTAL_IMPLEMENTATION_ACTIONS)
+            allowed = [action for action in allowed if action not in phys_actions]
+            for action in sorted(phys_actions):
+                if action not in forbidden:
+                    forbidden.append(action)
+            logger.info(
+                "Skipping phys_opt candidates because WNS %.3f ns is below %.3f ns and structural actions are available.",
+                current_wns,
+                PHYS_OPT_MIN_USEFUL_WNS_NS,
+            )
+
         if self.implementation_license_available is False:
-            implementation_actions = {"phys_opt_design", "phys_opt_design_retime", "place_design_explore", "pblock", "fanout_split"}
+            implementation_actions = set(VIVADO_INCREMENTAL_IMPLEMENTATION_ACTIONS) | {"fanout_split"}
             allowed = [action for action in allowed if action not in implementation_actions]
             for action in sorted(implementation_actions):
                 if action not in forbidden:
                     forbidden.append(action)
             if not allowed:
-                allowed = ["lut_opt"]
+                allowed = ["rapidwright_optimize_cell_placement"]
                 forbidden = [action for action in forbidden if action not in allowed]
 
         return allowed, forbidden
+
+    def _parse_json_result(self, result_text: str) -> dict:
+        try:
+            payload = json.loads(result_text)
+            return payload if isinstance(payload, dict) else {}
+        except json.JSONDecodeError:
+            return {}
+
+    def _result_has_error(self, payload: dict) -> bool:
+        return bool(payload.get("error") or payload.get("success") is False)
+
+    def _critical_path_cell_candidates(self, timing_context: dict, limit: int = 10) -> list[str]:
+        candidates: list[str] = []
+        worst_path = timing_context.get("worst_path", {})
+        for key in ("start_cell", "end_cell"):
+            value = str(worst_path.get(key) or "").strip("{} ")
+            if not value:
+                continue
+            cell = value.rsplit("/", 1)[0] if "/" in value else value
+            if cell and cell not in candidates:
+                candidates.append(cell)
+
+        for candidate in self.current_target_candidates[:limit]:
+            for key in ("startpoint", "endpoint"):
+                value = str(candidate.get(key) or "").strip("{} ")
+                cell = value.rsplit("/", 1)[0] if "/" in value else value
+                if cell and cell not in candidates:
+                    candidates.append(cell)
+
+        return candidates[:limit]
+
+    async def _extract_critical_path_cells_file(self, num_paths: int = 20) -> Path:
+        output_file = Path(self.temp_dir) / f"critical_path_cells_iter_{self.iteration:03d}.json"
+        result = await self.call_tool(
+            "vivado_extract_critical_path_cells",
+            {"num_paths": num_paths, "output_file": str(output_file), "timeout": 300},
+            internal=True,
+        )
+        if self._vivado_output_has_error(result):
+            raise RuntimeError(f"Could not extract critical path cells: {result[:300]}")
+        return output_file
+
+    async def _extract_critical_path_pins_file(self, num_paths: int = 20) -> Path:
+        output_file = Path(self.temp_dir) / f"critical_path_pins_iter_{self.iteration:03d}.json"
+        result = await self.call_tool(
+            "vivado_extract_critical_path_pins",
+            {"num_paths": num_paths, "output_file": str(output_file), "timeout": 300},
+            internal=True,
+        )
+        if self._vivado_output_has_error(result):
+            raise RuntimeError(f"Could not extract critical path pins: {result[:300]}")
+        return output_file
+
+    async def _compute_pblock_ranges(self, params: dict, timing_context: dict) -> tuple[Optional[dict], Optional[str]]:
+        """Compute Vivado pblock ranges through RapidWright fabric analysis."""
+        if params.get("ranges"):
+            return params, None
+
+        target_lut_count = int(
+            params.get("target_lut_count")
+            or self.last_design_info.get("lut_count")
+            or self.last_design_info.get("luts")
+            or DEFAULT_PBLOCK_TARGET_LUT_COUNT
+        )
+        target_ff_count = int(
+            params.get("target_ff_count")
+            or self.last_design_info.get("ff_count")
+            or self.last_design_info.get("ffs")
+            or DEFAULT_PBLOCK_TARGET_FF_COUNT
+        )
+        analysis_args = {
+            "target_lut_count": target_lut_count,
+            "target_ff_count": target_ff_count,
+            "target_dsp_count": int(params.get("target_dsp_count") or 0),
+            "target_bram_count": int(params.get("target_bram_count") or 0),
+        }
+        fabric_text = await self.call_tool("rapidwright_analyze_fabric_for_pblock", analysis_args, internal=True)
+        fabric = self._parse_json_result(fabric_text)
+        if self._result_has_error(fabric):
+            return None, f"RapidWright fabric analysis failed: {fabric.get('error') or fabric_text[:300]}"
+
+        region = fabric.get("recommended_region") or {}
+        required_region_keys = ("col_min", "col_max", "row_min", "row_max")
+        if not all(key in region for key in required_region_keys):
+            return None, f"RapidWright fabric analysis did not return recommended_region: {fabric_text[:300]}"
+
+        convert_args = {
+            "col_min": int(region["col_min"]),
+            "col_max": int(region["col_max"]),
+            "row_min": int(region["row_min"]),
+            "row_max": int(region["row_max"]),
+            "use_clock_regions": bool(params.get("use_clock_regions", False)),
+        }
+        range_text = await self.call_tool("rapidwright_convert_fabric_region_to_pblock", convert_args, internal=True)
+        range_payload = self._parse_json_result(range_text)
+        if self._result_has_error(range_payload):
+            return None, f"RapidWright pblock range conversion failed: {range_payload.get('error') or range_text[:300]}"
+
+        ranges = range_payload.get("pblock_ranges")
+        if not ranges:
+            return None, f"RapidWright pblock range conversion returned no pblock_ranges: {range_text[:300]}"
+
+        computed = dict(params)
+        computed["ranges"] = ranges
+        computed.setdefault("pblock_name", f"{DEFAULT_PBLOCK_NAME_PREFIX}_{self.iteration:03d}")
+        computed.setdefault("apply_to", "current_design")
+        computed.setdefault("is_soft", False)
+        self.last_rapidwright_edit_summary = {
+            "action": "pblock_range_computation",
+            "cells_moved": 0,
+            "nets_affected": 0,
+            "pblock_ranges": ranges,
+            "fabric_region": region,
+            "target_lut_count": target_lut_count,
+            "target_ff_count": target_ff_count,
+            "site_counts": range_payload.get("site_counts"),
+        }
+        logger.info("Computed pblock ranges via RapidWright: %s", ranges)
+        return computed, None
+
+    def _summarize_cell_placement(self, payload: dict, requested_cells: list[str]) -> dict:
+        results = payload.get("results") if isinstance(payload.get("results"), list) else []
+        moved = [item for item in results if item.get("status") == "success"]
+        return {
+            "action": "rapidwright_optimize_cell_placement",
+            "requested_cells": requested_cells,
+            "cells_processed": payload.get("cells_processed", len(requested_cells)),
+            "cells_moved": payload.get("cells_moved", len(moved)),
+            "moved_cells": [item.get("cell") for item in moved if item.get("cell")],
+            "nets_affected": sum(int(item.get("affected_nets") or 0) for item in moved),
+            "results": results,
+        }
+
+    def _summarize_fanout_split(self, payload: dict, net_name: str, split_factor: int) -> dict:
+        return {
+            "action": "fanout_split",
+            "net_name": net_name,
+            "split_factor": split_factor,
+            "status": payload.get("status"),
+            "cells_moved": int(payload.get("cells_moved") or payload.get("replicas_created") or 0),
+            "nets_affected": int(payload.get("nets_affected") or len(payload.get("new_nets") or [])),
+            "new_nets": payload.get("new_nets"),
+            "replicas_created": payload.get("replicas_created"),
+            "message": payload.get("message"),
+        }
 
     async def _route_candidate_with_eco(self, arguments: dict) -> str:
         """Apply shields and run preserve-fixed-route ECO routing for RW candidates."""
@@ -1657,15 +1917,24 @@ class DCPOptimizer(DCPOptimizerBase):
             checkpoint_path=str(checkpoint_path),
             batch_size=self.last_batch_size,
         )
-        self._annotate_latest_history({
+        self.no_improvement_count = self.checkpoint_manager.stall_count
+        self.consecutive_no_improvement = self.checkpoint_manager.stall_count
+        self.last_recorded_wns = wns
+
+        history_fields = {
             "target_tier": self.target_tier,
             "target_candidate_count": len(self.current_target_candidates),
             "path_delay_classification": self.path_delay_classification,
             "path_delay_breakdown": self.path_delay_breakdown,
             "clock_period_ns": period_for_record,
             "achieved_fmax_mhz": achieved_fmax,
+            "no_improvement_count": self.no_improvement_count,
+            "consecutive_no_improvement": self.consecutive_no_improvement,
             **self.last_decision_trace,
-        })
+        }
+        if self.last_rapidwright_edit_summary is not None:
+            history_fields["rapidwright_edit_summary"] = self.last_rapidwright_edit_summary
+        self._annotate_latest_history(history_fields)
         self.recorded_iterations.add(self.iteration)
 
         if self.checkpoint_manager.should_rollback():
@@ -2124,11 +2393,27 @@ class DCPOptimizer(DCPOptimizerBase):
             "allowed_actions": list(timing_context.get("allowed_actions", [])),
             "forbidden_actions": list(timing_context.get("forbidden_actions", [])),
             "llm_chosen_action": decision.get("chosen_action"),
+            "structural_override_active": timing_context.get("structural_override_active", False),
+            "stuck_iterations": timing_context.get("stuck_iterations", 0),
+            "consecutive_no_improvement": timing_context.get("consecutive_no_improvement", 0),
             "validation_result": reason,
             "reprompt_count": reprompt_count,
             "why_not_top_forbidden_action": decision.get("why_not_top_forbidden_action"),
             "raw_response": raw_text,
         }
+        logger.info(
+            "Action selection: offered=%s picked=%s structural_override=%s stuck_iterations=%s",
+            self.last_decision_trace["allowed_actions"],
+            self.last_decision_trace["llm_chosen_action"],
+            self.last_decision_trace["structural_override_active"],
+            self.last_decision_trace["stuck_iterations"],
+        )
+        if self.last_decision_trace["structural_override_active"]:
+            logger.warning(
+                "Stuck detector: %s iterations without improvement, forcing structural action: %s",
+                self.last_decision_trace["stuck_iterations"],
+                self.last_decision_trace["llm_chosen_action"],
+            )
         return decision
 
     async def _request_action_json(self) -> tuple[dict, str]:
@@ -2180,6 +2465,7 @@ class DCPOptimizer(DCPOptimizerBase):
     async def execute_validated_action(self, decision: dict, timing_context: dict) -> str:
         action = decision.get("chosen_action")
         params = decision.get("action_parameters") or {}
+        self.last_rapidwright_edit_summary = None
         if action in {"phys_opt_design", "phys_opt_design_retime"}:
             if not await self._check_implementation_license():
                 return self._failure_json(
@@ -2192,6 +2478,16 @@ class DCPOptimizer(DCPOptimizerBase):
             self.last_batch_size = 1
             return await self.call_tool("vivado_phys_opt_design", params)
         if action == "place_design_explore":
+            current_wns = timing_context.get("wns_ns")
+            if current_wns is not None and current_wns < PHYS_OPT_MIN_USEFUL_WNS_NS:
+                return self._failure_json(
+                    "implementation_action_below_useful_wns",
+                    (
+                        f"place_design_explore skipped because WNS {current_wns:.3f} ns is below "
+                        f"{PHYS_OPT_MIN_USEFUL_WNS_NS:.3f} ns and structural RapidWright actions are required first."
+                    ),
+                    command="place_design_explore",
+                )
             if not await self._check_implementation_license():
                 return self._failure_json(
                     "vivado_license_failure",
@@ -2211,13 +2507,139 @@ class DCPOptimizer(DCPOptimizerBase):
                     "Vivado Implementation license is unavailable; pblock flow requiring implementation is disabled.",
                     command="create_and_apply_pblock",
                 )
-            if "ranges" not in params:
-                logger.warning("pblock action missing ranges; falling back to place_design_explore.")
-                return await self.execute_validated_action({"chosen_action": "place_design_explore", "action_parameters": {}}, timing_context)
+            params, error = await self._compute_pblock_ranges(dict(params), timing_context)
+            if error:
+                logger.error("pblock action aborted: %s", error)
+                return self._failure_json("pblock_range_computation_failed", error, command="pblock")
+            assert params is not None
             self.last_recipe = action
             self.last_targets = [str(params.get("pblock_name", "pblock_opt")), str(params.get("ranges"))]
             self.last_batch_size = 1
+            self.last_rapidwright_edit_summary = {
+                **(self.last_rapidwright_edit_summary or {}),
+                "action": "pblock",
+                "cells_moved": 0,
+                "nets_affected": 0,
+                "pblock_name": params.get("pblock_name"),
+                "pblock_ranges": params.get("ranges"),
+                "apply_to": params.get("apply_to", "current_design"),
+                "is_soft": params.get("is_soft", False),
+            }
             return await self.call_tool("vivado_create_and_apply_pblock", params)
+        if action == "rapidwright_analyze_fabric_for_pblock":
+            params, error = await self._compute_pblock_ranges(dict(params), timing_context)
+            if error:
+                logger.error("RapidWright fabric/pblock analysis aborted: %s", error)
+                return self._failure_json("pblock_range_computation_failed", error, command=action)
+            assert params is not None
+            self.last_recipe = action
+            self.last_targets = [str(params.get("ranges"))]
+            self.last_batch_size = 1
+            self.last_rapidwright_edit_summary = {
+                **(self.last_rapidwright_edit_summary or {}),
+                "action": action,
+                "cells_moved": 0,
+                "nets_affected": 0,
+                "pblock_ranges": params.get("ranges"),
+                "changed_design": False,
+            }
+            return json.dumps({"success": True, "pblock_parameters": params}, indent=2)
+        if action == "rapidwright_convert_fabric_region_to_pblock":
+            params, error = await self._compute_pblock_ranges(dict(params), timing_context)
+            if error:
+                logger.error("RapidWright pblock range conversion aborted: %s", error)
+                return self._failure_json("pblock_range_computation_failed", error, command=action)
+            assert params is not None
+            self.last_recipe = action
+            self.last_targets = [str(params.get("ranges"))]
+            self.last_batch_size = 1
+            self.last_rapidwright_edit_summary = {
+                **(self.last_rapidwright_edit_summary or {}),
+                "action": action,
+                "cells_moved": 0,
+                "nets_affected": 0,
+                "pblock_ranges": params.get("ranges"),
+                "changed_design": False,
+            }
+            return json.dumps({"success": True, "pblock_parameters": params}, indent=2)
+        if action == "rapidwright_analyze_net_detour":
+            pins_file = await self._extract_critical_path_pins_file(num_paths=int(params.get("num_paths") or 20))
+            detour_result = await self.call_tool(
+                "rapidwright_analyze_net_detour",
+                {
+                    "input_file": str(pins_file),
+                    "detour_threshold": float(params.get("detour_threshold") or 2.0),
+                },
+            )
+            payload = self._parse_json_result(detour_result)
+            if self._result_has_error(payload):
+                return self._failure_json(
+                    "rapidwright_detour_analysis_failed",
+                    payload.get("error", detour_result[:300]),
+                    command=action,
+                )
+            candidates = payload.get("candidates") if isinstance(payload.get("candidates"), list) else []
+            self.last_recipe = action
+            self.last_targets = [str(item.get("cell")) for item in candidates[:10] if item.get("cell")]
+            self.last_batch_size = len(self.last_targets)
+            self.last_rapidwright_edit_summary = {
+                "action": action,
+                "changed_design": False,
+                "cells_moved": 0,
+                "nets_affected": 0,
+                "cells_analyzed": payload.get("cells_analyzed"),
+                "candidates_found": payload.get("candidates_found", len(candidates)),
+                "top_candidates": candidates[:10],
+            }
+            return detour_result
+        if action == "rapidwright_optimize_cell_placement":
+            cell_names = [str(cell) for cell in params.get("cell_names", []) if str(cell).strip()]
+            if not cell_names:
+                try:
+                    pins_file = await self._extract_critical_path_pins_file(num_paths=int(params.get("num_paths") or 20))
+                    detour_result = await self.call_tool(
+                        "rapidwright_analyze_net_detour",
+                        {
+                            "input_file": str(pins_file),
+                            "detour_threshold": float(params.get("detour_threshold") or 2.0),
+                        },
+                        internal=True,
+                    )
+                    detour_payload = self._parse_json_result(detour_result)
+                    candidates = detour_payload.get("candidates") if isinstance(detour_payload.get("candidates"), list) else []
+                    cell_names = [str(item.get("cell")) for item in candidates if item.get("cell")]
+                except Exception as exc:
+                    logger.warning("Could not derive placement cells from detour analysis: %s", exc)
+            if not cell_names:
+                cell_names = self._critical_path_cell_candidates(timing_context)
+            if not cell_names:
+                return self._failure_json(
+                    "no_action_target",
+                    "rapidwright_optimize_cell_placement selected but no critical cells were available.",
+                    command=action,
+                )
+            max_candidates = int(params.get("max_candidates") or min(10, len(cell_names)))
+            cell_names = cell_names[:max_candidates]
+            self.last_recipe = action
+            self.last_targets = list(cell_names)
+            self.last_batch_size = len(cell_names)
+            result = await self.call_tool(
+                "rapidwright_optimize_cell_placement",
+                {"cell_names": cell_names, "max_candidates": max_candidates},
+            )
+            payload = self._parse_json_result(result)
+            if self._result_has_error(payload):
+                return self._failure_json(
+                    "rapidwright_cell_placement_failed",
+                    payload.get("error", result[:300]),
+                    command=action,
+                )
+            self.last_rapidwright_edit_summary = self._summarize_cell_placement(payload, cell_names)
+            dcp = self.run_dir / f"cell_placement_iter_{self.iteration:03d}.dcp"
+            result += "\n\n" + await self.call_tool("rapidwright_write_checkpoint", {"dcp_path": str(dcp), "overwrite": True})
+            result += "\n\n" + await self.call_tool("vivado_open_checkpoint", {"dcp_path": str(dcp), "timeout": 600})
+            result += "\n\n" + await self.call_tool("vivado_route_design", {"directive": "Default", "timeout": 3600})
+            return result
         if action == "fanout_split":
             if not await self._check_implementation_license():
                 return self._failure_json(
@@ -2238,6 +2660,8 @@ class DCPOptimizer(DCPOptimizerBase):
             self.last_targets = [net_name]
             self.last_batch_size = 1
             result = await self.call_tool("rapidwright_optimize_fanout", {"net_name": net_name, "split_factor": split_factor})
+            payload = self._parse_json_result(result)
+            self.last_rapidwright_edit_summary = self._summarize_fanout_split(payload, net_name, split_factor)
             dcp = self.run_dir / f"fanout_split_iter_{self.iteration:03d}.dcp"
             result += "\n\n" + await self.call_tool("rapidwright_write_checkpoint", {"dcp_path": str(dcp), "overwrite": True})
             result += "\n\n" + await self.call_tool("vivado_open_checkpoint", {"dcp_path": str(dcp), "timeout": 600})
@@ -2261,7 +2685,11 @@ class DCPOptimizer(DCPOptimizerBase):
             self.last_targets = [str(timing_context["worst_path"].get("end_cell"))]
             self.last_batch_size = 1
             return await self.call_tool("vivado_phys_opt_design", {"critical_cell_opt": True})
-        return await self.call_tool("vivado_phys_opt_design", {})
+        return self._failure_json(
+            "unsupported_action",
+            f"Action {action!r} is not implemented by the orchestrator dispatch layer.",
+            command=str(action),
+        )
     
     async def optimize(self, input_dcp: Path, output_dcp: Path) -> bool:
         """Run the optimization workflow."""
