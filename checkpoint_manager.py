@@ -114,11 +114,13 @@ class CheckpointManager:
             next_state["stall_count"] = 0
         else:
             next_state["stall_count"] = self.stall_count + 1
-            blacklist_key = "nets_blacklisted" if self._is_net_recipe(recipe) else "cells_blacklisted"
-            next_blacklist = list(next_state[blacklist_key])
-            for target in targets_list:
-                self._append_unique(next_blacklist, target)
-            next_state[blacklist_key] = next_blacklist
+            blacklist_key = self._blacklist_key_for_recipe(recipe)
+            if blacklist_key is not None:
+                next_blacklist = list(next_state[blacklist_key])
+                for target in targets_list:
+                    if self._is_blacklistable_target(target):
+                        self._append_unique(next_blacklist, target)
+                next_state[blacklist_key] = next_blacklist
 
         self._persist_state(next_state)
 
@@ -137,12 +139,7 @@ class CheckpointManager:
 
     def should_escalate(self) -> bool:
         """Return True when repeated stalls should trigger a recipe escalation."""
-        if self.stall_count >= 3:
-            next_state = self._snapshot_state()
-            next_state["stall_count"] = 0
-            self._persist_state(next_state)
-            return True
-        return False
+        return self.stall_count >= 3 and self.stall_count % 3 == 0
 
     def should_continue(self) -> bool:
         """Return True while the wall-clock and iteration budgets remain."""
@@ -178,8 +175,31 @@ class CheckpointManager:
             raise RuntimeError("start_baseline() must be called before record()")
 
     def _is_net_recipe(self, recipe: str) -> bool:
+        return self._blacklist_key_for_recipe(recipe) == "nets_blacklisted"
+
+    def _blacklist_key_for_recipe(self, recipe: str) -> str | None:
         lower = recipe.lower()
-        return "fanout" in lower or "net" in lower
+        if lower in {"rapidwright_fanout", "fanout_split"}:
+            return "nets_blacklisted"
+        if lower in {"rapidwright_cell_placement"}:
+            return "cells_blacklisted"
+        return None
+
+    def _is_blacklistable_target(self, target: str) -> bool:
+        target = str(target).strip()
+        if not target:
+            return False
+        non_cell_targets = {
+            "default",
+            "explore",
+            "explorewithremap",
+            "aggressiveexplore",
+            "critical_cell_opt",
+            "logic_delay_bound",
+            "mixed_path",
+            "timing_path",
+        }
+        return target.lower() not in non_cell_targets
 
     def _append_unique(self, items: list[str], target: str) -> None:
         if target not in items:
