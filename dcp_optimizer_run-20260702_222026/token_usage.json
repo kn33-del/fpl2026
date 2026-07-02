@@ -1,0 +1,4257 @@
+{
+  "model": "x-ai/grok-4.3",
+  "timestamp": "2026-07-02 23:03:14",
+  "summary": {
+    "total_runtime_seconds": 2566.8737494945526,
+    "total_llm_calls": 50,
+    "total_iterations": 50,
+    "total_prompt_tokens": 785321,
+    "total_completion_tokens": 13925,
+    "total_tokens": 799246,
+    "total_cached_tokens": 0,
+    "total_reasoning_tokens": 0,
+    "total_cost": 0.28109415000000004,
+    "clock_period_ns": 1.5,
+    "current_period_ns": 1.5,
+    "initial_wns": -0.978,
+    "best_wns": -0.911,
+    "wns_improvement": 0.06699999999999995,
+    "initial_fmax_mhz": 403.5512510088782,
+    "best_fmax_mhz": 414.765657403567,
+    "fmax_improvement_mhz": 11.214406394688808,
+    "total_tool_calls": 602,
+    "total_tool_time_seconds": 3380.0143978595734,
+    "tool_call_counts": {
+      "rapidwright_initialize_rapidwright": 1,
+      "vivado_open_checkpoint": 1,
+      "vivado_report_timing_summary": 51,
+      "vivado_run_tcl": 275,
+      "vivado_get_critical_high_fanout_nets": 1,
+      "rapidwright_read_checkpoint": 1,
+      "vivado_extract_critical_path_cells": 1,
+      "rapidwright_analyze_critical_path_spread": 1,
+      "vivado_get_wns": 140,
+      "vivado_place_design": 30,
+      "vivado_route_design": 30,
+      "vivado_write_checkpoint": 50,
+      "vivado_phys_opt_design": 20
+    }
+  },
+  "per_llm_call_details": [],
+  "per_tool_call_details": [
+    {
+      "tool_name": "rapidwright_initialize_rapidwright",
+      "iteration": 0,
+      "elapsed_time": 0.4842684268951416,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_open_checkpoint",
+      "iteration": 0,
+      "elapsed_time": 18.690486192703247,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_timing_summary",
+      "iteration": 0,
+      "elapsed_time": 2.203685760498047,
+      "wns": -0.978,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 0,
+      "elapsed_time": 0.05536484718322754,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 0,
+      "elapsed_time": 0.06015801429748535,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 0,
+      "elapsed_time": 0.06246471405029297,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 0,
+      "elapsed_time": 0.14328956604003906,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_critical_high_fanout_nets",
+      "iteration": 0,
+      "elapsed_time": 2.790971517562866,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_read_checkpoint",
+      "iteration": 0,
+      "elapsed_time": 2.14109206199646,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_extract_critical_path_cells",
+      "iteration": 0,
+      "elapsed_time": 0.16855883598327637,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_critical_path_spread",
+      "iteration": 0,
+      "elapsed_time": 0.19421863555908203,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 1,
+      "elapsed_time": 0.11254382133483887,
+      "wns": -0.978,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 1,
+      "elapsed_time": 0.06169772148132324,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 1,
+      "elapsed_time": 0.14372038841247559,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 1,
+      "elapsed_time": 0.05530977249145508,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_place_design",
+      "iteration": 1,
+      "elapsed_time": 16.726126194000244,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_route_design",
+      "iteration": 1,
+      "elapsed_time": 41.635151624679565,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 1,
+      "elapsed_time": 0.061780452728271484,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_write_checkpoint",
+      "iteration": 1,
+      "elapsed_time": 2.1222941875457764,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_timing_summary",
+      "iteration": 1,
+      "elapsed_time": 0.6445927619934082,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 1,
+      "elapsed_time": 0.11241817474365234,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 2,
+      "elapsed_time": 0.11109185218811035,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 2,
+      "elapsed_time": 0.06308245658874512,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 2,
+      "elapsed_time": 0.1745307445526123,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_place_design",
+      "iteration": 2,
+      "elapsed_time": 7.135272741317749,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_route_design",
+      "iteration": 2,
+      "elapsed_time": 34.72503423690796,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 2,
+      "elapsed_time": 0.061417579650878906,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_write_checkpoint",
+      "iteration": 2,
+      "elapsed_time": 2.1133341789245605,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_timing_summary",
+      "iteration": 2,
+      "elapsed_time": 0.6431818008422852,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 2,
+      "elapsed_time": 0.11188244819641113,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 3,
+      "elapsed_time": 0.11088776588439941,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 3,
+      "elapsed_time": 0.0614018440246582,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 3,
+      "elapsed_time": 0.17481088638305664,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_place_design",
+      "iteration": 3,
+      "elapsed_time": 7.193253993988037,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_route_design",
+      "iteration": 3,
+      "elapsed_time": 34.753371238708496,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 3,
+      "elapsed_time": 0.06135058403015137,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_write_checkpoint",
+      "iteration": 3,
+      "elapsed_time": 2.116797924041748,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_timing_summary",
+      "iteration": 3,
+      "elapsed_time": 0.643587589263916,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 3,
+      "elapsed_time": 0.11232614517211914,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 4,
+      "elapsed_time": 0.11104631423950195,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 4,
+      "elapsed_time": 0.061777353286743164,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 4,
+      "elapsed_time": 0.17639660835266113,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_place_design",
+      "iteration": 4,
+      "elapsed_time": 7.245266914367676,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_route_design",
+      "iteration": 4,
+      "elapsed_time": 34.90039110183716,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 4,
+      "elapsed_time": 0.06139373779296875,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_write_checkpoint",
+      "iteration": 4,
+      "elapsed_time": 2.124858856201172,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_timing_summary",
+      "iteration": 4,
+      "elapsed_time": 0.6452045440673828,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 4,
+      "elapsed_time": 0.11187171936035156,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 5,
+      "elapsed_time": 0.1108083724975586,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 5,
+      "elapsed_time": 0.061470985412597656,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 5,
+      "elapsed_time": 0.1772294044494629,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 5,
+      "elapsed_time": 0.11240768432617188,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 5,
+      "elapsed_time": 1.5632214546203613,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 5,
+      "elapsed_time": 31.12112855911255,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 5,
+      "elapsed_time": 0.25645899772644043,
+      "wns": -0.921,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 5,
+      "elapsed_time": 1.512183666229248,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 5,
+      "elapsed_time": 0.6611850261688232,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 5,
+      "elapsed_time": 0.6587669849395752,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 5,
+      "elapsed_time": 23.940763473510742,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_phys_opt_design",
+      "iteration": 5,
+      "elapsed_time": 59.826969623565674,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 5,
+      "elapsed_time": 0.061438798904418945,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_write_checkpoint",
+      "iteration": 5,
+      "elapsed_time": 2.0730135440826416,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_timing_summary",
+      "iteration": 5,
+      "elapsed_time": 0.6544723510742188,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 5,
+      "elapsed_time": 0.11229133605957031,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 6,
+      "elapsed_time": 0.11085295677185059,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 6,
+      "elapsed_time": 0.06184697151184082,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 6,
+      "elapsed_time": 0.17545652389526367,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_place_design",
+      "iteration": 6,
+      "elapsed_time": 7.394692420959473,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_route_design",
+      "iteration": 6,
+      "elapsed_time": 33.35953092575073,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 6,
+      "elapsed_time": 0.06131887435913086,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_write_checkpoint",
+      "iteration": 6,
+      "elapsed_time": 2.125457286834717,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_timing_summary",
+      "iteration": 6,
+      "elapsed_time": 0.6505215167999268,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 6,
+      "elapsed_time": 0.11216521263122559,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 7,
+      "elapsed_time": 0.1112673282623291,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 7,
+      "elapsed_time": 0.06138968467712402,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 7,
+      "elapsed_time": 0.17842555046081543,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 7,
+      "elapsed_time": 0.11269140243530273,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 7,
+      "elapsed_time": 1.5717682838439941,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 7,
+      "elapsed_time": 21.55618381500244,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 7,
+      "elapsed_time": 0.2573530673980713,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 7,
+      "elapsed_time": 1.5167105197906494,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 7,
+      "elapsed_time": 0.6596970558166504,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 7,
+      "elapsed_time": 0.6560795307159424,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 7,
+      "elapsed_time": 20.46655249595642,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_phys_opt_design",
+      "iteration": 7,
+      "elapsed_time": 46.797871112823486,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 7,
+      "elapsed_time": 0.06113696098327637,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_write_checkpoint",
+      "iteration": 7,
+      "elapsed_time": 2.088850498199463,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_timing_summary",
+      "iteration": 7,
+      "elapsed_time": 0.6567533016204834,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 7,
+      "elapsed_time": 0.11204862594604492,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 8,
+      "elapsed_time": 0.11116814613342285,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 8,
+      "elapsed_time": 0.06129956245422363,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 8,
+      "elapsed_time": 0.1786489486694336,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 8,
+      "elapsed_time": 0.1124563217163086,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 8,
+      "elapsed_time": 1.5601205825805664,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 8,
+      "elapsed_time": 21.544581651687622,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 8,
+      "elapsed_time": 0.2572917938232422,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 8,
+      "elapsed_time": 1.5248541831970215,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 8,
+      "elapsed_time": 0.6623790264129639,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 8,
+      "elapsed_time": 0.6622030735015869,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 8,
+      "elapsed_time": 20.51430320739746,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_phys_opt_design",
+      "iteration": 8,
+      "elapsed_time": 46.83905220031738,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 8,
+      "elapsed_time": 0.06119251251220703,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_write_checkpoint",
+      "iteration": 8,
+      "elapsed_time": 2.086711883544922,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_timing_summary",
+      "iteration": 8,
+      "elapsed_time": 0.659611701965332,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 8,
+      "elapsed_time": 0.11254477500915527,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 9,
+      "elapsed_time": 0.11117839813232422,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 9,
+      "elapsed_time": 0.061644554138183594,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 9,
+      "elapsed_time": 0.1789076328277588,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_place_design",
+      "iteration": 9,
+      "elapsed_time": 7.447698593139648,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_route_design",
+      "iteration": 9,
+      "elapsed_time": 33.54337430000305,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 9,
+      "elapsed_time": 0.06147122383117676,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_write_checkpoint",
+      "iteration": 9,
+      "elapsed_time": 2.1293492317199707,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_timing_summary",
+      "iteration": 9,
+      "elapsed_time": 0.6575922966003418,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 9,
+      "elapsed_time": 0.11220121383666992,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 10,
+      "elapsed_time": 0.11071538925170898,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 10,
+      "elapsed_time": 0.06165623664855957,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 10,
+      "elapsed_time": 0.1808943748474121,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 10,
+      "elapsed_time": 0.1137852668762207,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 10,
+      "elapsed_time": 1.5701684951782227,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 10,
+      "elapsed_time": 21.592446088790894,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 10,
+      "elapsed_time": 0.2578237056732178,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 10,
+      "elapsed_time": 1.5199518203735352,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 10,
+      "elapsed_time": 0.660306453704834,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 10,
+      "elapsed_time": 0.6581835746765137,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 10,
+      "elapsed_time": 20.515520334243774,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_phys_opt_design",
+      "iteration": 10,
+      "elapsed_time": 46.88900876045227,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 10,
+      "elapsed_time": 0.060899972915649414,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_write_checkpoint",
+      "iteration": 10,
+      "elapsed_time": 2.0847842693328857,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_timing_summary",
+      "iteration": 10,
+      "elapsed_time": 0.65631103515625,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 10,
+      "elapsed_time": 0.11194729804992676,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 11,
+      "elapsed_time": 0.11086630821228027,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 11,
+      "elapsed_time": 0.06158638000488281,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 11,
+      "elapsed_time": 0.18077468872070312,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 11,
+      "elapsed_time": 0.11264944076538086,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 11,
+      "elapsed_time": 1.5656375885009766,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 11,
+      "elapsed_time": 21.622380018234253,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 11,
+      "elapsed_time": 0.2599210739135742,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 11,
+      "elapsed_time": 1.5260274410247803,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 11,
+      "elapsed_time": 0.6638405323028564,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 11,
+      "elapsed_time": 0.6572456359863281,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 11,
+      "elapsed_time": 20.49604892730713,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_phys_opt_design",
+      "iteration": 11,
+      "elapsed_time": 46.904611587524414,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 11,
+      "elapsed_time": 0.06122732162475586,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_write_checkpoint",
+      "iteration": 11,
+      "elapsed_time": 2.0887374877929688,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_timing_summary",
+      "iteration": 11,
+      "elapsed_time": 0.658151388168335,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 11,
+      "elapsed_time": 0.11175394058227539,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 12,
+      "elapsed_time": 0.11118769645690918,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 12,
+      "elapsed_time": 0.061803579330444336,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 12,
+      "elapsed_time": 0.1814558506011963,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_place_design",
+      "iteration": 12,
+      "elapsed_time": 7.4383299350738525,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_route_design",
+      "iteration": 12,
+      "elapsed_time": 33.717803955078125,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 12,
+      "elapsed_time": 0.06135249137878418,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_write_checkpoint",
+      "iteration": 12,
+      "elapsed_time": 2.137146472930908,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_timing_summary",
+      "iteration": 12,
+      "elapsed_time": 0.6544122695922852,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 12,
+      "elapsed_time": 0.11199545860290527,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 13,
+      "elapsed_time": 0.11125040054321289,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 13,
+      "elapsed_time": 0.06154799461364746,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 13,
+      "elapsed_time": 0.1831061840057373,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_place_design",
+      "iteration": 13,
+      "elapsed_time": 7.2559027671813965,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_route_design",
+      "iteration": 13,
+      "elapsed_time": 33.726691484451294,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 13,
+      "elapsed_time": 0.06122922897338867,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_write_checkpoint",
+      "iteration": 13,
+      "elapsed_time": 2.146481990814209,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_timing_summary",
+      "iteration": 13,
+      "elapsed_time": 0.6567771434783936,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 13,
+      "elapsed_time": 0.11185264587402344,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 14,
+      "elapsed_time": 0.11111140251159668,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 14,
+      "elapsed_time": 0.061750173568725586,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 14,
+      "elapsed_time": 0.18375277519226074,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 14,
+      "elapsed_time": 0.1127164363861084,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 14,
+      "elapsed_time": 1.587254524230957,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 14,
+      "elapsed_time": 21.65144634246826,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 14,
+      "elapsed_time": 0.25703930854797363,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 14,
+      "elapsed_time": 1.5230817794799805,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 14,
+      "elapsed_time": 0.6583108901977539,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 14,
+      "elapsed_time": 0.6560919284820557,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 14,
+      "elapsed_time": 20.521836757659912,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_phys_opt_design",
+      "iteration": 14,
+      "elapsed_time": 46.96862244606018,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 14,
+      "elapsed_time": 0.061385154724121094,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_write_checkpoint",
+      "iteration": 14,
+      "elapsed_time": 2.1159615516662598,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_timing_summary",
+      "iteration": 14,
+      "elapsed_time": 0.6618568897247314,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 14,
+      "elapsed_time": 0.1119685173034668,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 15,
+      "elapsed_time": 0.11083841323852539,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 15,
+      "elapsed_time": 0.06138205528259277,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 15,
+      "elapsed_time": 0.18379545211791992,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 15,
+      "elapsed_time": 0.11271500587463379,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 15,
+      "elapsed_time": 1.5753986835479736,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 15,
+      "elapsed_time": 21.595770120620728,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 15,
+      "elapsed_time": 0.2578310966491699,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 15,
+      "elapsed_time": 1.5246522426605225,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 15,
+      "elapsed_time": 0.6634776592254639,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 15,
+      "elapsed_time": 0.6590394973754883,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 15,
+      "elapsed_time": 20.47385334968567,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_phys_opt_design",
+      "iteration": 15,
+      "elapsed_time": 46.863585472106934,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 15,
+      "elapsed_time": 0.06120491027832031,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_write_checkpoint",
+      "iteration": 15,
+      "elapsed_time": 2.093465566635132,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_timing_summary",
+      "iteration": 15,
+      "elapsed_time": 0.6622397899627686,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 15,
+      "elapsed_time": 0.11183762550354004,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 16,
+      "elapsed_time": 0.11092185974121094,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 16,
+      "elapsed_time": 0.06150484085083008,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 16,
+      "elapsed_time": 0.1843891143798828,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 16,
+      "elapsed_time": 0.11340904235839844,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 16,
+      "elapsed_time": 1.576082706451416,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 16,
+      "elapsed_time": 21.617846965789795,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 16,
+      "elapsed_time": 0.2578151226043701,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 16,
+      "elapsed_time": 1.5312721729278564,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 16,
+      "elapsed_time": 0.6670322418212891,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 16,
+      "elapsed_time": 0.6608326435089111,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 16,
+      "elapsed_time": 20.4658842086792,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_phys_opt_design",
+      "iteration": 16,
+      "elapsed_time": 46.89106273651123,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 16,
+      "elapsed_time": 0.061090707778930664,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_write_checkpoint",
+      "iteration": 16,
+      "elapsed_time": 2.092825412750244,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_timing_summary",
+      "iteration": 16,
+      "elapsed_time": 0.6622610092163086,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 16,
+      "elapsed_time": 0.11185431480407715,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 17,
+      "elapsed_time": 0.11071896553039551,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 17,
+      "elapsed_time": 0.06113862991333008,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 17,
+      "elapsed_time": 0.18439149856567383,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 17,
+      "elapsed_time": 0.11296439170837402,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 17,
+      "elapsed_time": 1.572026014328003,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 17,
+      "elapsed_time": 21.646162748336792,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 17,
+      "elapsed_time": 0.2583284378051758,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 17,
+      "elapsed_time": 1.5318894386291504,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 17,
+      "elapsed_time": 0.662846565246582,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 17,
+      "elapsed_time": 0.6593310832977295,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 17,
+      "elapsed_time": 20.501265287399292,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_phys_opt_design",
+      "iteration": 17,
+      "elapsed_time": 46.94567537307739,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 17,
+      "elapsed_time": 0.06141161918640137,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_write_checkpoint",
+      "iteration": 17,
+      "elapsed_time": 2.0925984382629395,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_timing_summary",
+      "iteration": 17,
+      "elapsed_time": 0.6612391471862793,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 17,
+      "elapsed_time": 0.11193394660949707,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 18,
+      "elapsed_time": 0.11046338081359863,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 18,
+      "elapsed_time": 0.06501293182373047,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 18,
+      "elapsed_time": 0.18456506729125977,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_place_design",
+      "iteration": 18,
+      "elapsed_time": 7.424396991729736,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_route_design",
+      "iteration": 18,
+      "elapsed_time": 33.8063759803772,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 18,
+      "elapsed_time": 0.06138014793395996,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_write_checkpoint",
+      "iteration": 18,
+      "elapsed_time": 2.139666795730591,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_timing_summary",
+      "iteration": 18,
+      "elapsed_time": 0.664290189743042,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 18,
+      "elapsed_time": 0.11165070533752441,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 19,
+      "elapsed_time": 0.1111757755279541,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 19,
+      "elapsed_time": 0.06134748458862305,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 19,
+      "elapsed_time": 0.1878209114074707,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 19,
+      "elapsed_time": 0.11253690719604492,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 19,
+      "elapsed_time": 1.5852344036102295,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 19,
+      "elapsed_time": 21.67356300354004,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 19,
+      "elapsed_time": 0.2595036029815674,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 19,
+      "elapsed_time": 1.5305023193359375,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 19,
+      "elapsed_time": 0.6644730567932129,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 19,
+      "elapsed_time": 0.6592020988464355,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 19,
+      "elapsed_time": 20.516374349594116,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_phys_opt_design",
+      "iteration": 19,
+      "elapsed_time": 47.00221133232117,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 19,
+      "elapsed_time": 0.06123089790344238,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_write_checkpoint",
+      "iteration": 19,
+      "elapsed_time": 2.108304262161255,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_timing_summary",
+      "iteration": 19,
+      "elapsed_time": 0.663985013961792,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 19,
+      "elapsed_time": 0.11213564872741699,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 20,
+      "elapsed_time": 0.11070036888122559,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 20,
+      "elapsed_time": 0.06127786636352539,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 20,
+      "elapsed_time": 0.18762707710266113,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_place_design",
+      "iteration": 20,
+      "elapsed_time": 7.481715440750122,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_route_design",
+      "iteration": 20,
+      "elapsed_time": 33.81992530822754,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 20,
+      "elapsed_time": 0.06118607521057129,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_write_checkpoint",
+      "iteration": 20,
+      "elapsed_time": 2.1487298011779785,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_timing_summary",
+      "iteration": 20,
+      "elapsed_time": 0.6685340404510498,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 20,
+      "elapsed_time": 0.11182618141174316,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 21,
+      "elapsed_time": 0.1109464168548584,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 21,
+      "elapsed_time": 0.06149792671203613,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 21,
+      "elapsed_time": 0.19239211082458496,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 21,
+      "elapsed_time": 0.11294841766357422,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 21,
+      "elapsed_time": 1.5837016105651855,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 21,
+      "elapsed_time": 21.834277868270874,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 21,
+      "elapsed_time": 0.26028966903686523,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 21,
+      "elapsed_time": 1.546536922454834,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 21,
+      "elapsed_time": 0.6737122535705566,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 21,
+      "elapsed_time": 0.6686544418334961,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 21,
+      "elapsed_time": 20.653140544891357,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_phys_opt_design",
+      "iteration": 21,
+      "elapsed_time": 47.33416485786438,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 21,
+      "elapsed_time": 0.06124305725097656,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_write_checkpoint",
+      "iteration": 21,
+      "elapsed_time": 2.1141161918640137,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_timing_summary",
+      "iteration": 21,
+      "elapsed_time": 0.6709320545196533,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 21,
+      "elapsed_time": 0.11188793182373047,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 22,
+      "elapsed_time": 0.11133265495300293,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 22,
+      "elapsed_time": 0.061435699462890625,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 22,
+      "elapsed_time": 0.19121527671813965,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_place_design",
+      "iteration": 22,
+      "elapsed_time": 7.47499942779541,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_route_design",
+      "iteration": 22,
+      "elapsed_time": 34.41280269622803,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 22,
+      "elapsed_time": 0.06145048141479492,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_write_checkpoint",
+      "iteration": 22,
+      "elapsed_time": 2.187608242034912,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_timing_summary",
+      "iteration": 22,
+      "elapsed_time": 0.6740505695343018,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 22,
+      "elapsed_time": 0.11225652694702148,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 23,
+      "elapsed_time": 0.11103129386901855,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 23,
+      "elapsed_time": 0.06177258491516113,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 23,
+      "elapsed_time": 0.19235777854919434,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_place_design",
+      "iteration": 23,
+      "elapsed_time": 7.5582427978515625,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_route_design",
+      "iteration": 23,
+      "elapsed_time": 34.32750201225281,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 23,
+      "elapsed_time": 0.06135225296020508,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_write_checkpoint",
+      "iteration": 23,
+      "elapsed_time": 2.1762657165527344,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_timing_summary",
+      "iteration": 23,
+      "elapsed_time": 0.6756591796875,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 23,
+      "elapsed_time": 0.11215329170227051,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 24,
+      "elapsed_time": 0.11074280738830566,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 24,
+      "elapsed_time": 0.06142449378967285,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 24,
+      "elapsed_time": 0.19418859481811523,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_place_design",
+      "iteration": 24,
+      "elapsed_time": 7.4752490520477295,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_route_design",
+      "iteration": 24,
+      "elapsed_time": 34.34860181808472,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 24,
+      "elapsed_time": 0.061249732971191406,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_write_checkpoint",
+      "iteration": 24,
+      "elapsed_time": 2.259298801422119,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_timing_summary",
+      "iteration": 24,
+      "elapsed_time": 0.6783182621002197,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 24,
+      "elapsed_time": 0.11192727088928223,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 25,
+      "elapsed_time": 0.1113591194152832,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 25,
+      "elapsed_time": 0.06162667274475098,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 25,
+      "elapsed_time": 0.19365477561950684,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 25,
+      "elapsed_time": 0.11281871795654297,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 25,
+      "elapsed_time": 1.597252368927002,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 25,
+      "elapsed_time": 21.890044927597046,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 25,
+      "elapsed_time": 0.2611732482910156,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 25,
+      "elapsed_time": 1.5520477294921875,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 25,
+      "elapsed_time": 0.6748249530792236,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 25,
+      "elapsed_time": 0.6704409122467041,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 25,
+      "elapsed_time": 20.776671409606934,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_phys_opt_design",
+      "iteration": 25,
+      "elapsed_time": 47.53618121147156,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 25,
+      "elapsed_time": 0.06160879135131836,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_write_checkpoint",
+      "iteration": 25,
+      "elapsed_time": 2.137972593307495,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_timing_summary",
+      "iteration": 25,
+      "elapsed_time": 0.6824619770050049,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 25,
+      "elapsed_time": 0.11224579811096191,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 26,
+      "elapsed_time": 0.11128759384155273,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 26,
+      "elapsed_time": 0.06154990196228027,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 26,
+      "elapsed_time": 0.19426345825195312,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_place_design",
+      "iteration": 26,
+      "elapsed_time": 7.602107286453247,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_route_design",
+      "iteration": 26,
+      "elapsed_time": 34.25858116149902,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 26,
+      "elapsed_time": 0.06129884719848633,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_write_checkpoint",
+      "iteration": 26,
+      "elapsed_time": 2.174239158630371,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_timing_summary",
+      "iteration": 26,
+      "elapsed_time": 0.6778056621551514,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 26,
+      "elapsed_time": 0.11222672462463379,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 27,
+      "elapsed_time": 0.11093592643737793,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 27,
+      "elapsed_time": 0.06171727180480957,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 27,
+      "elapsed_time": 0.19533896446228027,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_place_design",
+      "iteration": 27,
+      "elapsed_time": 7.466918706893921,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_route_design",
+      "iteration": 27,
+      "elapsed_time": 34.37805962562561,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 27,
+      "elapsed_time": 0.06146407127380371,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_write_checkpoint",
+      "iteration": 27,
+      "elapsed_time": 2.1852362155914307,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_timing_summary",
+      "iteration": 27,
+      "elapsed_time": 0.6803970336914062,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 27,
+      "elapsed_time": 0.11238598823547363,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 28,
+      "elapsed_time": 0.11118936538696289,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 28,
+      "elapsed_time": 0.0616757869720459,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 28,
+      "elapsed_time": 0.19722390174865723,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 28,
+      "elapsed_time": 0.11288881301879883,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 28,
+      "elapsed_time": 1.6031229496002197,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 28,
+      "elapsed_time": 21.88841986656189,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 28,
+      "elapsed_time": 0.2627131938934326,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 28,
+      "elapsed_time": 1.5576379299163818,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 28,
+      "elapsed_time": 0.6687214374542236,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 28,
+      "elapsed_time": 0.6652042865753174,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 28,
+      "elapsed_time": 20.71311926841736,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_phys_opt_design",
+      "iteration": 28,
+      "elapsed_time": 47.47271966934204,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 28,
+      "elapsed_time": 0.06131768226623535,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_write_checkpoint",
+      "iteration": 28,
+      "elapsed_time": 2.159463405609131,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_timing_summary",
+      "iteration": 28,
+      "elapsed_time": 0.676497220993042,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 28,
+      "elapsed_time": 0.11242556571960449,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 29,
+      "elapsed_time": 0.11095070838928223,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 29,
+      "elapsed_time": 0.06168484687805176,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 29,
+      "elapsed_time": 0.19466638565063477,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_place_design",
+      "iteration": 29,
+      "elapsed_time": 7.565513372421265,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_route_design",
+      "iteration": 29,
+      "elapsed_time": 34.28035092353821,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 29,
+      "elapsed_time": 0.061319589614868164,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_write_checkpoint",
+      "iteration": 29,
+      "elapsed_time": 2.189391613006592,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_timing_summary",
+      "iteration": 29,
+      "elapsed_time": 0.6812989711761475,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 29,
+      "elapsed_time": 0.11203122138977051,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 30,
+      "elapsed_time": 0.11094498634338379,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 30,
+      "elapsed_time": 0.06154513359069824,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 30,
+      "elapsed_time": 0.19984960556030273,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 30,
+      "elapsed_time": 0.11289501190185547,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 30,
+      "elapsed_time": 1.6029574871063232,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 30,
+      "elapsed_time": 21.864332675933838,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 30,
+      "elapsed_time": 0.2583026885986328,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 30,
+      "elapsed_time": 1.5452678203582764,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 30,
+      "elapsed_time": 0.6744492053985596,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 30,
+      "elapsed_time": 0.6708545684814453,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 30,
+      "elapsed_time": 20.747647523880005,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_phys_opt_design",
+      "iteration": 30,
+      "elapsed_time": 47.477739572525024,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 30,
+      "elapsed_time": 0.06165623664855957,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_write_checkpoint",
+      "iteration": 30,
+      "elapsed_time": 2.1569719314575195,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_timing_summary",
+      "iteration": 30,
+      "elapsed_time": 0.6887264251708984,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 30,
+      "elapsed_time": 0.11220335960388184,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 31,
+      "elapsed_time": 0.11114144325256348,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 31,
+      "elapsed_time": 0.061721086502075195,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 31,
+      "elapsed_time": 0.19781827926635742,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_place_design",
+      "iteration": 31,
+      "elapsed_time": 7.527180194854736,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_route_design",
+      "iteration": 31,
+      "elapsed_time": 34.467864990234375,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 31,
+      "elapsed_time": 0.06143689155578613,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_write_checkpoint",
+      "iteration": 31,
+      "elapsed_time": 2.2572388648986816,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_timing_summary",
+      "iteration": 31,
+      "elapsed_time": 0.6850175857543945,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 31,
+      "elapsed_time": 0.11236858367919922,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 32,
+      "elapsed_time": 0.11093330383300781,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 32,
+      "elapsed_time": 0.061640024185180664,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 32,
+      "elapsed_time": 0.19806146621704102,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_place_design",
+      "iteration": 32,
+      "elapsed_time": 7.493837833404541,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_route_design",
+      "iteration": 32,
+      "elapsed_time": 34.43355345726013,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 32,
+      "elapsed_time": 0.06142616271972656,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_write_checkpoint",
+      "iteration": 32,
+      "elapsed_time": 2.1906096935272217,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_timing_summary",
+      "iteration": 32,
+      "elapsed_time": 0.6857132911682129,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 32,
+      "elapsed_time": 0.11212706565856934,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 33,
+      "elapsed_time": 0.11149334907531738,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 33,
+      "elapsed_time": 0.061591386795043945,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 33,
+      "elapsed_time": 0.19915556907653809,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_place_design",
+      "iteration": 33,
+      "elapsed_time": 7.570809841156006,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_route_design",
+      "iteration": 33,
+      "elapsed_time": 34.42819023132324,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 33,
+      "elapsed_time": 0.06145000457763672,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_write_checkpoint",
+      "iteration": 33,
+      "elapsed_time": 2.2006702423095703,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_timing_summary",
+      "iteration": 33,
+      "elapsed_time": 0.6819055080413818,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 33,
+      "elapsed_time": 0.11209678649902344,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 34,
+      "elapsed_time": 0.1107778549194336,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 34,
+      "elapsed_time": 0.06155276298522949,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 34,
+      "elapsed_time": 0.1994318962097168,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 34,
+      "elapsed_time": 0.11301422119140625,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 34,
+      "elapsed_time": 1.5962481498718262,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 34,
+      "elapsed_time": 21.8845853805542,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 34,
+      "elapsed_time": 0.2619493007659912,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 34,
+      "elapsed_time": 1.5413739681243896,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 34,
+      "elapsed_time": 0.6692161560058594,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 34,
+      "elapsed_time": 0.6688835620880127,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 34,
+      "elapsed_time": 20.776901960372925,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_phys_opt_design",
+      "iteration": 34,
+      "elapsed_time": 47.51304078102112,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 34,
+      "elapsed_time": 0.061372995376586914,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_write_checkpoint",
+      "iteration": 34,
+      "elapsed_time": 2.1343557834625244,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_timing_summary",
+      "iteration": 34,
+      "elapsed_time": 0.6795482635498047,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 34,
+      "elapsed_time": 0.11226391792297363,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 35,
+      "elapsed_time": 0.11130094528198242,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 35,
+      "elapsed_time": 0.06143331527709961,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 35,
+      "elapsed_time": 0.1996307373046875,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 35,
+      "elapsed_time": 0.11293792724609375,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 35,
+      "elapsed_time": 1.5913913249969482,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 35,
+      "elapsed_time": 21.975372552871704,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 35,
+      "elapsed_time": 0.2614481449127197,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 35,
+      "elapsed_time": 1.5524559020996094,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 35,
+      "elapsed_time": 0.6734800338745117,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 35,
+      "elapsed_time": 0.6668760776519775,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 35,
+      "elapsed_time": 20.829235315322876,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_phys_opt_design",
+      "iteration": 35,
+      "elapsed_time": 47.664069175720215,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 35,
+      "elapsed_time": 0.06134295463562012,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_write_checkpoint",
+      "iteration": 35,
+      "elapsed_time": 2.1494603157043457,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_timing_summary",
+      "iteration": 35,
+      "elapsed_time": 0.6859407424926758,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 35,
+      "elapsed_time": 0.11207985877990723,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 36,
+      "elapsed_time": 0.11095595359802246,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 36,
+      "elapsed_time": 0.06129956245422363,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 36,
+      "elapsed_time": 0.19884300231933594,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 36,
+      "elapsed_time": 0.11266827583312988,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 36,
+      "elapsed_time": 1.5974650382995605,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 36,
+      "elapsed_time": 21.920594692230225,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 36,
+      "elapsed_time": 0.2600386142730713,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 36,
+      "elapsed_time": 1.5557773113250732,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 36,
+      "elapsed_time": 0.6735203266143799,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 36,
+      "elapsed_time": 0.6719896793365479,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 36,
+      "elapsed_time": 20.772852659225464,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_phys_opt_design",
+      "iteration": 36,
+      "elapsed_time": 47.56580877304077,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 36,
+      "elapsed_time": 0.06127810478210449,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_write_checkpoint",
+      "iteration": 36,
+      "elapsed_time": 2.152709722518921,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_timing_summary",
+      "iteration": 36,
+      "elapsed_time": 0.6810681819915771,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 36,
+      "elapsed_time": 0.11218380928039551,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 37,
+      "elapsed_time": 0.11096811294555664,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 37,
+      "elapsed_time": 0.06156563758850098,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 37,
+      "elapsed_time": 0.1978590488433838,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 37,
+      "elapsed_time": 0.11320161819458008,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 37,
+      "elapsed_time": 1.5935947895050049,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 37,
+      "elapsed_time": 21.947908401489258,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 37,
+      "elapsed_time": 0.2606220245361328,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 37,
+      "elapsed_time": 1.5528829097747803,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 37,
+      "elapsed_time": 0.6763930320739746,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 37,
+      "elapsed_time": 0.6721782684326172,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 37,
+      "elapsed_time": 20.835392475128174,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_phys_opt_design",
+      "iteration": 37,
+      "elapsed_time": 47.653085470199585,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 37,
+      "elapsed_time": 0.06107759475708008,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_write_checkpoint",
+      "iteration": 37,
+      "elapsed_time": 2.147286891937256,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_timing_summary",
+      "iteration": 37,
+      "elapsed_time": 0.6825265884399414,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 37,
+      "elapsed_time": 0.11229848861694336,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 38,
+      "elapsed_time": 0.11107063293457031,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 38,
+      "elapsed_time": 0.06157422065734863,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 38,
+      "elapsed_time": 0.1997699737548828,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_place_design",
+      "iteration": 38,
+      "elapsed_time": 7.660639524459839,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_route_design",
+      "iteration": 38,
+      "elapsed_time": 34.52379846572876,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 38,
+      "elapsed_time": 0.061287641525268555,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_write_checkpoint",
+      "iteration": 38,
+      "elapsed_time": 2.184577465057373,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_timing_summary",
+      "iteration": 38,
+      "elapsed_time": 0.6862757205963135,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 38,
+      "elapsed_time": 0.11231374740600586,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 39,
+      "elapsed_time": 0.11101865768432617,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 39,
+      "elapsed_time": 0.06162571907043457,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 39,
+      "elapsed_time": 0.20267558097839355,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_place_design",
+      "iteration": 39,
+      "elapsed_time": 7.55112361907959,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_route_design",
+      "iteration": 39,
+      "elapsed_time": 34.4388644695282,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 39,
+      "elapsed_time": 0.06168985366821289,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_write_checkpoint",
+      "iteration": 39,
+      "elapsed_time": 2.2053840160369873,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_timing_summary",
+      "iteration": 39,
+      "elapsed_time": 0.6884500980377197,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 39,
+      "elapsed_time": 0.11225104331970215,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 40,
+      "elapsed_time": 0.11075615882873535,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 40,
+      "elapsed_time": 0.06137657165527344,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 40,
+      "elapsed_time": 0.20446467399597168,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_place_design",
+      "iteration": 40,
+      "elapsed_time": 7.550106048583984,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_route_design",
+      "iteration": 40,
+      "elapsed_time": 34.42332625389099,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 40,
+      "elapsed_time": 0.06140613555908203,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_write_checkpoint",
+      "iteration": 40,
+      "elapsed_time": 2.253882646560669,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_timing_summary",
+      "iteration": 40,
+      "elapsed_time": 0.6870932579040527,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 40,
+      "elapsed_time": 0.11283683776855469,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 41,
+      "elapsed_time": 0.11116147041320801,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 41,
+      "elapsed_time": 0.06165194511413574,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 41,
+      "elapsed_time": 0.20514512062072754,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 41,
+      "elapsed_time": 0.11307692527770996,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 41,
+      "elapsed_time": 1.6070761680603027,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 41,
+      "elapsed_time": 21.952712059020996,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 41,
+      "elapsed_time": 0.2631258964538574,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 41,
+      "elapsed_time": 1.5479028224945068,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 41,
+      "elapsed_time": 0.6700589656829834,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 41,
+      "elapsed_time": 0.6650009155273438,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 41,
+      "elapsed_time": 20.768438577651978,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_phys_opt_design",
+      "iteration": 41,
+      "elapsed_time": 47.588247537612915,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 41,
+      "elapsed_time": 0.06145048141479492,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_write_checkpoint",
+      "iteration": 41,
+      "elapsed_time": 2.155503511428833,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_timing_summary",
+      "iteration": 41,
+      "elapsed_time": 0.6880662441253662,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 41,
+      "elapsed_time": 0.11233305931091309,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 42,
+      "elapsed_time": 0.11098313331604004,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 42,
+      "elapsed_time": 0.061412811279296875,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 42,
+      "elapsed_time": 0.20530438423156738,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_place_design",
+      "iteration": 42,
+      "elapsed_time": 7.660855531692505,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_route_design",
+      "iteration": 42,
+      "elapsed_time": 34.43530607223511,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 42,
+      "elapsed_time": 0.06164264678955078,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_write_checkpoint",
+      "iteration": 42,
+      "elapsed_time": 2.196218490600586,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_timing_summary",
+      "iteration": 42,
+      "elapsed_time": 0.6904928684234619,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 42,
+      "elapsed_time": 0.11217594146728516,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 43,
+      "elapsed_time": 0.11121916770935059,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 43,
+      "elapsed_time": 0.061784982681274414,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 43,
+      "elapsed_time": 0.20796418190002441,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 43,
+      "elapsed_time": 0.1129462718963623,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 43,
+      "elapsed_time": 1.6044015884399414,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 43,
+      "elapsed_time": 21.856775999069214,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 43,
+      "elapsed_time": 0.25974321365356445,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 43,
+      "elapsed_time": 1.5454819202423096,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 43,
+      "elapsed_time": 0.6698546409606934,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 43,
+      "elapsed_time": 0.6661214828491211,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 43,
+      "elapsed_time": 20.821780920028687,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_phys_opt_design",
+      "iteration": 43,
+      "elapsed_time": 47.53796172142029,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 43,
+      "elapsed_time": 0.0613398551940918,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_write_checkpoint",
+      "iteration": 43,
+      "elapsed_time": 2.1582632064819336,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_timing_summary",
+      "iteration": 43,
+      "elapsed_time": 0.6909370422363281,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 43,
+      "elapsed_time": 0.11194062232971191,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 44,
+      "elapsed_time": 0.11097121238708496,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 44,
+      "elapsed_time": 0.06166577339172363,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 44,
+      "elapsed_time": 0.20476651191711426,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_place_design",
+      "iteration": 44,
+      "elapsed_time": 7.504198789596558,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_route_design",
+      "iteration": 44,
+      "elapsed_time": 34.371405601501465,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 44,
+      "elapsed_time": 0.06138491630554199,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_write_checkpoint",
+      "iteration": 44,
+      "elapsed_time": 2.1889519691467285,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_timing_summary",
+      "iteration": 44,
+      "elapsed_time": 0.6881668567657471,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 44,
+      "elapsed_time": 0.11212635040283203,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 45,
+      "elapsed_time": 0.11099815368652344,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 45,
+      "elapsed_time": 0.06226086616516113,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 45,
+      "elapsed_time": 0.20644211769104004,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_place_design",
+      "iteration": 45,
+      "elapsed_time": 7.410858869552612,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_route_design",
+      "iteration": 45,
+      "elapsed_time": 34.548622369766235,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 45,
+      "elapsed_time": 0.06120014190673828,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_write_checkpoint",
+      "iteration": 45,
+      "elapsed_time": 2.18855619430542,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_timing_summary",
+      "iteration": 45,
+      "elapsed_time": 0.6900160312652588,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 45,
+      "elapsed_time": 0.11207413673400879,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 46,
+      "elapsed_time": 0.11118674278259277,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 46,
+      "elapsed_time": 0.061589956283569336,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 46,
+      "elapsed_time": 0.20871901512145996,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_place_design",
+      "iteration": 46,
+      "elapsed_time": 7.498130559921265,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_route_design",
+      "iteration": 46,
+      "elapsed_time": 34.57139492034912,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 46,
+      "elapsed_time": 0.06102585792541504,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_write_checkpoint",
+      "iteration": 46,
+      "elapsed_time": 2.1880359649658203,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_timing_summary",
+      "iteration": 46,
+      "elapsed_time": 0.6881499290466309,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 46,
+      "elapsed_time": 0.11216616630554199,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 47,
+      "elapsed_time": 0.11105108261108398,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 47,
+      "elapsed_time": 0.06183004379272461,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 47,
+      "elapsed_time": 0.20914697647094727,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_place_design",
+      "iteration": 47,
+      "elapsed_time": 7.556964874267578,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_route_design",
+      "iteration": 47,
+      "elapsed_time": 34.59682321548462,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 47,
+      "elapsed_time": 0.06141066551208496,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_write_checkpoint",
+      "iteration": 47,
+      "elapsed_time": 2.195521831512451,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_timing_summary",
+      "iteration": 47,
+      "elapsed_time": 0.6951632499694824,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 47,
+      "elapsed_time": 0.11230182647705078,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 48,
+      "elapsed_time": 0.11127424240112305,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 48,
+      "elapsed_time": 0.06126236915588379,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 48,
+      "elapsed_time": 0.20830512046813965,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_place_design",
+      "iteration": 48,
+      "elapsed_time": 7.541366338729858,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_route_design",
+      "iteration": 48,
+      "elapsed_time": 34.50748682022095,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 48,
+      "elapsed_time": 0.06126713752746582,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_write_checkpoint",
+      "iteration": 48,
+      "elapsed_time": 2.196425437927246,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_timing_summary",
+      "iteration": 48,
+      "elapsed_time": 0.6915302276611328,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 48,
+      "elapsed_time": 0.11256861686706543,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 49,
+      "elapsed_time": 0.1118154525756836,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 49,
+      "elapsed_time": 0.0615231990814209,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 49,
+      "elapsed_time": 0.20930719375610352,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_place_design",
+      "iteration": 49,
+      "elapsed_time": 7.5453431606292725,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_route_design",
+      "iteration": 49,
+      "elapsed_time": 34.544167280197144,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 49,
+      "elapsed_time": 0.06126904487609863,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_write_checkpoint",
+      "iteration": 49,
+      "elapsed_time": 2.2028379440307617,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_timing_summary",
+      "iteration": 49,
+      "elapsed_time": 0.6958489418029785,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 49,
+      "elapsed_time": 0.11221861839294434,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 50,
+      "elapsed_time": 0.11108231544494629,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 50,
+      "elapsed_time": 0.06184053421020508,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 50,
+      "elapsed_time": 0.20827507972717285,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_place_design",
+      "iteration": 50,
+      "elapsed_time": 7.498779296875,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_route_design",
+      "iteration": 50,
+      "elapsed_time": 34.41287159919739,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 50,
+      "elapsed_time": 0.06128120422363281,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_write_checkpoint",
+      "iteration": 50,
+      "elapsed_time": 2.195885181427002,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_timing_summary",
+      "iteration": 50,
+      "elapsed_time": 0.6910972595214844,
+      "wns": -0.911,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 50,
+      "elapsed_time": 0.11206364631652832,
+      "wns": -0.911,
+      "error": false
+    }
+  ]
+}
