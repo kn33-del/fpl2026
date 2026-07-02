@@ -1,0 +1,245 @@
+{
+  "input_dcp": "/home/ubuntu/fpl2026/fpl26_contest_benchmarks/logicnets_jscl_2025.1.dcp",
+  "clock_name": "clk_fpl26contest",
+  "clock_period_ns": 1.5,
+  "baseline_wns": -0.978,
+  "baseline_fmax_mhz": 403.5512510088782,
+  "best_wns": -0.911,
+  "best_fmax_mhz": 414.765657403567,
+  "best_checkpoint": "/home/ubuntu/fpl2026/dcp_optimizer_run-20260702_220201/checkpoints/iter_002.dcp",
+  "current_iter": 5,
+  "stall_count": 0,
+  "cells_blacklisted": [
+    "layer2_reg/data_out_reg[84]",
+    "Explore"
+  ],
+  "nets_blacklisted": [],
+  "iterations": [
+    {
+      "iter": 1,
+      "recipe": "place_design_explore",
+      "batch_size": 1,
+      "targets": [
+        "layer1_reg/data_out_reg[76]_rep__0"
+      ],
+      "wns_before": -0.978,
+      "wns_after": -0.92,
+      "fmax_before": 403.5512510088782,
+      "fmax_after": 413.22314049586777,
+      "delta_fmax": 9.671889486989585,
+      "vivado_runtime_s": 0.6442210674285889,
+      "status": "improved",
+      "checkpoint": "/home/ubuntu/fpl2026/dcp_optimizer_run-20260702_220201/checkpoints/iter_001.dcp",
+      "target_tier": "tier1_violating_paths",
+      "target_candidate_count": 20,
+      "path_delay_classification": "net_delay_bound",
+      "path_delay_breakdown": {
+        "logic_pct": 0.17896,
+        "net_pct": 0.82104,
+        "logic_delay_ns": 0.44,
+        "net_delay_ns": 2.019
+      },
+      "clock_period_ns": 1.5,
+      "achieved_fmax_mhz": 413.22314049586777,
+      "delay_class": "net_delay_bound",
+      "endpoint_type": "REGISTER",
+      "allowed_actions": [
+        "pblock",
+        "replicate_register",
+        "place_design_explore",
+        "phys_opt_design"
+      ],
+      "forbidden_actions": [
+        "lut_opt",
+        "logic_restructure",
+        "fanout_split"
+      ],
+      "llm_chosen_action": "pblock",
+      "validation_result": "ok",
+      "reprompt_count": 0,
+      "why_not_top_forbidden_action": "fanout_split is forbidden for net_delay_bound because net splitting cannot fix high tile spread on routing-dominated paths.",
+      "raw_response": "{\n  \"delay_class_acknowledged\": \"net_delay_bound\",\n  \"endpoint_type_acknowledged\": \"REGISTER\",\n  \"chosen_action\": \"pblock\",\n  \"action_parameters\": {\"strategy\": \"tighten\", \"target_nets\": [\"layer0_reg/M0w[38]\", \"layer0_reg/M0w[19]\"]},\n  \"why_this_fits_delay_class\": \"net_pct=0.82104 indicates routing-bound paths that benefit from placement co-location rather than logic changes.\",\n  \"why_not_top_forbidden_action\": \"fanout_split is forbidden for net_delay_bound because net splitting cannot fix high tile spread on routing-dominated paths.\",\n  \"confidence\": 4\n}"
+    },
+    {
+      "iter": 2,
+      "recipe": "vivado_phys_opt",
+      "batch_size": 1,
+      "targets": [
+        "critical_cell_opt"
+      ],
+      "wns_before": -0.92,
+      "wns_after": -0.911,
+      "fmax_before": 413.22314049586777,
+      "fmax_after": 414.765657403567,
+      "delta_fmax": 1.5425169076992233,
+      "vivado_runtime_s": 0.6506962776184082,
+      "status": "improved",
+      "checkpoint": "/home/ubuntu/fpl2026/dcp_optimizer_run-20260702_220201/checkpoints/iter_002.dcp",
+      "target_tier": "tier1_violating_paths",
+      "target_candidate_count": 20,
+      "path_delay_classification": "net_delay_bound",
+      "path_delay_breakdown": {
+        "logic_pct": 0.21422,
+        "net_pct": 0.78578,
+        "logic_delay_ns": 0.514,
+        "net_delay_ns": 1.885
+      },
+      "clock_period_ns": 1.5,
+      "achieved_fmax_mhz": 414.765657403567,
+      "delay_class": "net_delay_bound",
+      "endpoint_type": "REGISTER",
+      "allowed_actions": [
+        "pblock",
+        "replicate_register",
+        "place_design_explore",
+        "phys_opt_design"
+      ],
+      "forbidden_actions": [
+        "lut_opt",
+        "logic_restructure",
+        "fanout_split"
+      ],
+      "llm_chosen_action": "replicate_register",
+      "validation_result": "ok",
+      "reprompt_count": 0,
+      "why_not_top_forbidden_action": "fanout_split is forbidden under net_delay_bound as it cannot resolve high tile spread without first improving placement.",
+      "raw_response": "{\n  \"delay_class_acknowledged\": \"net_delay_bound\",\n  \"endpoint_type_acknowledged\": \"REGISTER\",\n  \"chosen_action\": \"replicate_register\",\n  \"action_parameters\": {\"nets\": [\"layer1_reg/M1w[47]\", \"layer0_reg/M0w[19]\"], \"replication_factor\": 2},\n  \"why_this_fits_delay_class\": \"net_pct=0.78578 shows routing-bound paths where register replication reduces effective fanout and enables better placement.\",\n  \"why_not_top_forbidden_action\": \"fanout_split is forbidden under net_delay_bound as it cannot resolve high tile spread without first improving placement.\",\n  \"confidence\": 4\n}"
+    },
+    {
+      "iter": 3,
+      "recipe": "place_design_explore",
+      "batch_size": 1,
+      "targets": [
+        "layer2_reg/data_out_reg[84]"
+      ],
+      "wns_before": -0.911,
+      "wns_after": -0.911,
+      "fmax_before": 414.765657403567,
+      "fmax_after": 414.765657403567,
+      "delta_fmax": 0.0,
+      "vivado_runtime_s": 0.643155574798584,
+      "status": "no_improvement",
+      "checkpoint": "/home/ubuntu/fpl2026/dcp_optimizer_run-20260702_220201/checkpoints/iter_003.dcp",
+      "target_tier": "tier1_violating_paths",
+      "target_candidate_count": 20,
+      "path_delay_classification": "net_delay_bound",
+      "path_delay_breakdown": {
+        "logic_pct": 0.1355,
+        "net_pct": 0.8645,
+        "logic_delay_ns": 0.324,
+        "net_delay_ns": 2.067
+      },
+      "clock_period_ns": 1.5,
+      "achieved_fmax_mhz": 414.765657403567,
+      "delay_class": "net_delay_bound",
+      "endpoint_type": "REGISTER",
+      "allowed_actions": [
+        "pblock",
+        "replicate_register",
+        "place_design_explore",
+        "phys_opt_design"
+      ],
+      "forbidden_actions": [
+        "lut_opt",
+        "logic_restructure",
+        "fanout_split"
+      ],
+      "llm_chosen_action": "place_design_explore",
+      "validation_result": "ok",
+      "reprompt_count": 0,
+      "why_not_top_forbidden_action": "fanout_split remains forbidden for net_delay_bound since it cannot mitigate placement spread on routing-dominated nets.",
+      "raw_response": "{\n  \"delay_class_acknowledged\": \"net_delay_bound\",\n  \"endpoint_type_acknowledged\": \"REGISTER\",\n  \"chosen_action\": \"place_design_explore\",\n  \"action_parameters\": {\"directive\": \"Explore\"},\n  \"why_this_fits_delay_class\": \"net_pct=0.8645 indicates routing-bound paths requiring placement refinement to reduce high tile spread.\",\n  \"why_not_top_forbidden_action\": \"fanout_split remains forbidden for net_delay_bound since it cannot mitigate placement spread on routing-dominated nets.\",\n  \"confidence\": 4\n}"
+    },
+    {
+      "iter": 4,
+      "recipe": "place_design_explore",
+      "batch_size": 1,
+      "targets": [
+        "layer2_reg/data_out_reg[84]"
+      ],
+      "wns_before": -0.911,
+      "wns_after": -0.911,
+      "fmax_before": 414.765657403567,
+      "fmax_after": 414.765657403567,
+      "delta_fmax": 0.0,
+      "vivado_runtime_s": 0.6470532417297363,
+      "status": "no_improvement",
+      "checkpoint": "/home/ubuntu/fpl2026/dcp_optimizer_run-20260702_220201/checkpoints/iter_004.dcp",
+      "target_tier": "tier1_violating_paths",
+      "target_candidate_count": 20,
+      "path_delay_classification": "net_delay_bound",
+      "path_delay_breakdown": {
+        "logic_pct": 0.1355,
+        "net_pct": 0.8645,
+        "logic_delay_ns": 0.324,
+        "net_delay_ns": 2.067
+      },
+      "clock_period_ns": 1.5,
+      "achieved_fmax_mhz": 414.765657403567,
+      "delay_class": "net_delay_bound",
+      "endpoint_type": "REGISTER",
+      "allowed_actions": [
+        "pblock",
+        "replicate_register",
+        "place_design_explore",
+        "phys_opt_design"
+      ],
+      "forbidden_actions": [
+        "lut_opt",
+        "logic_restructure",
+        "fanout_split"
+      ],
+      "llm_chosen_action": "pblock",
+      "validation_result": "ok",
+      "reprompt_count": 0,
+      "why_not_top_forbidden_action": "fanout_split is forbidden for net_delay_bound because splitting nets does not resolve excessive tile spread on routing-dominated paths.",
+      "raw_response": "{\n  \"delay_class_acknowledged\": \"net_delay_bound\",\n  \"endpoint_type_acknowledged\": \"REGISTER\",\n  \"chosen_action\": \"pblock\",\n  \"action_parameters\": {\"strategy\": \"tighten\", \"target_region\": \"layer2\"},\n  \"why_this_fits_delay_class\": \"net_pct=0.8645 indicates routing-bound paths where placement containment via pblock reduces high tile spread.\",\n  \"why_not_top_forbidden_action\": \"fanout_split is forbidden for net_delay_bound because splitting nets does not resolve excessive tile spread on routing-dominated paths.\",\n  \"confidence\": 4\n}"
+    },
+    {
+      "iter": 5,
+      "recipe": "vivado_phys_opt",
+      "batch_size": 1,
+      "targets": [
+        "Explore"
+      ],
+      "wns_before": -0.911,
+      "wns_after": -0.911,
+      "fmax_before": 414.765657403567,
+      "fmax_after": 414.765657403567,
+      "delta_fmax": 0.0,
+      "vivado_runtime_s": 0.6519789695739746,
+      "status": "no_improvement",
+      "checkpoint": "/home/ubuntu/fpl2026/dcp_optimizer_run-20260702_220201/checkpoints/iter_005.dcp",
+      "target_tier": "tier1_violating_paths",
+      "target_candidate_count": 20,
+      "path_delay_classification": "net_delay_bound",
+      "path_delay_breakdown": {
+        "logic_pct": 0.1355,
+        "net_pct": 0.8645,
+        "logic_delay_ns": 0.324,
+        "net_delay_ns": 2.067
+      },
+      "clock_period_ns": 1.5,
+      "achieved_fmax_mhz": 414.765657403567,
+      "delay_class": "net_delay_bound",
+      "endpoint_type": "REGISTER",
+      "allowed_actions": [
+        "pblock",
+        "replicate_register",
+        "place_design_explore",
+        "phys_opt_design"
+      ],
+      "forbidden_actions": [
+        "lut_opt",
+        "logic_restructure",
+        "fanout_split"
+      ],
+      "llm_chosen_action": "phys_opt_design",
+      "validation_result": "ok",
+      "reprompt_count": 0,
+      "why_not_top_forbidden_action": "fanout_split is forbidden under net_delay_bound as net splitting cannot address high tile spread without prior placement improvements.",
+      "raw_response": "{\n  \"delay_class_acknowledged\": \"net_delay_bound\",\n  \"endpoint_type_acknowledged\": \"REGISTER\",\n  \"chosen_action\": \"phys_opt_design\",\n  \"action_parameters\": {\"directive\": \"Explore\"},\n  \"why_this_fits_delay_class\": \"net_pct=0.8645 indicates routing-bound paths where phys_opt_design can apply placement-aware netlist transformations to reduce delays.\",\n  \"why_not_top_forbidden_action\": \"fanout_split is forbidden under net_delay_bound as net splitting cannot address high tile spread without prior placement improvements.\",\n  \"confidence\": 3\n}"
+    }
+  ],
+  "started_at_epoch_s": 1783029752.0202696
+}
