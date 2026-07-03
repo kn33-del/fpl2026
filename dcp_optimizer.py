@@ -64,6 +64,8 @@ DECISION_SPREAD_TILE_THRESHOLD = 30
 PHYS_OPT_MIN_USEFUL_WNS_NS = -0.5
 STUCK_ITERATION_THRESHOLD = 3
 WNS_IMPROVEMENT_EPSILON_NS = 1e-4
+ACTION_FAILURE_EXHAUSTION_THRESHOLD = 3
+ACTION_FAILURE_COOLDOWN_ITERS = 5
 RAPIDWRIGHT_STRUCTURAL_ACTIONS = [
     "rapidwright_optimize_cell_placement",
     "rapidwright_analyze_net_detour",
@@ -731,6 +733,9 @@ class DCPOptimizer(DCPOptimizerBase):
         self.last_recorded_wns: Optional[float] = None
         self.consecutive_no_improvement = 0
         self.structural_override_active = False
+        self.action_failure_counts: dict[str, int] = {}
+        self.action_failure_memory: dict[str, dict] = {}
+        self.last_no_action_failure_key: Optional[tuple] = None
         self.phys_opt_retime_supported: Optional[bool] = None
         self.implementation_license_available: Optional[bool] = None
     
@@ -1389,6 +1394,14 @@ class DCPOptimizer(DCPOptimizerBase):
         if failure.get("error_type") == "vivado_license_failure":
             self.implementation_license_available = False
             logger.warning("Vivado Implementation license failure observed; future implementation actions will be filtered.")
+        failed_action = str(failure.get("command") or self.last_decision_trace.get("llm_chosen_action") or self.last_recipe or "")
+        failed_targets = list(self.last_targets)
+        if self._is_no_action_failure(failure):
+            failure_key = (failed_action, tuple(failed_targets), self.iteration)
+            if self.last_no_action_failure_key != failure_key:
+                self._blacklist_failure_targets(failed_action, failed_targets)
+                self._remember_no_action_failure(failed_action, failed_targets)
+                self.last_no_action_failure_key = failure_key
         if self.checkpoint_manager is None:
             return
         iteration = {
@@ -1407,6 +1420,8 @@ class DCPOptimizer(DCPOptimizerBase):
             "error_type": failure.get("error_type", "vivado_command_failure"),
             "checkpoint": None,
             "rapidwright_edit_summary": self.last_rapidwright_edit_summary,
+            "action_failure_memory": self._serializable_action_failure_memory(),
+            "action_failure_counts": self._serializable_action_failure_counts(),
             **self.last_decision_trace,
         }
         self.checkpoint_manager.current_iter += 1
@@ -1480,6 +1495,8 @@ class DCPOptimizer(DCPOptimizerBase):
                     self.consecutive_no_improvement,
                     allowed,
                 )
+        allowed = self._filter_exhausted_actions(allowed)
+        exhausted_actions = self._active_exhausted_actions()
         return {
             "iteration": self.iteration,
             "wns_ns": current_wns,
@@ -1504,6 +1521,9 @@ class DCPOptimizer(DCPOptimizerBase):
             "stuck_iterations": self.consecutive_no_improvement,
             "consecutive_no_improvement": self.consecutive_no_improvement,
             "structural_override_active": structural_override,
+            "action_failure_memory": self._serializable_action_failure_memory(),
+            "action_failure_counts": self._serializable_action_failure_counts(),
+            "exhausted_actions": exhausted_actions,
             "allowed_actions": allowed,
             "forbidden_actions": forbidden,
         }
@@ -1622,6 +1642,146 @@ class DCPOptimizer(DCPOptimizerBase):
     def _result_has_error(self, payload: dict) -> bool:
         return bool(payload.get("error") or payload.get("success") is False)
 
+    def _filter_exhausted_actions(self, allowed: list[str]) -> list[str]:
+        active_exhausted = set(self._active_exhausted_actions())
+        active_exhausted.update(
+            action
+            for action, count in self.action_failure_counts.items()
+            if count >= ACTION_FAILURE_EXHAUSTION_THRESHOLD
+        )
+        if not active_exhausted:
+            return allowed
+        filtered = [action for action in allowed if action not in active_exhausted]
+        if filtered:
+            logger.warning(
+                "Action failure memory: suppressing exhausted actions %s until cooldown expires.",
+                sorted(active_exhausted),
+            )
+            return filtered
+        return allowed
+
+    def _active_exhausted_actions(self) -> list[str]:
+        exhausted: list[str] = []
+        current_fingerprint = self._target_fingerprint()
+        for action, memory in self.action_failure_memory.items():
+            if memory.get("target_fingerprint") != current_fingerprint:
+                continue
+            cooldown_until = int(memory.get("cooldown_until_iter") or -1)
+            if cooldown_until >= self.iteration:
+                exhausted.append(action)
+        return exhausted
+
+    def _serializable_action_failure_memory(self) -> dict:
+        return {
+            action: dict(memory)
+            for action, memory in self.action_failure_memory.items()
+            if memory.get("consecutive_no_action_failures") or int(memory.get("cooldown_until_iter") or -1) >= self.iteration
+        }
+
+    def _serializable_action_failure_counts(self) -> dict[str, int]:
+        return {
+            action: count
+            for action, count in self.action_failure_counts.items()
+            if count > 0
+        }
+
+    def _is_no_action_failure(self, failure: dict) -> bool:
+        error_type = str(failure.get("error_type") or "").lower()
+        message = str(failure.get("message") or "").lower()
+        return (
+            error_type == "no_action_target"
+            or "no critical cells were available" in message
+            or "no legal placement" in message
+            or "no action target" in message
+            or "selected but no" in message
+        )
+
+    def _target_fingerprint(self) -> str:
+        candidates = []
+        for candidate in self.current_target_candidates[:5]:
+            candidates.append({
+                "slack": candidate.get("slack"),
+                "startpoint": candidate.get("startpoint"),
+                "endpoint": candidate.get("endpoint"),
+            })
+        payload = {
+            "tier": self.target_tier,
+            "delay_class": self.path_delay_classification,
+            "candidates": candidates,
+        }
+        return json.dumps(payload, sort_keys=True)
+
+    def _remember_no_action_failure(self, action: str, targets: list[str]) -> None:
+        if not action:
+            return
+        fingerprint = self._target_fingerprint()
+        memory = self.action_failure_memory.get(action, {})
+        if memory.get("target_fingerprint") != fingerprint:
+            memory = {
+                "consecutive_no_action_failures": 0,
+                "failed_targets": [],
+                "target_fingerprint": fingerprint,
+            }
+        failed_targets = list(memory.get("failed_targets") or [])
+        for target in targets:
+            if target and target not in failed_targets:
+                failed_targets.append(target)
+        count = int(memory.get("consecutive_no_action_failures") or 0) + 1
+        self.action_failure_counts[action] = self.action_failure_counts.get(action, 0) + 1
+        memory.update({
+            "consecutive_no_action_failures": count,
+            "failed_targets": failed_targets,
+            "last_failed_iter": self.iteration,
+            "target_fingerprint": fingerprint,
+        })
+        if count >= ACTION_FAILURE_EXHAUSTION_THRESHOLD:
+            memory["cooldown_until_iter"] = self.iteration + ACTION_FAILURE_COOLDOWN_ITERS
+            logger.warning(
+                "Action failure memory: %s exhausted after %d no-action failures; cooling down until iteration %d.",
+                action,
+                count,
+                memory["cooldown_until_iter"],
+            )
+        self.action_failure_memory[action] = memory
+
+    def _reset_action_failure_memory(self, action: str) -> None:
+        self.action_failure_counts[action] = 0
+        if action in self.action_failure_memory:
+            self.action_failure_memory[action]["consecutive_no_action_failures"] = 0
+            self.action_failure_memory[action]["cooldown_until_iter"] = -1
+
+    def _blacklist_failure_targets(self, action: str, targets: list[str]) -> None:
+        if self.checkpoint_manager is None or not targets:
+            return
+        if action in {"rapidwright_optimize_cell_placement", "rapidwright_analyze_net_detour"}:
+            for target in targets:
+                if self.checkpoint_manager._is_blacklistable_target(target) and target not in self.checkpoint_manager.cells_blacklisted:
+                    self.checkpoint_manager.cells_blacklisted.append(str(target))
+            persist = getattr(self.checkpoint_manager, "_persist_history", None)
+            if callable(persist):
+                persist()
+        elif action in {"rapidwright_optimize_fanout", "fanout_split"}:
+            for target in targets:
+                if self.checkpoint_manager._is_blacklistable_target(target) and target not in self.checkpoint_manager.nets_blacklisted:
+                    self.checkpoint_manager.nets_blacklisted.append(str(target))
+            persist = getattr(self.checkpoint_manager, "_persist_history", None)
+            if callable(persist):
+                persist()
+
+    def _cell_blacklist(self) -> set[str]:
+        if self.checkpoint_manager is None:
+            return set()
+        return set(self.checkpoint_manager.get_blacklist().get("cells", []))
+
+    def _filter_blacklisted_cells(self, cells: list[str]) -> list[str]:
+        blacklist = self._cell_blacklist()
+        filtered: list[str] = []
+        for cell in cells:
+            cell = str(cell).strip()
+            if cell and cell not in blacklist and cell not in filtered:
+                filtered.append(cell)
+        return filtered
+
     def _critical_path_cell_candidates(self, timing_context: dict, limit: int = 10) -> list[str]:
         candidates: list[str] = []
         worst_path = timing_context.get("worst_path", {})
@@ -1640,7 +1800,21 @@ class DCPOptimizer(DCPOptimizerBase):
                 if cell and cell not in candidates:
                     candidates.append(cell)
 
-        return candidates[:limit]
+        return self._filter_blacklisted_cells(candidates)[:limit]
+
+    def _path_identifier_targets(self, timing_context: dict) -> list[str]:
+        worst_path = timing_context.get("worst_path", {})
+        targets = []
+        for key in ("start_cell", "end_cell"):
+            value = str(worst_path.get(key) or "").strip("{} ")
+            if value and value not in targets:
+                targets.append(value)
+        if not targets:
+            start = str(worst_path.get("start_cell") or "").strip()
+            end = str(worst_path.get("end_cell") or "").strip()
+            if start or end:
+                targets.append(f"{start}->{end}")
+        return targets
 
     async def _extract_critical_path_cells_file(self, num_paths: int = 20) -> Path:
         output_file = Path(self.temp_dir) / f"critical_path_cells_iter_{self.iteration:03d}.json"
@@ -1920,6 +2094,8 @@ class DCPOptimizer(DCPOptimizerBase):
         self.no_improvement_count = self.checkpoint_manager.stall_count
         self.consecutive_no_improvement = self.checkpoint_manager.stall_count
         self.last_recorded_wns = wns
+        if iteration.get("status") in {"improved", "marginal"}:
+            self._reset_action_failure_memory(self.last_recipe)
 
         history_fields = {
             "target_tier": self.target_tier,
@@ -1930,6 +2106,8 @@ class DCPOptimizer(DCPOptimizerBase):
             "achieved_fmax_mhz": achieved_fmax,
             "no_improvement_count": self.no_improvement_count,
             "consecutive_no_improvement": self.consecutive_no_improvement,
+            "action_failure_memory": self._serializable_action_failure_memory(),
+            "action_failure_counts": self._serializable_action_failure_counts(),
             **self.last_decision_trace,
         }
         if self.last_rapidwright_edit_summary is not None:
@@ -2396,6 +2574,9 @@ class DCPOptimizer(DCPOptimizerBase):
             "structural_override_active": timing_context.get("structural_override_active", False),
             "stuck_iterations": timing_context.get("stuck_iterations", 0),
             "consecutive_no_improvement": timing_context.get("consecutive_no_improvement", 0),
+            "exhausted_actions": list(timing_context.get("exhausted_actions", [])),
+            "action_failure_memory": dict(timing_context.get("action_failure_memory", {})),
+            "action_failure_counts": dict(timing_context.get("action_failure_counts", {})),
             "validation_result": reason,
             "reprompt_count": reprompt_count,
             "why_not_top_forbidden_action": decision.get("why_not_top_forbidden_action"),
@@ -2580,7 +2761,7 @@ class DCPOptimizer(DCPOptimizerBase):
                 )
             candidates = payload.get("candidates") if isinstance(payload.get("candidates"), list) else []
             self.last_recipe = action
-            self.last_targets = [str(item.get("cell")) for item in candidates[:10] if item.get("cell")]
+            self.last_targets = self._filter_blacklisted_cells([str(item.get("cell")) for item in candidates[:10] if item.get("cell")])
             self.last_batch_size = len(self.last_targets)
             self.last_rapidwright_edit_summary = {
                 "action": action,
@@ -2591,9 +2772,11 @@ class DCPOptimizer(DCPOptimizerBase):
                 "candidates_found": payload.get("candidates_found", len(candidates)),
                 "top_candidates": candidates[:10],
             }
+            self._reset_action_failure_memory(action)
             return detour_result
         if action == "rapidwright_optimize_cell_placement":
-            cell_names = [str(cell) for cell in params.get("cell_names", []) if str(cell).strip()]
+            attempted_cells = [str(cell) for cell in params.get("cell_names", []) if str(cell).strip()]
+            cell_names = self._filter_blacklisted_cells(attempted_cells)
             if not cell_names:
                 try:
                     pins_file = await self._extract_critical_path_pins_file(num_paths=int(params.get("num_paths") or 20))
@@ -2607,12 +2790,21 @@ class DCPOptimizer(DCPOptimizerBase):
                     )
                     detour_payload = self._parse_json_result(detour_result)
                     candidates = detour_payload.get("candidates") if isinstance(detour_payload.get("candidates"), list) else []
-                    cell_names = [str(item.get("cell")) for item in candidates if item.get("cell")]
+                    attempted_cells = [str(item.get("cell")) for item in candidates if item.get("cell")]
+                    cell_names = self._filter_blacklisted_cells(attempted_cells)
                 except Exception as exc:
                     logger.warning("Could not derive placement cells from detour analysis: %s", exc)
             if not cell_names:
                 cell_names = self._critical_path_cell_candidates(timing_context)
+                attempted_cells = cell_names or attempted_cells
             if not cell_names:
+                fallback_targets = attempted_cells or self._path_identifier_targets(timing_context)
+                self.last_recipe = action
+                self.last_targets = fallback_targets
+                self.last_batch_size = len(fallback_targets)
+                self._blacklist_failure_targets(action, fallback_targets)
+                self._remember_no_action_failure(action, fallback_targets)
+                self.last_no_action_failure_key = (action, tuple(fallback_targets), self.iteration)
                 return self._failure_json(
                     "no_action_target",
                     "rapidwright_optimize_cell_placement selected but no critical cells were available.",
@@ -2629,12 +2821,20 @@ class DCPOptimizer(DCPOptimizerBase):
             )
             payload = self._parse_json_result(result)
             if self._result_has_error(payload):
+                message = str(payload.get("error") or payload.get("message") or result[:300])
+                error_type = "no_action_target" if self._is_no_action_failure({"error_type": payload.get("error_type"), "message": message}) else "rapidwright_cell_placement_failed"
+                if error_type == "no_action_target":
+                    self._blacklist_failure_targets(action, cell_names)
+                    self._remember_no_action_failure(action, cell_names)
+                    self.last_no_action_failure_key = (action, tuple(cell_names), self.iteration)
                 return self._failure_json(
-                    "rapidwright_cell_placement_failed",
-                    payload.get("error", result[:300]),
+                    error_type,
+                    message,
                     command=action,
                 )
             self.last_rapidwright_edit_summary = self._summarize_cell_placement(payload, cell_names)
+            if int(self.last_rapidwright_edit_summary.get("cells_moved") or 0) > 0:
+                self._reset_action_failure_memory(action)
             dcp = self.run_dir / f"cell_placement_iter_{self.iteration:03d}.dcp"
             result += "\n\n" + await self.call_tool("rapidwright_write_checkpoint", {"dcp_path": str(dcp), "overwrite": True})
             result += "\n\n" + await self.call_tool("vivado_open_checkpoint", {"dcp_path": str(dcp), "timeout": 600})

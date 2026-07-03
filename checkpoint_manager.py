@@ -155,6 +155,18 @@ class CheckpointManager:
             "nets": list(self.nets_blacklisted),
         }
 
+    def add_to_blacklist(self, key: str, targets: list[str]) -> None:
+        """Persistently add concrete cell or net targets to a blacklist."""
+        if key not in {"cells_blacklisted", "nets_blacklisted"}:
+            raise ValueError(f"Unknown blacklist key: {key}")
+        next_state = self._snapshot_state()
+        next_blacklist = list(next_state[key])
+        for target in targets:
+            if self._is_blacklistable_target(target):
+                self._append_unique(next_blacklist, str(target))
+        next_state[key] = next_blacklist
+        self._persist_state(next_state)
+
     def summary(self) -> str:
         """Return a one-paragraph summary of run progress."""
         if self.baseline_fmax_mhz is None or self.best_fmax_mhz is None:
