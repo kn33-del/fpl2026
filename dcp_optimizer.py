@@ -848,6 +848,11 @@ class DCPOptimizer(DCPOptimizerBase):
             else:
                 result = await session.call_tool(actual_name, arguments)
 
+                if getattr(result, "isError", False):
+                    error_text = "\n".join(c.text for c in result.content if hasattr(c, "text"))
+                    logger.error(f"{tool_name} returned an MCP error, not Vivado output: {error_text[:500]}")
+                    raise VivadoToolCallError(tool_name, error_text)   # define this exception near WNSParseError
+
                 # Extract text content from result
                 if result.content:
                     text_parts = [c.text for c in result.content if hasattr(c, 'text')]
@@ -871,6 +876,12 @@ class DCPOptimizer(DCPOptimizerBase):
                                 self.best_wns = current_wns
                             else:
                                 logger.info(f"Current WNS (clock: {self.target_clock}): {current_wns:.3f} ns{fmax_str} (best is still {self.best_wns:.3f} ns)")
+                    except VivadoToolCallError as e:
+                        logger.error(f"Vivado tool call failed ({e.tool_name}); reopening last good checkpoint to resync state.")
+                        best_ckpt = self.checkpoint_manager.get_best_checkpoint() if self.checkpoint_manager else None
+                        if best_ckpt:
+                            await self.call_tool("vivado_open_checkpoint", {"dcp_path": best_ckpt}, internal=True)
+                        continue
                     except Exception as e:
                         logger.warning(f"Failed to get clock-specific WNS, falling back to overall: {e}")
                         self.target_clock = None  # Fall through to overall WNS parsing

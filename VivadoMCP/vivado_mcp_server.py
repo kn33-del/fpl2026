@@ -19,6 +19,7 @@ import re
 import signal
 import shutil
 import sys
+import uuid
 from typing import Optional, Dict, Any
 
 import pexpect
@@ -47,6 +48,7 @@ _vivado_log_file: Optional[str] = None
 _vivado_journal_file: Optional[str] = None
 _design_open: bool = False
 _command_pending: bool = False  # True if a command timed out and may still be running
+_command_sequence: int = 0
 
 
 _VIVADO_FAILURE_PATTERNS = [
@@ -55,6 +57,17 @@ _VIVADO_FAILURE_PATTERNS = [
     "valid license was not found",
     "Failed to get the license",
 ]
+
+_LEGACY_SENTINEL_PATTERNS = [
+    "route_status_start",
+    "timing_summary_start",
+    "fanout_analysis_start",
+    "get_wns_start",
+]
+
+
+class VivadoPipeDesyncError(RuntimeError):
+    """Raised when the persistent Vivado Tcl pipe can no longer be trusted."""
 
 
 def classify_vivado_failure(command: str, output: str) -> Optional[Dict[str, Any]]:
@@ -180,6 +193,10 @@ def start_vivado(log_file: Optional[str] = None, journal_file: Optional[str] = N
     # Get the PID for reliable cleanup
     _vivado_pid = _vivado_process.pid
     logger.info(f"Vivado process started with PID: {_vivado_pid}")
+    try:
+        _vivado_process.setecho(False)
+    except Exception:
+        logger.debug("Could not disable Vivado pty echo", exc_info=True)
     
     # Wait for Vivado prompt
     logger.info("Waiting for Vivado prompt...")
@@ -201,6 +218,73 @@ def wait_for_prompt(proc: pexpect.spawn, timeout: float) -> str:
     """Wait for Vivado prompt and return captured output."""
     proc.expect(VIVADO_PROMPT, timeout=timeout)
     return proc.before
+
+
+def make_command_token() -> str:
+    """Create a unique token for bracketing one Tcl command's output."""
+    global _command_sequence
+    _command_sequence += 1
+    return f"{_command_sequence}_{uuid.uuid4().hex}"
+
+
+def wrap_tcl_command(command: str, token: str) -> tuple[str, str, str]:
+    """Wrap Tcl in unique sentinels and print command return values explicitly."""
+    begin = f"VIVADO_CMD_BEGIN_{token}"
+    end = f"VIVADO_CMD_END_{token}"
+    wrapped = (
+        "set __codex_begin {VIVADO_CMD_BEGIN_}\n"
+        f"append __codex_begin {{{token}}}\n"
+        "set __codex_end {VIVADO_CMD_END_}\n"
+        f"append __codex_end {{{token}}}\n"
+        "puts $__codex_begin\n"
+        "flush stdout\n"
+        "set __codex_cmd_result {}\n"
+        "if {[catch {\n"
+        f"{command}\n"
+        "} __codex_cmd_result __codex_cmd_options]} {\n"
+        "    puts {__VIVADO_CMD_ERROR__}\n"
+        "    puts $__codex_cmd_result\n"
+        "} elseif {$__codex_cmd_result ne {}} {\n"
+        "    puts $__codex_cmd_result\n"
+        "}\n"
+        "puts $__codex_end\n"
+        "flush stdout"
+    )
+    return wrapped, begin, end
+
+
+def detect_pipe_desync(output: str, token: str, command: str) -> Optional[str]:
+    """Detect obvious evidence that another command's output leaked into this one."""
+    text = output or ""
+    for marker in _LEGACY_SENTINEL_PATTERNS:
+        if marker in text:
+            return f"captured legacy sentinel marker {marker!r}"
+
+    for match in re.finditer(r"VIVADO_CMD_(?:BEGIN|END)_([0-9]+_[0-9a-f]{32})", text):
+        if match.group(1) != token:
+            return f"captured sentinel for another command: {match.group(0)}"
+
+    if re.search(r"\r?\nVivado% ", text):
+        return "captured Vivado prompt inside command output"
+
+    return None
+
+
+def effective_command_timeout(command: str, requested_timeout: Optional[float]) -> float:
+    """Use long timeout floors for implementation commands that legitimately run for minutes."""
+    timeout = requested_timeout if requested_timeout is not None else 300
+    stripped = command.strip().lower()
+    long_running_prefixes = (
+        "route_design",
+        "place_design",
+        "phys_opt_design",
+        "opt_design",
+        "write_checkpoint",
+        "open_checkpoint",
+    )
+    if stripped.startswith(long_running_prefixes):
+        return max(float(timeout), 3600.0)
+    return float(timeout)
 
 
 def sync_after_timeout(proc: pexpect.spawn) -> str:
@@ -239,43 +323,57 @@ def run_tcl_command(command: str, timeout: Optional[float] = None) -> str:
     
     proc = ensure_vivado()
     
-    # If a previous command timed out, wait for it to complete first
     if _command_pending:
-        sync_output = sync_after_timeout(proc)
-        if sync_output:
-            # Previous command completed, we can continue
-            pass
+        logger.error("vivado_pipe_desync_detected: previous command timed out; restarting Vivado before new command.")
+        restart_vivado_process()
+        raise VivadoPipeDesyncError("Previous Vivado command timed out; process restarted to avoid pipe desync.")
     
-    # Use provided timeout or default
-    effective_timeout = timeout if timeout is not None else 300
+    # Use provided timeout or default, with floors for long-running commands.
+    effective_timeout = effective_command_timeout(command, timeout)
     
     # Log the command (truncate if very long)
     cmd_log = command if len(command) < 200 else command[:200] + "..."
     logger.info(f"Executing Tcl command: {cmd_log}")
     
-    # Send command
-    proc.sendline(command)
+    token = make_command_token()
+    wrapped_command, begin_sentinel, end_sentinel = wrap_tcl_command(command, token)
+    
+    # Send command wrapped in unique begin/end sentinels.  We wait for the
+    # matching end sentinel, then drain the Tcl prompt, so verbose commands
+    # cannot bleed unread output into the next command.
+    proc.sendline(wrapped_command)
     
     try:
-        # Wait for prompt and capture output
-        proc.expect(VIVADO_PROMPT, timeout=effective_timeout)
-        
-        # Get output (everything between command echo and prompt)
+        proc.expect(re.escape(begin_sentinel), timeout=effective_timeout)
+        proc.expect(re.escape(end_sentinel), timeout=effective_timeout)
         output = proc.before
-        
-        # Remove the echoed command from output (first line)
-        lines = output.split("\n")
-        if lines and command in lines[0]:
-            output = "\n".join(lines[1:])
-        
+        wait_for_prompt(proc, timeout=60)
+        _command_pending = False
+
+        desync_reason = detect_pipe_desync(output, token, command)
+        if desync_reason:
+            logger.error("vivado_pipe_desync_detected: %s while running %s", desync_reason, cmd_log)
+            restart_vivado_process()
+            raise VivadoPipeDesyncError(desync_reason)
+
+        if "__VIVADO_CMD_ERROR__" in output:
+            logger.warning("Vivado command reported Tcl error: %s", cmd_log)
+
         logger.info(f"Command completed successfully")
         return output.strip()
     
     except pexpect.TIMEOUT:
-        # Mark that we have a pending command
         _command_pending = True
-        logger.error(f"Command timed out after {effective_timeout}s: {cmd_log}")
-        raise
+        logger.error(
+            "vivado_pipe_desync_detected: command timed out after %ss before unique sentinel %s: %s",
+            effective_timeout,
+            end_sentinel,
+            cmd_log,
+        )
+        restart_vivado_process()
+        raise VivadoPipeDesyncError(
+            f"Command timed out before unique end sentinel {end_sentinel}; Vivado restarted to resync pipe."
+        )
 
 
 def restart_vivado_process() -> str:
@@ -316,9 +414,6 @@ def get_critical_high_fanout_nets(
     """
     import re
     from collections import defaultdict
-    
-    # Flush buffer before generating timing report
-    run_tcl_command("puts {fanout_analysis_start}", timeout=5)
     
     # Generate detailed timing report for multiple paths
     cmd = f"report_timing -return_string -max_paths {num_paths} -delay_type max -sort_by slack"
@@ -1704,15 +1799,11 @@ async def call_tool(name: str, arguments: dict):
         
         elif name == "report_route_status":
             timeout = arguments.get("timeout", 300)
-            # Run a quick command first to flush any leftover output from previous commands
-            run_tcl_command("puts {route_status_start}", timeout=5)
             output = run_tcl_command("report_route_status -return_string", timeout=timeout)
             return [TextContent(type="text", text=output)]
         
         elif name == "report_timing_summary":
             timeout = arguments.get("timeout", 300)
-            # Run a quick command first to flush any leftover output from previous commands
-            run_tcl_command("puts {timing_summary_start}", timeout=5)
             output = run_tcl_command("report_timing_summary -return_string", timeout=timeout)
             return [TextContent(type="text", text=output)]
         
@@ -1898,6 +1989,16 @@ async def call_tool(name: str, arguments: dict):
         return [TextContent(
             type="text",
             text="Error: Vivado process terminated unexpectedly. Use restart_vivado to restart."
+        )]
+    except VivadoPipeDesyncError as e:
+        return [TextContent(
+            type="text",
+            text=json.dumps({
+                "success": False,
+                "error_type": "vivado_pipe_desync_detected",
+                "command": name,
+                "message": str(e),
+            }, indent=2)
         )]
     except Exception as e:
         return [TextContent(type="text", text=f"Error: {str(e)}")]
