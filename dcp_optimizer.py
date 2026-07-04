@@ -861,31 +861,25 @@ class DCPOptimizer(DCPOptimizerBase):
                     result_text = "(no output)"
             
             # Track WNS from timing reports and get_wns calls
-            if tool_name == "vivado_report_timing_summary":
-                # If target clock is set, get clock-specific WNS instead of overall
-                if self.target_clock:
-                    try:
-                        clock_wns = await super().get_wns_for_target_clock(self._call_vivado_tool)
-                        if clock_wns is not None:
-                            current_wns = clock_wns
-                            wns_measured = current_wns
-                            current_fmax = self.calculate_fmax(current_wns, self.clock_period)
-                            fmax_str = f", fmax: {current_fmax:.2f} MHz" if current_fmax is not None else ""
-                            if current_wns > self.best_wns:
-                                logger.info(f"New best WNS (clock: {self.target_clock}): {current_wns:.3f} ns{fmax_str} (improved from {self.best_wns:.3f} ns)")
-                                self.best_wns = current_wns
-                            else:
-                                logger.info(f"Current WNS (clock: {self.target_clock}): {current_wns:.3f} ns{fmax_str} (best is still {self.best_wns:.3f} ns)")
-                    except VivadoToolCallError as e:
-                        logger.error(f"Vivado tool call failed ({e.tool_name}); reopening last good checkpoint to resync state.")
-                        best_ckpt = self.checkpoint_manager.get_best_checkpoint() if self.checkpoint_manager else None
-                        if best_ckpt:
-                            await self.call_tool("vivado_open_checkpoint", {"dcp_path": best_ckpt}, internal=True)
-                        continue
-                    except Exception as e:
-                        logger.warning(f"Failed to get clock-specific WNS, falling back to overall: {e}")
-                        self.target_clock = None  # Fall through to overall WNS parsing
-                
+                if tool_name == "vivado_report_timing_summary":
+                    if self.target_clock:
+                        try:
+                            clock_wns = await super().get_wns_for_target_clock(self._call_vivado_tool)
+                            if clock_wns is not None:
+                                current_wns = clock_wns
+                                wns_measured = current_wns
+                                current_fmax = self.calculate_fmax(current_wns, self.clock_period)
+                                fmax_str = f", fmax: {current_fmax:.2f} MHz" if current_fmax is not None else ""
+                                if current_wns > self.best_wns:
+                                    logger.info(f"New best WNS (clock: {self.target_clock}): {current_wns:.3f} ns{fmax_str} (improved from {self.best_wns:.3f} ns)")
+                                    self.best_wns = current_wns
+                                else:
+                                    logger.info(f"Current WNS (clock: {self.target_clock}): {current_wns:.3f} ns{fmax_str} (best is still {self.best_wns:.3f} ns)")
+                        except VivadoToolCallError:
+                            raise  # let it bubble up to the iteration loop — don't swallow it here
+                        except Exception as e:
+                            logger.warning(f"Failed to get clock-specific WNS, falling back to overall: {e}")
+                            self.target_clock = None                
                 if not self.target_clock or wns_measured is None:
                     try:
                         current_wns = parse_timing_summary_wns_static(result_text, self.clock_period)
@@ -3138,7 +3132,7 @@ Proceed by selecting exactly one validated action per timing-context turn."""
         while self.iteration < max_iterations:
             self.iteration += 1
             logger.info(f"=== Iteration {self.iteration} ===")
-            
+
             try:
                 await self._append_iteration_context()
                 decision = await self.get_validated_action_decision(self.last_timing_context)
@@ -3150,7 +3144,7 @@ Proceed by selecting exactly one validated action per timing-context turn."""
                     continue
                 await self.call_tool("vivado_report_timing_summary", {"timeout": 300})
                 print(f"\n{response_text}\n")
-                
+
                 current_wns = await self._get_current_wns()
                 if current_wns is not None and current_wns >= 0 and self.current_period_ns is not None:
                     await self._run_clock_bisection_after_closure(current_wns)
@@ -3160,7 +3154,14 @@ Proceed by selecting exactly one validated action per timing-context turn."""
                     self.end_time = time.time()
                     self._print_optimization_summary()
                     return True
-                    
+
+            except VivadoToolCallError as e:
+                logger.error(f"Vivado tool call failed ({e.tool_name}); reopening last good checkpoint to resync state.")
+                best_ckpt = self.checkpoint_manager.get_best_checkpoint() if self.checkpoint_manager else None
+                if best_ckpt:
+                    await self.call_tool("vivado_open_checkpoint", {"dcp_path": best_ckpt}, internal=True)
+                continue
+
             except Exception as e:
                 logger.exception(f"Error during optimization: {e}")
                 self.end_time = time.time()
