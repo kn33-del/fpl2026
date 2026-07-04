@@ -52,7 +52,7 @@ class ECORouter:
 
     def route_incremental(self, design_cell_count: int, unrouted_net_count: int, directive: str = "Default") -> RouteResult:
         timeout = self._compute_timeout(design_cell_count, unrouted_net_count)
-        tcl = f"route_design {PRESERVE_FLAG} -directive {{{directive}}}"
+        tcl = f"route_design -directive {{{directive}}}"
         raw = self.vivado.run_tcl_command(tcl, timeout=timeout)
         # Immediately query route status
         status_raw = self.vivado.run_tcl_command("report_route_status -return_string", timeout=30)
@@ -80,7 +80,7 @@ class ECORouter:
 
     async def route_incremental_async(self, design_cell_count: int, unrouted_net_count: int, directive: str = "Default") -> RouteResult:
         timeout = self._compute_timeout(design_cell_count, unrouted_net_count)
-        tcl = f"route_design {PRESERVE_FLAG} -directive {{{directive}}}"
+        tcl = f"route_design -directive {{{directive}}}"
         await self._call_vivado(tcl, timeout=timeout)
         status_raw = await self._call_vivado("report_route_status -return_string", timeout=30)
         parsed = self.parse_route_status(status_raw)
@@ -97,26 +97,35 @@ class ECORouter:
     def route_with_fallback(self, design_cell_count: int, unrouted_net_count: int) -> RouteResult:
         directives = ["Default", "Explore", "AggressiveExplore"]
         timeout = self._compute_timeout(design_cell_count, unrouted_net_count)
-        # Try preserve attempts
+        last_status_raw = ""
+        last_parsed = {}
         for d in directives:
-            tcl = f"route_design {PRESERVE_FLAG} -directive {{{d}}}"
+            tcl = f"route_design -directive {{{d}}}"
             raw = self.vivado.run_tcl_command(tcl, timeout=timeout)
             status_raw = self.vivado.run_tcl_command("report_route_status -return_string", timeout=30)
             parsed = self.parse_route_status(status_raw)
-            if parsed.get("routing_errors", 1) == 0:
+            last_status_raw, last_parsed = status_raw, parsed
+            if parsed.get("fully_routed"):
                 return RouteResult(
                     directive_used=d,
                     routing_errors=parsed.get("routing_errors", 0),
                     unrouted_nets=parsed.get("unrouted_nets", 0),
-                    fully_routed=parsed.get("fully_routed", False),
+                    fully_routed=True,
                     fallback_used=False,
                     timeout_s=timeout,
                     vivado_raw_output=status_raw,
                 )
 
-        # All preserve attempts failed — fallback to full route_design without preserve
-        logger.warning("All preserve-fixed-routes attempts failed; falling back to full route_design (this will overwrite existing routing)")
-        raw = self.vivado.run_tcl_command(f"route_design -directive {{Default}}", timeout=timeout * 2)
+        # All directive attempts left the design incompletely routed — fall back to a
+        # full, non-incremental route_design (this may re-route nets we intended to keep).
+        logger.warning(
+            "Incremental routing did not reach a fully-routed state after %s (last: errors=%s unrouted=%s); "
+            "falling back to full route_design",
+            directives,
+            last_parsed.get("routing_errors"),
+            last_parsed.get("unrouted_nets"),
+        )
+        raw = self.vivado.run_tcl_command("route_design -directive {Default}", timeout=timeout * 2)
         status_raw = self.vivado.run_tcl_command("report_route_status -return_string", timeout=60)
         parsed = self.parse_route_status(status_raw)
         return RouteResult(
@@ -132,24 +141,32 @@ class ECORouter:
     async def route_with_fallback_async(self, design_cell_count: int, unrouted_net_count: int) -> RouteResult:
         directives = ["Default", "Explore", "AggressiveExplore"]
         timeout = self._compute_timeout(design_cell_count, unrouted_net_count)
+        last_parsed = {}
         for d in directives:
-            tcl = f"route_design {PRESERVE_FLAG} -directive {{{d}}}"
+            tcl = f"route_design -directive {{{d}}}"
             await self._call_vivado(tcl, timeout=timeout)
             status_raw = await self._call_vivado("report_route_status -return_string", timeout=30)
             parsed = self.parse_route_status(status_raw)
-            if parsed.get("routing_errors", 1) == 0:
+            last_parsed = parsed
+            if parsed.get("fully_routed"):
                 return RouteResult(
                     directive_used=d,
                     routing_errors=parsed.get("routing_errors", 0),
                     unrouted_nets=parsed.get("unrouted_nets", 0),
-                    fully_routed=parsed.get("fully_routed", False),
+                    fully_routed=True,
                     fallback_used=False,
                     timeout_s=timeout,
                     vivado_raw_output=status_raw,
                 )
 
-        logger.warning("All preserve-fixed-routes attempts failed; falling back to full route_design (this will overwrite existing routing)")
-        await self._call_vivado(f"route_design -directive {{Default}}", timeout=timeout * 2)
+        logger.warning(
+            "Incremental routing did not reach a fully-routed state after %s (last: errors=%s unrouted=%s); "
+            "falling back to full route_design",
+            directives,
+            last_parsed.get("routing_errors"),
+            last_parsed.get("unrouted_nets"),
+        )
+        await self._call_vivado("route_design -directive {Default}", timeout=timeout * 2)
         status_raw = await self._call_vivado("report_route_status -return_string", timeout=60)
         parsed = self.parse_route_status(status_raw)
         return RouteResult(
