@@ -62,7 +62,10 @@ DECISION_LOGIC_DELAY_BOUND_THRESHOLD = 0.70
 DECISION_SPREAD_NET_THRESHOLD = 0.60
 DECISION_SPREAD_TILE_THRESHOLD = 30
 PHYS_OPT_MIN_USEFUL_WNS_NS = -0.5
+WNS_SANITY_ABS_LIMIT_NS = 50.0
+WNS_SANITY_POSITIVE_CLOCK_FRACTION = 0.10
 STUCK_ITERATION_THRESHOLD = 3
+STRUCTURAL_OVERRIDE_MAX_ITERS = 6
 WNS_IMPROVEMENT_EPSILON_NS = 1e-4
 ACTION_FAILURE_EXHAUSTION_THRESHOLD = 3
 ACTION_FAILURE_COOLDOWN_ITERS = 5
@@ -89,6 +92,10 @@ VIVADO_INCREMENTAL_IMPLEMENTATION_ACTIONS = {
 DEFAULT_PBLOCK_TARGET_LUT_COUNT = 20000
 DEFAULT_PBLOCK_TARGET_FF_COUNT = 40000
 DEFAULT_PBLOCK_NAME_PREFIX = "pblock_net_delay"
+
+
+class WNSParseError(ValueError):
+    """Raised when Vivado WNS output cannot be parsed into a plausible slack."""
 
 TIMING_DECISION_SYSTEM_PROMPT = """
 You are an FPGA timing optimization agent operating on AMD UltraScale+ xcvu3p designs.
@@ -182,6 +189,60 @@ def parse_timing_summary_static(timing_report: str) -> dict:
             pass
     
     return result
+
+
+def validate_wns_sanity_static(
+    wns: float,
+    clock_period_ns: Optional[float] = None,
+    source: str = "WNS",
+) -> float:
+    """Reject WNS values that are implausible before history/regression logic sees them."""
+    if abs(wns) > WNS_SANITY_ABS_LIMIT_NS:
+        raise WNSParseError(
+            f"{source} parsed implausible WNS {wns} ns; abs limit is {WNS_SANITY_ABS_LIMIT_NS} ns"
+        )
+    if clock_period_ns is not None and clock_period_ns > 0:
+        max_positive = max(clock_period_ns * WNS_SANITY_POSITIVE_CLOCK_FRACTION, 0.001)
+        if wns > max_positive:
+            raise WNSParseError(
+                f"{source} parsed implausible positive WNS {wns} ns; "
+                f"max allowed is {max_positive:.6f} ns for clock period {clock_period_ns:.6f} ns"
+            )
+    return wns
+
+
+def parse_wns_value_static(
+    output: str,
+    clock_period_ns: Optional[float] = None,
+    source: str = "vivado_get_wns",
+) -> float:
+    """Parse WNS only from sentinel-delimited or single-line numeric Tcl output."""
+    text = str(output or "").strip()
+    sentinel = re.search(
+        r"WNS_VALUE_BEGIN\s*([-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?)\s*WNS_VALUE_END",
+        text,
+        re.MULTILINE,
+    )
+    if sentinel:
+        value = float(sentinel.group(1))
+        return validate_wns_sanity_static(value, clock_period_ns, source)
+
+    if re.fullmatch(r"[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?", text):
+        value = float(text)
+        return validate_wns_sanity_static(value, clock_period_ns, source)
+
+    raise WNSParseError(f"{source} did not contain a single valid WNS value: {text[:200]}")
+
+
+def parse_timing_summary_wns_static(
+    timing_report: str,
+    clock_period_ns: Optional[float] = None,
+) -> Optional[float]:
+    """Extract WNS from the timing summary table and sanity-check it."""
+    wns = parse_timing_summary_static(timing_report).get("wns")
+    if wns is None:
+        return None
+    return validate_wns_sanity_static(float(wns), clock_period_ns, "report_timing_summary")
 
 
 def load_system_prompt() -> str:
@@ -481,31 +542,28 @@ class DCPOptimizerBase:
                 f"set clk_obj [get_clocks -quiet {{{self.target_clock}}}]; "
                 f"if {{$clk_obj ne {{}}}} {{ "
                 f"  set tp [get_timing_paths -max_paths 1 -setup -to $clk_obj]; "
-                f"  if {{[llength $tp] > 0}} {{get_property SLACK $tp}} else {{puts 0.0}} "
+                f"  if {{[llength $tp] > 0}} {{set wns_value [get_property SLACK $tp]}} else {{set wns_value 0.0}}; "
                 f"}} else {{ "
                 f"  set tp [get_timing_paths -max_paths 1 -slack_lesser_than 999]; "
-                f"  if {{[llength $tp] > 0}} {{get_property SLACK $tp}} else {{puts 0.0}} "
-                f"}}"
+                f"  if {{[llength $tp] > 0}} {{set wns_value [get_property SLACK $tp]}} else {{set wns_value 0.0}} "
+                f"}}; "
+                f"puts {{WNS_VALUE_BEGIN}}; puts $wns_value; puts {{WNS_VALUE_END}}"
             )
         else:
             tcl_cmd = (
                 "set tp [get_timing_paths -max_paths 1 -slack_lesser_than 999]; "
-                "if {[llength $tp] > 0} {get_property SLACK $tp} else {puts 0.0}"
+                "if {[llength $tp] > 0} {set wns_value [get_property SLACK $tp]} else {set wns_value 0.0}; "
+                "puts {WNS_VALUE_BEGIN}; puts $wns_value; puts {WNS_VALUE_END}"
             )
         
         try:
             result = await call_tool_fn("run_tcl", {"command": tcl_cmd})
-            for token in result.strip().split('\n'):
-                token = token.strip()
-                if not token or token.startswith('ERROR') or token.startswith('WARNING'):
-                    continue
-                try:
-                    wns = float(token)
-                    clock_info = f" (clock: {self.target_clock})" if self.target_clock else ""
-                    logger.info(f"WNS{clock_info}: {wns:.3f} ns")
-                    return wns
-                except ValueError:
-                    continue
+            wns = parse_wns_value_static(result, self.clock_period, "target_clock_wns")
+            clock_info = f" (clock: {self.target_clock})" if self.target_clock else ""
+            logger.info(f"WNS{clock_info}: {wns:.3f} ns")
+            return wns
+        except WNSParseError as e:
+            logger.error(f"Failed to parse WNS for target clock: {e}")
         except Exception as e:
             logger.warning(f"Failed to get WNS for target clock: {e}")
         
@@ -818,9 +876,14 @@ class DCPOptimizer(DCPOptimizerBase):
                         self.target_clock = None  # Fall through to overall WNS parsing
                 
                 if not self.target_clock or wns_measured is None:
-                    timing_info = parse_timing_summary_static(result_text)
-                    if timing_info["wns"] is not None:
-                        current_wns = timing_info["wns"]
+                    try:
+                        current_wns = parse_timing_summary_wns_static(result_text, self.clock_period)
+                    except WNSParseError as e:
+                        logger.error("Ignoring invalid WNS from timing summary: %s", e)
+                        if not internal:
+                            await self._record_wns_parse_error("report_timing_summary", str(e), result_text)
+                        current_wns = None
+                    if current_wns is not None:
                         wns_measured = current_wns
                         current_fmax = self.calculate_fmax(current_wns, self.clock_period)
                         fmax_str = f", fmax: {current_fmax:.2f} MHz" if current_fmax is not None else ""
@@ -833,7 +896,7 @@ class DCPOptimizer(DCPOptimizerBase):
             # Also track WNS from get_wns tool (returns just the numeric WNS value)
             elif tool_name == "vivado_get_wns":
                 try:
-                    current_wns = float(result_text.strip())
+                    current_wns = parse_wns_value_static(result_text, self.clock_period, "vivado_get_wns")
                     wns_measured = current_wns
                     current_fmax = self.calculate_fmax(current_wns, self.clock_period)
                     fmax_str = f", fmax: {current_fmax:.2f} MHz" if current_fmax is not None else ""
@@ -842,8 +905,10 @@ class DCPOptimizer(DCPOptimizerBase):
                         self.best_wns = current_wns
                     else:
                         logger.info(f"Current WNS (from get_wns): {current_wns:.3f} ns{fmax_str} (best is still {self.best_wns:.3f} ns)")
-                except (ValueError, AttributeError):
-                    logger.warning(f"Could not parse WNS from get_wns output: {result_text[:100]}")
+                except (WNSParseError, ValueError, AttributeError) as e:
+                    logger.error(f"Could not parse WNS from get_wns output: {result_text[:100]} ({e})")
+                    if not internal:
+                        await self._record_wns_parse_error("vivado_get_wns", str(e), result_text)
             
             elapsed_time = time.time() - start_time
             self.last_vivado_runtime_s = elapsed_time if tool_name.startswith("vivado_") else self.last_vivado_runtime_s
@@ -944,9 +1009,9 @@ class DCPOptimizer(DCPOptimizerBase):
             args["clock"] = self.target_clock
         result = await self.call_tool("vivado_get_wns", args, internal=True)
         try:
-            return float(result.strip().splitlines()[-1])
-        except (ValueError, IndexError):
-            logger.warning(f"Could not parse current WNS from Vivado: {result[:200]}")
+            return parse_wns_value_static(result, self.clock_period, "vivado_get_wns")
+        except (WNSParseError, ValueError, IndexError) as e:
+            logger.error(f"Could not parse current WNS from Vivado: {result[:200]} ({e})")
             return None
 
     async def _refresh_target_candidates(self, wns: Optional[float]) -> list[dict]:
@@ -1434,6 +1499,38 @@ class DCPOptimizer(DCPOptimizerBase):
             persist()
         logger.warning("Recorded failed optimization action: %s", failure.get("error_type"))
 
+    async def _record_wns_parse_error(self, source: str, reason: str, raw_output: str) -> None:
+        """Record a WNS parse failure without treating it as timing regression."""
+        if self.checkpoint_manager is None:
+            return
+        if self.iteration <= 0 or self.iteration in self.recorded_iterations:
+            return
+        iteration = {
+            "iter": self.checkpoint_manager.current_iter + 1,
+            "recipe": self.last_recipe,
+            "batch_size": self.last_batch_size,
+            "targets": list(self.last_targets),
+            "wns_before": self.checkpoint_manager.best_wns,
+            "wns_after": None,
+            "fmax_before": self.checkpoint_manager.best_fmax_mhz,
+            "fmax_after": None,
+            "delta_fmax": None,
+            "vivado_runtime_s": self.last_vivado_runtime_s,
+            "status": "wns_parse_error",
+            "reason": reason,
+            "source": source,
+            "raw_wns_output": str(raw_output)[:500],
+            "checkpoint": None,
+            **self.last_decision_trace,
+        }
+        self.checkpoint_manager.current_iter += 1
+        self.checkpoint_manager.iterations.append(iteration)
+        self.recorded_iterations.add(self.iteration)
+        persist = getattr(self.checkpoint_manager, "_persist_history", None)
+        if callable(persist):
+            persist()
+        logger.error("Recorded WNS parse error for iteration %s from %s: %s", self.iteration, source, reason)
+
     async def _append_iteration_context(self) -> None:
         current_wns = await self._get_current_wns()
         if current_wns is not None:
@@ -1481,7 +1578,11 @@ class DCPOptimizer(DCPOptimizerBase):
             avg_spread,
             current_wns,
         )
-        structural_override = self.consecutive_no_improvement >= STUCK_ITERATION_THRESHOLD
+        structural_override_age = self.consecutive_no_improvement - STUCK_ITERATION_THRESHOLD
+        structural_override = (
+            structural_override_age >= 0
+            and structural_override_age < STRUCTURAL_OVERRIDE_MAX_ITERS
+        )
         self.structural_override_active = structural_override
         if structural_override:
             structural_allowed = [action for action in RAPIDWRIGHT_STRUCTURAL_ACTIONS if action in allowed]
@@ -1495,6 +1596,11 @@ class DCPOptimizer(DCPOptimizerBase):
                     self.consecutive_no_improvement,
                     allowed,
                 )
+        elif self.consecutive_no_improvement >= STUCK_ITERATION_THRESHOLD:
+            logger.warning(
+                "Stuck detector: structural override decayed after %d no-improvement iterations; widening action space.",
+                self.consecutive_no_improvement,
+            )
         allowed = self._filter_exhausted_actions(allowed)
         exhausted_actions = self._active_exhausted_actions()
         return {
@@ -1521,6 +1627,8 @@ class DCPOptimizer(DCPOptimizerBase):
             "stuck_iterations": self.consecutive_no_improvement,
             "consecutive_no_improvement": self.consecutive_no_improvement,
             "structural_override_active": structural_override,
+            "structural_override_age": max(0, structural_override_age),
+            "structural_override_max_iters": STRUCTURAL_OVERRIDE_MAX_ITERS,
             "action_failure_memory": self._serializable_action_failure_memory(),
             "action_failure_counts": self._serializable_action_failure_counts(),
             "exhausted_actions": exhausted_actions,
@@ -1658,6 +1766,16 @@ class DCPOptimizer(DCPOptimizerBase):
                 sorted(active_exhausted),
             )
             return filtered
+        structural_fallback = [
+            action for action in RAPIDWRIGHT_STRUCTURAL_ACTIONS
+            if action not in active_exhausted
+        ]
+        if structural_fallback:
+            logger.warning(
+                "Action failure memory: all offered actions were exhausted; offering alternate structural actions %s.",
+                structural_fallback,
+            )
+            return structural_fallback
         return allowed
 
     def _active_exhausted_actions(self) -> list[str]:
@@ -1827,6 +1945,27 @@ class DCPOptimizer(DCPOptimizerBase):
             raise RuntimeError(f"Could not extract critical path cells: {result[:300]}")
         return output_file
 
+    async def _live_critical_path_cell_candidates(self, num_paths: int = 20, limit: int = 20) -> list[str]:
+        """Extract current timing-path cells from Vivado and apply the cell blacklist."""
+        try:
+            cells_file = await self._extract_critical_path_cells_file(num_paths=num_paths)
+            paths = json.loads(cells_file.read_text())
+        except Exception as exc:
+            logger.warning("Could not extract live critical path cells: %s", exc)
+            return []
+
+        candidates: list[str] = []
+        if isinstance(paths, list):
+            for path in paths:
+                if not isinstance(path, list):
+                    continue
+                for cell in path:
+                    cell_name = str(cell).strip("{} ")
+                    if cell_name and cell_name not in candidates:
+                        candidates.append(cell_name)
+
+        return self._filter_blacklisted_cells(candidates)[:limit]
+
     async def _extract_critical_path_pins_file(self, num_paths: int = 20) -> Path:
         output_file = Path(self.temp_dir) / f"critical_path_pins_iter_{self.iteration:03d}.json"
         result = await self.call_tool(
@@ -1929,6 +2068,23 @@ class DCPOptimizer(DCPOptimizerBase):
             "new_nets": payload.get("new_nets"),
             "replicas_created": payload.get("replicas_created"),
             "message": payload.get("message"),
+        }
+
+    def _summarize_pblock_assignment(self, payload: dict, params: dict) -> dict:
+        cells_assigned = int(payload.get("cells_assigned") or payload.get("cells_matched") or 0)
+        return {
+            **(self.last_rapidwright_edit_summary or {}),
+            "action": "pblock",
+            "changed_design": cells_assigned > 0,
+            "cells_moved": cells_assigned,
+            "nets_affected": 0,
+            "pblock_name": payload.get("pblock_name") or params.get("pblock_name"),
+            "pblock_ranges": payload.get("ranges") or params.get("ranges"),
+            "apply_to": payload.get("apply_to") or params.get("apply_to", "current_design"),
+            "is_soft": payload.get("is_soft") if "is_soft" in payload else params.get("is_soft", False),
+            "cells_matched": int(payload.get("cells_matched") or 0),
+            "cells_assigned": cells_assigned,
+            "resource_validation": payload.get("resource_validation"),
         }
 
     async def _route_candidate_with_eco(self, arguments: dict) -> str:
@@ -2062,6 +2218,11 @@ class DCPOptimizer(DCPOptimizerBase):
         if self.iteration <= 0 or self.iteration in self.recorded_iterations:
             return
         if self.last_recipe == "initial":
+            return
+        try:
+            wns = validate_wns_sanity_static(float(wns), self.current_period_ns or self.clock_period, "iteration_history")
+        except (TypeError, ValueError, WNSParseError) as e:
+            await self._record_wns_parse_error("iteration_history", str(e), str(wns))
             return
 
         checkpoint_dir = self.run_dir / "checkpoints"
@@ -2696,17 +2857,22 @@ class DCPOptimizer(DCPOptimizerBase):
             self.last_recipe = action
             self.last_targets = [str(params.get("pblock_name", "pblock_opt")), str(params.get("ranges"))]
             self.last_batch_size = 1
-            self.last_rapidwright_edit_summary = {
-                **(self.last_rapidwright_edit_summary or {}),
-                "action": "pblock",
-                "cells_moved": 0,
-                "nets_affected": 0,
-                "pblock_name": params.get("pblock_name"),
-                "pblock_ranges": params.get("ranges"),
-                "apply_to": params.get("apply_to", "current_design"),
-                "is_soft": params.get("is_soft", False),
-            }
-            return await self.call_tool("vivado_create_and_apply_pblock", params)
+            result = await self.call_tool("vivado_create_and_apply_pblock", params)
+            payload = self._parse_json_result(result)
+            if self._result_has_error(payload):
+                return self._failure_json(
+                    payload.get("error_type", "pblock_assignment_failed"),
+                    payload.get("message", result[:300]),
+                    command="pblock",
+                )
+            self.last_rapidwright_edit_summary = self._summarize_pblock_assignment(payload, params)
+            if int(self.last_rapidwright_edit_summary.get("cells_assigned") or 0) <= 0:
+                return self._failure_json(
+                    "pblock_empty_assignment",
+                    "Pblock action completed but assigned zero cells.",
+                    command="pblock",
+                )
+            return result
         if action == "rapidwright_analyze_fabric_for_pblock":
             params, error = await self._compute_pblock_ranges(dict(params), timing_context)
             if error:
@@ -2798,6 +2964,14 @@ class DCPOptimizer(DCPOptimizerBase):
                 cell_names = self._critical_path_cell_candidates(timing_context)
                 attempted_cells = cell_names or attempted_cells
             if not cell_names:
+                live_cells = await self._live_critical_path_cell_candidates(
+                    num_paths=int(params.get("num_paths") or 20),
+                    limit=int(params.get("max_candidates") or 20),
+                )
+                if live_cells:
+                    cell_names = live_cells
+                    attempted_cells = live_cells
+            if not cell_names:
                 fallback_targets = attempted_cells or self._path_identifier_targets(timing_context)
                 self.last_recipe = action
                 self.last_targets = fallback_targets
@@ -2835,6 +3009,15 @@ class DCPOptimizer(DCPOptimizerBase):
             self.last_rapidwright_edit_summary = self._summarize_cell_placement(payload, cell_names)
             if int(self.last_rapidwright_edit_summary.get("cells_moved") or 0) > 0:
                 self._reset_action_failure_memory(action)
+            else:
+                self._blacklist_failure_targets(action, cell_names)
+                self._remember_no_action_failure(action, cell_names)
+                self.last_no_action_failure_key = (action, tuple(cell_names), self.iteration)
+                return self._failure_json(
+                    "no_action_target",
+                    "rapidwright_optimize_cell_placement completed but moved zero cells.",
+                    command=action,
+                )
             dcp = self.run_dir / f"cell_placement_iter_{self.iteration:03d}.dcp"
             result += "\n\n" + await self.call_tool("rapidwright_write_checkpoint", {"dcp_path": str(dcp), "overwrite": True})
             result += "\n\n" + await self.call_tool("vivado_open_checkpoint", {"dcp_path": str(dcp), "timeout": 600})
