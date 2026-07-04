@@ -267,7 +267,7 @@ def write_checkpoint(dcp_path: str, overwrite: bool = False) -> Dict[str, Any]:
         return {"error": "No design loaded. Use read_checkpoint first."}
     
     try:
-        from com.xilinx.rapidwright.tests import CodePerfTracker
+        from com.xilinx.rapidwright.edif import EDIFTools
         from pathlib import Path
         import os
         
@@ -296,8 +296,19 @@ def write_checkpoint(dcp_path: str, overwrite: bool = False) -> Dict[str, Any]:
                 contains_encrypted_ip = False
                 logger.warning("Could not determine if design contains encrypted IP")
         
-        logger.info(f"Writing design checkpoint to {output_file}")
-        design.writeCheckpoint(str(output_file))
+        edif_file = output_file.with_suffix(".edf")
+        logger.info(
+            "Writing design checkpoint to %s with synchronized EDIF %s",
+            output_file,
+            edif_file,
+        )
+        netlist = design.getNetlist()
+        EDIFTools.writeEDIFFile(str(edif_file), netlist, design.getPartName())
+        design.detachNetlist()
+        try:
+            design.writeCheckpoint(str(output_file), str(edif_file), None)
+        finally:
+            design.setNetlist(netlist)
         
         # Get file size
         bytes_written = output_file.stat().st_size
@@ -310,6 +321,7 @@ def write_checkpoint(dcp_path: str, overwrite: bool = False) -> Dict[str, Any]:
             "status": "success",
             "message": f"Design checkpoint saved successfully to {output_file.name}",
             "output_file": str(output_file),
+            "edif_file": str(edif_file),
             "bytes_written": bytes_written
         }
         
@@ -1909,4 +1921,3 @@ def convert_fabric_region_to_pblock_ranges(
         import traceback
         traceback.print_exc()
         return {"error": str(e)}
-

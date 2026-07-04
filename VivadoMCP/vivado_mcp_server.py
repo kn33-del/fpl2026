@@ -1017,6 +1017,7 @@ def create_and_apply_pblock(
     """
     result_lines = []
     current_ranges = ranges
+    final_validation = None
     
     logger.info(f"Creating pblock '{pblock_name}' with range: {ranges}")
     logger.info(f"validate_resources={validate_resources}, max_expansion_attempts={max_expansion_attempts}")
@@ -1051,16 +1052,59 @@ def create_and_apply_pblock(
             
             # Apply pblock to cells
             if apply_to == "current_design":
-                add_cmd = f"add_cells_to_pblock {pblock_name} [get_cells -hierarchical]"
+                cell_query = "get_cells -hierarchical -quiet"
             else:
-                add_cmd = f"add_cells_to_pblock {pblock_name} [get_cells {apply_to}]"
+                cell_query = f"get_cells -hierarchical -quiet {{{apply_to}}}"
+
+            count_cmd = f"set pblock_cells [{cell_query}]; puts \"PBLOCK_CELL_COUNT:[llength $pblock_cells]\""
+            count_result = run_tcl_command(count_cmd, timeout=timeout)
+            count_match = re.search(r"PBLOCK_CELL_COUNT:(\d+)", count_result)
+            cell_count = int(count_match.group(1)) if count_match else 0
+            result_lines.append(f"Matched cells for pblock: {cell_count}")
+            if cell_count <= 0:
+                return json.dumps({
+                    "success": False,
+                    "error_type": "pblock_no_cells",
+                    "command": "create_and_apply_pblock",
+                    "message": f"Pblock target '{apply_to}' matched zero cells; refusing to create an empty pblock.",
+                    "pblock_name": pblock_name,
+                    "ranges": current_ranges,
+                    "apply_to": apply_to,
+                    "cells_matched": cell_count,
+                    "log": "\n".join(result_lines),
+                }, indent=2)
+
+            add_cmd = f"add_cells_to_pblock {pblock_name} $pblock_cells"
             
             result = run_tcl_command(add_cmd, timeout=timeout)
             result_lines.append(f"Applied pblock to: {apply_to}")
+
+            assigned_cmd = (
+                f"set assigned_cells [get_cells -quiet -of_objects [get_pblocks {pblock_name}]]; "
+                "puts \"PBLOCK_ASSIGNED_COUNT:[llength $assigned_cells]\""
+            )
+            assigned_result = run_tcl_command(assigned_cmd, timeout=timeout)
+            assigned_match = re.search(r"PBLOCK_ASSIGNED_COUNT:(\d+)", assigned_result)
+            assigned_count = int(assigned_match.group(1)) if assigned_match else 0
+            result_lines.append(f"Assigned cells to pblock: {assigned_count}")
+            if assigned_count <= 0:
+                return json.dumps({
+                    "success": False,
+                    "error_type": "pblock_empty_assignment",
+                    "command": "create_and_apply_pblock",
+                    "message": f"Pblock '{pblock_name}' was created but no cells were assigned.",
+                    "pblock_name": pblock_name,
+                    "ranges": current_ranges,
+                    "apply_to": apply_to,
+                    "cells_matched": cell_count,
+                    "cells_assigned": assigned_count,
+                    "log": "\n".join(result_lines),
+                }, indent=2)
             
             # Validate resources if requested
             if validate_resources:
                 validation = validate_pblock_resources(pblock_name)
+                final_validation = validation
                 
                 if not validation['is_valid']:
                     result_lines.append(f"\n⚠ Resource validation FAILED:")
@@ -1102,12 +1146,33 @@ def create_and_apply_pblock(
                 "3. Check timing with report_timing_summary"
             ])
             
-            return "\n".join(result_lines)
+            return json.dumps({
+                "success": True,
+                "status": "success",
+                "message": f"Pblock {pblock_name} created and assigned to {assigned_count} cells.",
+                "pblock_name": pblock_name,
+                "ranges": current_ranges,
+                "apply_to": apply_to,
+                "is_soft": is_soft,
+                "cells_matched": cell_count,
+                "cells_assigned": assigned_count,
+                "resource_validation": final_validation,
+                "log": "\n".join(result_lines),
+            }, indent=2)
             
         except Exception as e:
             result_lines.append(f"Error in attempt {attempt}: {str(e)}")
             if attempt >= max_expansion_attempts:
-                return f"Error creating/applying pblock: {str(e)}\n" + "\n".join(result_lines)
+                return json.dumps({
+                    "success": False,
+                    "error_type": "pblock_command_failure",
+                    "command": "create_and_apply_pblock",
+                    "message": str(e),
+                    "pblock_name": pblock_name,
+                    "ranges": current_ranges,
+                    "apply_to": apply_to,
+                    "log": "\n".join(result_lines),
+                }, indent=2)
     
     return "\n".join(result_lines)
 
@@ -1654,21 +1719,30 @@ async def call_tool(name: str, arguments: dict):
         elif name == "get_wns":
             timeout = arguments.get("timeout", 60)
             clock = arguments.get("clock", None)
-            # Flush buffer first
-            run_tcl_command("puts {get_wns_start}", timeout=5)
             if clock:
                 tcl_cmd = (
                     f"set clk_obj [get_clocks -quiet {{{clock}}}]; "
                     f"if {{$clk_obj ne {{}}}} {{ "
                     f"  set wns_path [get_timing_paths -max_paths 1 -setup -to $clk_obj]; "
-                    f"  if {{[llength $wns_path] > 0}} {{get_property SLACK $wns_path}} else {{puts 0.0}} "
-                    f"}} else {{puts {{ERROR: clock not found}}}}"
+                    f"  if {{[llength $wns_path] > 0}} {{set wns_value [get_property SLACK $wns_path]}} else {{set wns_value 0.0}} "
+                    f"}} else {{error {{clock not found}}}}; "
+                    f"puts {{WNS_VALUE_BEGIN}}; puts $wns_value; puts {{WNS_VALUE_END}}"
                 )
             else:
-                tcl_cmd = "set wns_path [get_timing_paths -max_paths 1 -slack_lesser_than 999]; if {[llength $wns_path] > 0} {get_property SLACK $wns_path} else {puts 0.0}"
+                tcl_cmd = (
+                    "set wns_path [get_timing_paths -max_paths 1 -slack_lesser_than 999]; "
+                    "if {[llength $wns_path] > 0} {set wns_value [get_property SLACK $wns_path]} else {set wns_value 0.0}; "
+                    "puts {WNS_VALUE_BEGIN}; puts $wns_value; puts {WNS_VALUE_END}"
+                )
             output = run_tcl_command(tcl_cmd, timeout=timeout)
-            # Clean up the output to just return the number
-            wns_value = output.strip().split('\n')[-1].strip()
+            match = re.search(
+                r"WNS_VALUE_BEGIN\s*([-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?)\s*WNS_VALUE_END",
+                output,
+                re.MULTILINE,
+            )
+            if not match:
+                raise ValueError(f"Could not parse sentinel-delimited WNS from Vivado output: {output[:300]}")
+            wns_value = match.group(1)
             return [TextContent(type="text", text=wns_value)]
         
         elif name == "place_design":
