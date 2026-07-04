@@ -899,7 +899,7 @@ class DCPOptimizer(DCPOptimizerBase):
                             logger.info(f"Current WNS: {current_wns:.3f} ns{fmax_str} (best is still {self.best_wns:.3f} ns)")
             
             # Also track WNS from get_wns tool (returns just the numeric WNS value)
-            elif tool_name == "vivado_get_wns":
+            if tool_name == "vivado_get_wns":
                 try:
                     current_wns = parse_wns_value_static(result_text, self.clock_period, "vivado_get_wns")
                     wns_measured = current_wns
