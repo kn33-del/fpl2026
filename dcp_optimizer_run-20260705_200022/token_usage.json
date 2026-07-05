@@ -1,0 +1,1940 @@
+{
+  "model": "x-ai/grok-4.3",
+  "timestamp": "2026-07-05 20:09:48",
+  "summary": {
+    "total_runtime_seconds": 564.5784904956818,
+    "total_llm_calls": 50,
+    "total_iterations": 50,
+    "total_prompt_tokens": 2574136,
+    "total_completion_tokens": 15134,
+    "total_tokens": 2589270,
+    "total_cached_tokens": 0,
+    "total_reasoning_tokens": 0,
+    "total_cost": 0.9387177999999998,
+    "clock_period_ns": 1.5,
+    "current_period_ns": 1.5,
+    "initial_wns": -0.978,
+    "best_wns": -0.92,
+    "wns_improvement": 0.05799999999999994,
+    "initial_fmax_mhz": 403.5512510088782,
+    "best_fmax_mhz": 413.22314049586777,
+    "fmax_improvement_mhz": 9.671889486989585,
+    "total_tool_calls": 270,
+    "total_tool_time_seconds": 505.3770513534546,
+    "tool_call_counts": {
+      "rapidwright_initialize_rapidwright": 1,
+      "vivado_open_checkpoint": 5,
+      "vivado_report_timing_summary": 7,
+      "vivado_run_tcl": 119,
+      "vivado_get_critical_high_fanout_nets": 1,
+      "rapidwright_read_checkpoint": 1,
+      "vivado_extract_critical_path_cells": 1,
+      "rapidwright_analyze_critical_path_spread": 5,
+      "vivado_get_wns": 56,
+      "rapidwright_analyze_fabric_for_pblock": 47,
+      "rapidwright_convert_fabric_region_to_pblock": 3,
+      "vivado_write_checkpoint": 6,
+      "vivado_extract_critical_path_pins": 3,
+      "rapidwright_analyze_net_detour": 3,
+      "rapidwright_optimize_cell_placement": 2,
+      "rapidwright_write_checkpoint": 2,
+      "vivado_report_route_status": 2,
+      "vivado_route_design": 3,
+      "vivado_create_and_apply_pblock": 2,
+      "vivado_place_design": 1
+    }
+  },
+  "per_llm_call_details": [],
+  "per_tool_call_details": [
+    {
+      "tool_name": "rapidwright_initialize_rapidwright",
+      "iteration": 0,
+      "elapsed_time": 0.4801943302154541,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_open_checkpoint",
+      "iteration": 0,
+      "elapsed_time": 18.988936185836792,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_timing_summary",
+      "iteration": 0,
+      "elapsed_time": 2.200814723968506,
+      "wns": -0.978,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 0,
+      "elapsed_time": 0.0552973747253418,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 0,
+      "elapsed_time": 0.0608060359954834,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 0,
+      "elapsed_time": 0.06265687942504883,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 0,
+      "elapsed_time": 0.16474604606628418,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_critical_high_fanout_nets",
+      "iteration": 0,
+      "elapsed_time": 2.7621893882751465,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_read_checkpoint",
+      "iteration": 0,
+      "elapsed_time": 2.1350629329681396,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_extract_critical_path_cells",
+      "iteration": 0,
+      "elapsed_time": 0.18712902069091797,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_critical_path_spread",
+      "iteration": 0,
+      "elapsed_time": 0.18976950645446777,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 1,
+      "elapsed_time": 0.06190013885498047,
+      "wns": -0.978,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 1,
+      "elapsed_time": 0.06185722351074219,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 1,
+      "elapsed_time": 0.16435027122497559,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_fabric_for_pblock",
+      "iteration": 1,
+      "elapsed_time": 2.655496835708618,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_convert_fabric_region_to_pblock",
+      "iteration": 1,
+      "elapsed_time": 0.770993709564209,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 1,
+      "elapsed_time": 0.0612797737121582,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_write_checkpoint",
+      "iteration": 1,
+      "elapsed_time": 2.030074119567871,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_timing_summary",
+      "iteration": 1,
+      "elapsed_time": 0.4521627426147461,
+      "wns": -0.978,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 1,
+      "elapsed_time": 0.06101799011230469,
+      "wns": -0.978,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 2,
+      "elapsed_time": 0.05942845344543457,
+      "wns": -0.978,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 2,
+      "elapsed_time": 0.06168222427368164,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 2,
+      "elapsed_time": 0.16517972946166992,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_extract_critical_path_pins",
+      "iteration": 2,
+      "elapsed_time": 0.17885279655456543,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_net_detour",
+      "iteration": 2,
+      "elapsed_time": 0.11755537986755371,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_critical_path_spread",
+      "iteration": 2,
+      "elapsed_time": 0.002985715866088867,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_optimize_cell_placement",
+      "iteration": 2,
+      "elapsed_time": 0.23451828956604004,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_critical_path_spread",
+      "iteration": 2,
+      "elapsed_time": 0.0032165050506591797,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_write_checkpoint",
+      "iteration": 2,
+      "elapsed_time": 1.3047726154327393,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_open_checkpoint",
+      "iteration": 2,
+      "elapsed_time": 12.070897579193115,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 2,
+      "elapsed_time": 0.05886268615722656,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 2,
+      "elapsed_time": 0.058476924896240234,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_route_status",
+      "iteration": 2,
+      "elapsed_time": 0.9618027210235596,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 2,
+      "elapsed_time": 44.04351615905762,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 2,
+      "elapsed_time": 0.9784812927246094,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_route_design",
+      "iteration": 2,
+      "elapsed_time": 46.10148620605469,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 2,
+      "elapsed_time": 0.061165809631347656,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_write_checkpoint",
+      "iteration": 2,
+      "elapsed_time": 2.1898984909057617,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_open_checkpoint",
+      "iteration": 2,
+      "elapsed_time": 12.113443851470947,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_timing_summary",
+      "iteration": 2,
+      "elapsed_time": 0.7421226501464844,
+      "wns": -2.585,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 2,
+      "elapsed_time": 2.0313148498535156,
+      "wns": -0.978,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 3,
+      "elapsed_time": 0.06042909622192383,
+      "wns": -0.978,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 3,
+      "elapsed_time": 0.06261181831359863,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 3,
+      "elapsed_time": 0.1986548900604248,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_fabric_for_pblock",
+      "iteration": 3,
+      "elapsed_time": 2.6488864421844482,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_convert_fabric_region_to_pblock",
+      "iteration": 3,
+      "elapsed_time": 0.7669005393981934,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 3,
+      "elapsed_time": 0.06197834014892578,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_write_checkpoint",
+      "iteration": 3,
+      "elapsed_time": 2.18011736869812,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_timing_summary",
+      "iteration": 3,
+      "elapsed_time": 0.5869200229644775,
+      "wns": -0.978,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 3,
+      "elapsed_time": 0.061888694763183594,
+      "wns": -0.978,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 4,
+      "elapsed_time": 0.06018948554992676,
+      "wns": -0.978,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 4,
+      "elapsed_time": 0.06296420097351074,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 4,
+      "elapsed_time": 0.19426202774047852,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_fabric_for_pblock",
+      "iteration": 4,
+      "elapsed_time": 2.6752302646636963,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_convert_fabric_region_to_pblock",
+      "iteration": 4,
+      "elapsed_time": 0.7716600894927979,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 4,
+      "elapsed_time": 0.1972498893737793,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_create_and_apply_pblock",
+      "iteration": 4,
+      "elapsed_time": 2.2592639923095703,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_create_and_apply_pblock",
+      "iteration": 4,
+      "elapsed_time": 2.4567577838897705,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_place_design",
+      "iteration": 4,
+      "elapsed_time": 18.35466957092285,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_route_design",
+      "iteration": 4,
+      "elapsed_time": 43.29728960990906,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 4,
+      "elapsed_time": 0.06229972839355469,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_write_checkpoint",
+      "iteration": 4,
+      "elapsed_time": 2.2865149974823,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_timing_summary",
+      "iteration": 4,
+      "elapsed_time": 0.7573666572570801,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 4,
+      "elapsed_time": 0.06213498115539551,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 5,
+      "elapsed_time": 0.06035423278808594,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 5,
+      "elapsed_time": 0.0629570484161377,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 5,
+      "elapsed_time": 0.19862651824951172,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_fabric_for_pblock",
+      "iteration": 5,
+      "elapsed_time": 2.662034749984741,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 6,
+      "elapsed_time": 0.0624544620513916,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 6,
+      "elapsed_time": 0.062139034271240234,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 6,
+      "elapsed_time": 0.19814753532409668,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_extract_critical_path_pins",
+      "iteration": 6,
+      "elapsed_time": 0.21200823783874512,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_net_detour",
+      "iteration": 6,
+      "elapsed_time": 0.09077644348144531,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 6,
+      "elapsed_time": 0.06198883056640625,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_write_checkpoint",
+      "iteration": 6,
+      "elapsed_time": 2.223177909851074,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_timing_summary",
+      "iteration": 6,
+      "elapsed_time": 0.5924243927001953,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 6,
+      "elapsed_time": 0.061827659606933594,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 7,
+      "elapsed_time": 0.06036067008972168,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 7,
+      "elapsed_time": 0.06168627738952637,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 7,
+      "elapsed_time": 0.19871878623962402,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_extract_critical_path_pins",
+      "iteration": 7,
+      "elapsed_time": 0.21126937866210938,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_net_detour",
+      "iteration": 7,
+      "elapsed_time": 0.08964300155639648,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_critical_path_spread",
+      "iteration": 7,
+      "elapsed_time": 0.0028553009033203125,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_optimize_cell_placement",
+      "iteration": 7,
+      "elapsed_time": 0.2567484378814697,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_critical_path_spread",
+      "iteration": 7,
+      "elapsed_time": 0.0031774044036865234,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_write_checkpoint",
+      "iteration": 7,
+      "elapsed_time": 0.7455720901489258,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_open_checkpoint",
+      "iteration": 7,
+      "elapsed_time": 12.635055303573608,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 7,
+      "elapsed_time": 0.05854368209838867,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 7,
+      "elapsed_time": 0.05731654167175293,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_route_status",
+      "iteration": 7,
+      "elapsed_time": 0.9994204044342041,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 7,
+      "elapsed_time": 48.06354212760925,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 7,
+      "elapsed_time": 0.9741642475128174,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_route_design",
+      "iteration": 7,
+      "elapsed_time": 50.153319358825684,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 7,
+      "elapsed_time": 0.06153106689453125,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_write_checkpoint",
+      "iteration": 7,
+      "elapsed_time": 2.255479335784912,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_open_checkpoint",
+      "iteration": 7,
+      "elapsed_time": 12.809112071990967,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_timing_summary",
+      "iteration": 7,
+      "elapsed_time": 0.855036735534668,
+      "wns": -2.537,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 7,
+      "elapsed_time": 2.085707902908325,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 8,
+      "elapsed_time": 0.06074786186218262,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 8,
+      "elapsed_time": 0.06288361549377441,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 8,
+      "elapsed_time": 0.20899271965026855,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_fabric_for_pblock",
+      "iteration": 8,
+      "elapsed_time": 2.660550832748413,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 9,
+      "elapsed_time": 0.06274080276489258,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 9,
+      "elapsed_time": 0.06352519989013672,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 9,
+      "elapsed_time": 0.20264363288879395,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_fabric_for_pblock",
+      "iteration": 9,
+      "elapsed_time": 2.658952474594116,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 10,
+      "elapsed_time": 0.06292247772216797,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 10,
+      "elapsed_time": 0.06333684921264648,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 10,
+      "elapsed_time": 0.20326662063598633,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_fabric_for_pblock",
+      "iteration": 10,
+      "elapsed_time": 2.6725900173187256,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 11,
+      "elapsed_time": 0.06265044212341309,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 11,
+      "elapsed_time": 0.06367254257202148,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 11,
+      "elapsed_time": 0.2021629810333252,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_fabric_for_pblock",
+      "iteration": 11,
+      "elapsed_time": 2.652804374694824,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 12,
+      "elapsed_time": 0.06304430961608887,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 12,
+      "elapsed_time": 0.0634164810180664,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 12,
+      "elapsed_time": 0.20309710502624512,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_fabric_for_pblock",
+      "iteration": 12,
+      "elapsed_time": 2.6760504245758057,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 13,
+      "elapsed_time": 0.06307578086853027,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 13,
+      "elapsed_time": 0.06344103813171387,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 13,
+      "elapsed_time": 0.2040863037109375,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_fabric_for_pblock",
+      "iteration": 13,
+      "elapsed_time": 2.6736984252929688,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 14,
+      "elapsed_time": 0.06300592422485352,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 14,
+      "elapsed_time": 0.06409144401550293,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 14,
+      "elapsed_time": 0.20180296897888184,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_fabric_for_pblock",
+      "iteration": 14,
+      "elapsed_time": 2.657696008682251,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 15,
+      "elapsed_time": 0.06302404403686523,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 15,
+      "elapsed_time": 0.06352829933166504,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 15,
+      "elapsed_time": 0.20154690742492676,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_fabric_for_pblock",
+      "iteration": 15,
+      "elapsed_time": 2.6617085933685303,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 16,
+      "elapsed_time": 0.06334257125854492,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 16,
+      "elapsed_time": 0.06378293037414551,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 16,
+      "elapsed_time": 0.2021028995513916,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_fabric_for_pblock",
+      "iteration": 16,
+      "elapsed_time": 2.652416944503784,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 17,
+      "elapsed_time": 0.06297516822814941,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 17,
+      "elapsed_time": 0.06372594833374023,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 17,
+      "elapsed_time": 0.20397281646728516,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_fabric_for_pblock",
+      "iteration": 17,
+      "elapsed_time": 2.667590379714966,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 18,
+      "elapsed_time": 0.06281685829162598,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 18,
+      "elapsed_time": 0.06385159492492676,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 18,
+      "elapsed_time": 0.20342683792114258,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_fabric_for_pblock",
+      "iteration": 18,
+      "elapsed_time": 2.663100481033325,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 19,
+      "elapsed_time": 0.06309247016906738,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 19,
+      "elapsed_time": 0.06373119354248047,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 19,
+      "elapsed_time": 0.2040691375732422,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_fabric_for_pblock",
+      "iteration": 19,
+      "elapsed_time": 2.6698009967803955,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 20,
+      "elapsed_time": 0.06312251091003418,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 20,
+      "elapsed_time": 0.06416678428649902,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 20,
+      "elapsed_time": 0.2031235694885254,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_fabric_for_pblock",
+      "iteration": 20,
+      "elapsed_time": 2.6708643436431885,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 21,
+      "elapsed_time": 0.0632479190826416,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 21,
+      "elapsed_time": 0.06387162208557129,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 21,
+      "elapsed_time": 0.2035062313079834,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_fabric_for_pblock",
+      "iteration": 21,
+      "elapsed_time": 2.6788978576660156,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 22,
+      "elapsed_time": 0.06300878524780273,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 22,
+      "elapsed_time": 0.06426668167114258,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 22,
+      "elapsed_time": 0.20168495178222656,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_fabric_for_pblock",
+      "iteration": 22,
+      "elapsed_time": 2.651836395263672,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 23,
+      "elapsed_time": 0.06313729286193848,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 23,
+      "elapsed_time": 0.0642704963684082,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 23,
+      "elapsed_time": 0.20310592651367188,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_fabric_for_pblock",
+      "iteration": 23,
+      "elapsed_time": 2.6739628314971924,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 24,
+      "elapsed_time": 0.06309890747070312,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 24,
+      "elapsed_time": 0.06413817405700684,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 24,
+      "elapsed_time": 0.20256400108337402,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_fabric_for_pblock",
+      "iteration": 24,
+      "elapsed_time": 2.662452220916748,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 25,
+      "elapsed_time": 0.0632326602935791,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 25,
+      "elapsed_time": 0.06422662734985352,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 25,
+      "elapsed_time": 0.20189237594604492,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_fabric_for_pblock",
+      "iteration": 25,
+      "elapsed_time": 2.6692793369293213,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 26,
+      "elapsed_time": 0.06318092346191406,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 26,
+      "elapsed_time": 0.06424617767333984,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 26,
+      "elapsed_time": 0.2031095027923584,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_fabric_for_pblock",
+      "iteration": 26,
+      "elapsed_time": 2.6639561653137207,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 27,
+      "elapsed_time": 0.06316161155700684,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 27,
+      "elapsed_time": 0.06436634063720703,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 27,
+      "elapsed_time": 0.2039191722869873,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_fabric_for_pblock",
+      "iteration": 27,
+      "elapsed_time": 2.660531759262085,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 28,
+      "elapsed_time": 0.06332564353942871,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 28,
+      "elapsed_time": 0.06443142890930176,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 28,
+      "elapsed_time": 0.20427799224853516,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_fabric_for_pblock",
+      "iteration": 28,
+      "elapsed_time": 2.660316228866577,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 29,
+      "elapsed_time": 0.06327986717224121,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 29,
+      "elapsed_time": 0.06437230110168457,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 29,
+      "elapsed_time": 0.20360136032104492,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_fabric_for_pblock",
+      "iteration": 29,
+      "elapsed_time": 2.6608469486236572,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 30,
+      "elapsed_time": 0.06336522102355957,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 30,
+      "elapsed_time": 0.06471920013427734,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 30,
+      "elapsed_time": 0.20413756370544434,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_fabric_for_pblock",
+      "iteration": 30,
+      "elapsed_time": 2.6661486625671387,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 31,
+      "elapsed_time": 0.0635373592376709,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 31,
+      "elapsed_time": 0.0646672248840332,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 31,
+      "elapsed_time": 0.2039027214050293,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_fabric_for_pblock",
+      "iteration": 31,
+      "elapsed_time": 2.675295829772949,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 32,
+      "elapsed_time": 0.06327271461486816,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 32,
+      "elapsed_time": 0.0647592544555664,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 32,
+      "elapsed_time": 0.20288491249084473,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_fabric_for_pblock",
+      "iteration": 32,
+      "elapsed_time": 2.6558516025543213,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 33,
+      "elapsed_time": 0.06329679489135742,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 33,
+      "elapsed_time": 0.06490921974182129,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 33,
+      "elapsed_time": 0.20367860794067383,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_fabric_for_pblock",
+      "iteration": 33,
+      "elapsed_time": 2.671142339706421,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 34,
+      "elapsed_time": 0.06371688842773438,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 34,
+      "elapsed_time": 0.06510019302368164,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 34,
+      "elapsed_time": 0.20475268363952637,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_fabric_for_pblock",
+      "iteration": 34,
+      "elapsed_time": 2.6782925128936768,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 35,
+      "elapsed_time": 0.06331729888916016,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 35,
+      "elapsed_time": 0.06562685966491699,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 35,
+      "elapsed_time": 0.2040853500366211,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_fabric_for_pblock",
+      "iteration": 35,
+      "elapsed_time": 2.681490421295166,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 36,
+      "elapsed_time": 0.06325078010559082,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 36,
+      "elapsed_time": 0.06477737426757812,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 36,
+      "elapsed_time": 0.20369696617126465,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_fabric_for_pblock",
+      "iteration": 36,
+      "elapsed_time": 2.668632984161377,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 37,
+      "elapsed_time": 0.0633547306060791,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 37,
+      "elapsed_time": 0.06513071060180664,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 37,
+      "elapsed_time": 0.2024526596069336,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_fabric_for_pblock",
+      "iteration": 37,
+      "elapsed_time": 2.6628811359405518,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 38,
+      "elapsed_time": 0.06345200538635254,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 38,
+      "elapsed_time": 0.06519293785095215,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 38,
+      "elapsed_time": 0.20456290245056152,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_fabric_for_pblock",
+      "iteration": 38,
+      "elapsed_time": 2.6614274978637695,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 39,
+      "elapsed_time": 0.06349635124206543,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 39,
+      "elapsed_time": 0.0649714469909668,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 39,
+      "elapsed_time": 0.20307040214538574,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_fabric_for_pblock",
+      "iteration": 39,
+      "elapsed_time": 2.6846401691436768,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 40,
+      "elapsed_time": 0.06342196464538574,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 40,
+      "elapsed_time": 0.06524038314819336,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 40,
+      "elapsed_time": 0.20125436782836914,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_fabric_for_pblock",
+      "iteration": 40,
+      "elapsed_time": 2.6650218963623047,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 41,
+      "elapsed_time": 0.06347823143005371,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 41,
+      "elapsed_time": 0.06599950790405273,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 41,
+      "elapsed_time": 0.20316171646118164,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_fabric_for_pblock",
+      "iteration": 41,
+      "elapsed_time": 2.6711084842681885,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 42,
+      "elapsed_time": 0.06351971626281738,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 42,
+      "elapsed_time": 0.06555819511413574,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 42,
+      "elapsed_time": 0.20422053337097168,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_fabric_for_pblock",
+      "iteration": 42,
+      "elapsed_time": 2.6692943572998047,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 43,
+      "elapsed_time": 0.0634315013885498,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 43,
+      "elapsed_time": 0.065704345703125,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 43,
+      "elapsed_time": 0.20414495468139648,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_fabric_for_pblock",
+      "iteration": 43,
+      "elapsed_time": 2.6583783626556396,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 44,
+      "elapsed_time": 0.06354427337646484,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 44,
+      "elapsed_time": 0.06727433204650879,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 44,
+      "elapsed_time": 0.20610284805297852,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_fabric_for_pblock",
+      "iteration": 44,
+      "elapsed_time": 2.687694549560547,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 45,
+      "elapsed_time": 0.06355834007263184,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 45,
+      "elapsed_time": 0.06585121154785156,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 45,
+      "elapsed_time": 0.2039031982421875,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_fabric_for_pblock",
+      "iteration": 45,
+      "elapsed_time": 2.665958881378174,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 46,
+      "elapsed_time": 0.06348371505737305,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 46,
+      "elapsed_time": 0.06678891181945801,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 46,
+      "elapsed_time": 0.2035689353942871,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_fabric_for_pblock",
+      "iteration": 46,
+      "elapsed_time": 2.6613762378692627,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 47,
+      "elapsed_time": 0.06353187561035156,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 47,
+      "elapsed_time": 0.06583142280578613,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 47,
+      "elapsed_time": 0.20561504364013672,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_fabric_for_pblock",
+      "iteration": 47,
+      "elapsed_time": 2.675513744354248,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 48,
+      "elapsed_time": 0.06338024139404297,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 48,
+      "elapsed_time": 0.06628870964050293,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 48,
+      "elapsed_time": 0.2049102783203125,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_fabric_for_pblock",
+      "iteration": 48,
+      "elapsed_time": 2.6549925804138184,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 49,
+      "elapsed_time": 0.06378912925720215,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 49,
+      "elapsed_time": 0.0657649040222168,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 49,
+      "elapsed_time": 0.20209813117980957,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_fabric_for_pblock",
+      "iteration": 49,
+      "elapsed_time": 2.661400318145752,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 50,
+      "elapsed_time": 0.06381845474243164,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 50,
+      "elapsed_time": 0.06637716293334961,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 50,
+      "elapsed_time": 0.2018113136291504,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_fabric_for_pblock",
+      "iteration": 50,
+      "elapsed_time": 2.670689105987549,
+      "wns": null,
+      "error": false
+    }
+  ]
+}
