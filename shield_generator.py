@@ -47,18 +47,18 @@ class ShieldGenerator:
         parts = [p for p in raw.replace('\n', ' ').split(' ') if p]
         return parts
 
-    def get_currently_locked(self, filter_type: str = "both") -> Dict[str, List[str]]:
+    async def get_currently_locked(self, filter_type: str = "both") -> Dict[str, List[str]]:
         locked_cells = []
         locked_nets = []
         if filter_type in ("cells", "both"):
-            out = self.vivado.run_tcl_command("get_cells -filter {IS_LOC_FIXED == 1}")
+            out = await self.vivado.run_tcl_command("get_cells -filter {IS_LOC_FIXED == 1}")
             locked_cells = self.parse_get_cells_output(out)
         if filter_type in ("nets", "both"):
-            out = self.vivado.run_tcl_command("get_nets -filter {DONT_TOUCH == 1}")
+            out = await self.vivado.run_tcl_command("get_nets -filter {DONT_TOUCH == 1}")
             locked_nets = self.parse_get_cells_output(out)
         return {"locked_cells": locked_cells, "locked_nets": locked_nets}
 
-    def release_all_shields(self) -> ShieldResult:
+    async def release_all_shields(self) -> ShieldResult:
         tcl = (
             "set locked_cells [get_cells -filter {IS_LOC_FIXED == 1}]\n"
             "if {[llength $locked_cells] > 0} {\n"
@@ -71,14 +71,14 @@ class ShieldGenerator:
             "}\n"
         )
         try:
-            out = self.vivado.run_tcl_command(tcl)
+            out = await self.vivado.run_tcl_command(tcl)
             # don't treat warnings as fatal
             return ShieldResult(cells_locked=0, nets_locked=0, cells_skipped=0, nets_skipped=0, tcl_calls_made=1, success=True)
         except Exception as e:
             logger.warning(f"release_all_shields failed: {e}")
             return ShieldResult(cells_locked=0, nets_locked=0, cells_skipped=0, nets_skipped=0, tcl_calls_made=0, success=False, error_message=str(e))
 
-    def lock_moved_cells(self, cell_names: List[str], lock_bel: bool = True) -> ShieldResult:
+    async def lock_moved_cells(self, cell_names: List[str], lock_bel: bool = True) -> ShieldResult:
         if not cell_names:
             return ShieldResult(0, 0, 0, 0, 0, True)
 
@@ -98,13 +98,13 @@ class ShieldGenerator:
         if lock_bel:
             tcl += "\nset_property IS_BEL_FIXED 1 $objs"
         try:
-            out = self.vivado.run_tcl_command(tcl)
+            out = await self.vivado.run_tcl_command(tcl)
             return ShieldResult(cells_locked=len(to_lock), nets_locked=0, cells_skipped=skip, nets_skipped=0, tcl_calls_made=1, success=True)
         except Exception as e:
             logger.warning(f"lock_moved_cells failed: {e}")
             return ShieldResult(cells_locked=0, nets_locked=0, cells_skipped=skip, nets_skipped=0, tcl_calls_made=0, success=False, error_message=str(e))
 
-    def lock_good_routes(self, net_names: List[str]) -> ShieldResult:
+    async def lock_good_routes(self, net_names: List[str]) -> ShieldResult:
         if not net_names:
             return ShieldResult(0, 0, 0, 0, 0, True)
 
@@ -122,13 +122,13 @@ class ShieldGenerator:
 
         tcl = _build_tcl_set_property("get_nets", "DONT_TOUCH", 1, to_lock)
         try:
-            out = self.vivado.run_tcl_command(tcl)
+            out = await self.vivado.run_tcl_command(tcl)
             return ShieldResult(cells_locked=0, nets_locked=len(to_lock), cells_skipped=0, nets_skipped=skip, tcl_calls_made=1, success=True)
         except Exception as e:
             logger.warning(f"lock_good_routes failed: {e}")
             return ShieldResult(cells_locked=0, nets_locked=0, cells_skipped=0, nets_skipped=skip, tcl_calls_made=0, success=False, error_message=str(e))
 
-    def shield_iteration(self, moved_cells: List[str], preserved_nets: List[str]) -> ShieldResult:
+    async def shield_iteration(self, moved_cells: List[str], preserved_nets: List[str]) -> ShieldResult:
         """
         Orchestrate a single iteration's shield sequence.
 
@@ -144,9 +144,9 @@ class ShieldGenerator:
         This method implements steps 1-4 (release previous shields, lock moved cells, lock preserved nets).
         """
         # release previous iteration shields
-        res_release = self.release_all_shields()
-        res_cells = self.lock_moved_cells(moved_cells)
-        res_nets = self.lock_good_routes(preserved_nets)
+        res_release = await self.release_all_shields()
+        res_cells = await self.lock_moved_cells(moved_cells)
+        res_nets = await self.lock_good_routes(preserved_nets)
 
         total_cells_locked = res_cells.cells_locked
         total_nets_locked = res_nets.nets_locked

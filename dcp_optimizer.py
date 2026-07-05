@@ -97,6 +97,21 @@ DEFAULT_PBLOCK_NAME_PREFIX = "pblock_net_delay"
 class WNSParseError(ValueError):
     """Raised when Vivado WNS output cannot be parsed into a plausible slack."""
 
+
+class VivadoToolCallError(RuntimeError):
+    """Raised when an MCP tool call returns isError=True (a real Vivado/RapidWright
+    failure, e.g. a pipe desync + restart) rather than normal command output.
+
+    This must be allowed to propagate up to the main optimize() loop so it can
+    reopen the last-known-good checkpoint instead of quietly falling through to
+    WNS/timing parsers that would otherwise misinterpret the error text as data.
+    """
+
+    def __init__(self, tool_name: str, error_text: str):
+        self.tool_name = tool_name
+        self.error_text = error_text
+        super().__init__(f"{tool_name} returned an MCP error: {error_text[:500]}")
+
 TIMING_DECISION_SYSTEM_PROMPT = """
 You are an FPGA timing optimization agent operating on AMD UltraScale+ xcvu3p designs.
 You receive a structured timing state and must choose a physical optimization action.
@@ -564,6 +579,11 @@ class DCPOptimizerBase:
             return wns
         except WNSParseError as e:
             logger.error(f"Failed to parse WNS for target clock: {e}")
+        except VivadoToolCallError:
+            # Real Vivado-side failure, not a parsing issue -- propagate so the
+            # caller's recovery handler (reopen last-good checkpoint) can run,
+            # instead of silently returning None here.
+            raise
         except Exception as e:
             logger.warning(f"Failed to get WNS for target clock: {e}")
         
@@ -848,38 +868,46 @@ class DCPOptimizer(DCPOptimizerBase):
             else:
                 result = await session.call_tool(actual_name, arguments)
 
-                if getattr(result, "isError", False):
-                    error_text = "\n".join(c.text for c in result.content if hasattr(c, "text"))
-                    logger.error(f"{tool_name} returned an MCP error, not Vivado output: {error_text[:500]}")
-                    raise VivadoToolCallError(tool_name, error_text)   # define this exception near WNSParseError
-
                 # Extract text content from result
                 if result.content:
                     text_parts = [c.text for c in result.content if hasattr(c, 'text')]
                     result_text = "\n".join(text_parts)
                 else:
                     result_text = "(no output)"
+
+                # A real server-side failure (e.g. Vivado pipe desync + restart)
+                # comes back as an MCP error result, not normal command output.
+                # Without this check, that error text gets fed straight into the
+                # WNS/timing parsers below as if it were real Vivado output.
+                if getattr(result, "isError", False):
+                    logger.error(f"{tool_name} returned an MCP error, not Vivado output: {result_text[:500]}")
+                    raise VivadoToolCallError(tool_name, result_text)
             
             # Track WNS from timing reports and get_wns calls
-                if tool_name == "vivado_report_timing_summary":
-                    if self.target_clock:
-                        try:
-                            clock_wns = await super().get_wns_for_target_clock(self._call_vivado_tool)
-                            if clock_wns is not None:
-                                current_wns = clock_wns
-                                wns_measured = current_wns
-                                current_fmax = self.calculate_fmax(current_wns, self.clock_period)
-                                fmax_str = f", fmax: {current_fmax:.2f} MHz" if current_fmax is not None else ""
-                                if current_wns > self.best_wns:
-                                    logger.info(f"New best WNS (clock: {self.target_clock}): {current_wns:.3f} ns{fmax_str} (improved from {self.best_wns:.3f} ns)")
-                                    self.best_wns = current_wns
-                                else:
-                                    logger.info(f"Current WNS (clock: {self.target_clock}): {current_wns:.3f} ns{fmax_str} (best is still {self.best_wns:.3f} ns)")
-                        except VivadoToolCallError:
-                            raise  # let it bubble up to the iteration loop — don't swallow it here
-                        except Exception as e:
-                            logger.warning(f"Failed to get clock-specific WNS, falling back to overall: {e}")
-                            self.target_clock = None                
+            if tool_name == "vivado_report_timing_summary":
+                # If target clock is set, get clock-specific WNS instead of overall
+                if self.target_clock:
+                    try:
+                        clock_wns = await super().get_wns_for_target_clock(self._call_vivado_tool)
+                        if clock_wns is not None:
+                            current_wns = clock_wns
+                            wns_measured = current_wns
+                            current_fmax = self.calculate_fmax(current_wns, self.clock_period)
+                            fmax_str = f", fmax: {current_fmax:.2f} MHz" if current_fmax is not None else ""
+                            if current_wns > self.best_wns:
+                                logger.info(f"New best WNS (clock: {self.target_clock}): {current_wns:.3f} ns{fmax_str} (improved from {self.best_wns:.3f} ns)")
+                                self.best_wns = current_wns
+                            else:
+                                logger.info(f"Current WNS (clock: {self.target_clock}): {current_wns:.3f} ns{fmax_str} (best is still {self.best_wns:.3f} ns)")
+                    except VivadoToolCallError:
+                        # Real Vivado-side failure, not a parsing issue -- let it
+                        # bubble all the way up to optimize()'s recovery handler
+                        # rather than silently falling back to overall WNS parsing.
+                        raise
+                    except Exception as e:
+                        logger.warning(f"Failed to get clock-specific WNS, falling back to overall: {e}")
+                        self.target_clock = None  # Fall through to overall WNS parsing
+                
                 if not self.target_clock or wns_measured is None:
                     try:
                         current_wns = parse_timing_summary_wns_static(result_text, self.clock_period)
@@ -899,7 +927,7 @@ class DCPOptimizer(DCPOptimizerBase):
                             logger.info(f"Current WNS: {current_wns:.3f} ns{fmax_str} (best is still {self.best_wns:.3f} ns)")
             
             # Also track WNS from get_wns tool (returns just the numeric WNS value)
-            if tool_name == "vivado_get_wns":
+            elif tool_name == "vivado_get_wns":
                 try:
                     current_wns = parse_wns_value_static(result_text, self.clock_period, "vivado_get_wns")
                     wns_measured = current_wns
@@ -931,7 +959,26 @@ class DCPOptimizer(DCPOptimizerBase):
             })
             
             return result_text
-            
+
+        except VivadoToolCallError as e:
+            # Real Vivado/RapidWright-side failure (e.g. pipe desync + restart).
+            # This must propagate all the way up to optimize()'s main loop so it
+            # can reopen the last-known-good checkpoint, instead of being
+            # swallowed here and turned into a plain string that downstream
+            # WNS/timing parsers would misread as real data.
+            error_occurred = True
+            elapsed_time = time.time() - start_time
+            self.tool_call_details.append({
+                "tool_name": tool_name,
+                "iteration": self.iteration,
+                "elapsed_time": elapsed_time,
+                "wns": None,
+                "error": True,
+                "error_message": str(e)
+            })
+            logger.error(f"Tool call failed (propagating for recovery): {e}")
+            raise
+
         except Exception as e:
             error_occurred = True
             elapsed_time = time.time() - start_time
@@ -3132,7 +3179,7 @@ Proceed by selecting exactly one validated action per timing-context turn."""
         while self.iteration < max_iterations:
             self.iteration += 1
             logger.info(f"=== Iteration {self.iteration} ===")
-
+            
             try:
                 await self._append_iteration_context()
                 decision = await self.get_validated_action_decision(self.last_timing_context)
@@ -3144,7 +3191,7 @@ Proceed by selecting exactly one validated action per timing-context turn."""
                     continue
                 await self.call_tool("vivado_report_timing_summary", {"timeout": 300})
                 print(f"\n{response_text}\n")
-
+                
                 current_wns = await self._get_current_wns()
                 if current_wns is not None and current_wns >= 0 and self.current_period_ns is not None:
                     await self._run_clock_bisection_after_closure(current_wns)
@@ -3156,10 +3203,24 @@ Proceed by selecting exactly one validated action per timing-context turn."""
                     return True
 
             except VivadoToolCallError as e:
+                # A real Vivado/RapidWright-side failure occurred (e.g. a pipe
+                # desync + auto-restart on the MCP server). The live Vivado
+                # session may now be empty/stateless, so resync by reopening
+                # the last-known-good checkpoint before continuing, rather than
+                # letting subsequent commands run blind against nothing.
                 logger.error(f"Vivado tool call failed ({e.tool_name}); reopening last good checkpoint to resync state.")
                 best_ckpt = self.checkpoint_manager.get_best_checkpoint() if self.checkpoint_manager else None
                 if best_ckpt:
-                    await self.call_tool("vivado_open_checkpoint", {"dcp_path": best_ckpt}, internal=True)
+                    try:
+                        await self.call_tool("vivado_open_checkpoint", {"dcp_path": best_ckpt}, internal=True)
+                    except Exception as reopen_exc:
+                        logger.exception(f"Failed to reopen checkpoint after desync recovery: {reopen_exc}")
+                        self.end_time = time.time()
+                        raise
+                else:
+                    logger.error("No known-good checkpoint to reopen; aborting run.")
+                    self.end_time = time.time()
+                    raise
                 continue
 
             except Exception as e:
