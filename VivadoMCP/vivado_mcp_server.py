@@ -12,14 +12,12 @@ Usage:
 
 import argparse
 import atexit
-import json
 import logging
 import os
 import re
 import signal
 import shutil
 import sys
-import uuid
 from typing import Optional, Dict, Any
 
 import pexpect
@@ -48,54 +46,6 @@ _vivado_log_file: Optional[str] = None
 _vivado_journal_file: Optional[str] = None
 _design_open: bool = False
 _command_pending: bool = False  # True if a command timed out and may still be running
-_command_sequence: int = 0
-
-
-_VIVADO_FAILURE_PATTERNS = [
-    "phys_opt_design failed",
-    "ERROR:",
-    "valid license was not found",
-    "Failed to get the license",
-]
-
-_LEGACY_SENTINEL_PATTERNS = [
-    "route_status_start",
-    "timing_summary_start",
-    "fanout_analysis_start",
-    "get_wns_start",
-]
-
-
-class VivadoPipeDesyncError(RuntimeError):
-    """Raised when the persistent Vivado Tcl pipe can no longer be trusted."""
-
-
-def classify_vivado_failure(command: str, output: str) -> Optional[Dict[str, Any]]:
-    """Return a structured failure payload when Vivado rejected a command."""
-    text = output or ""
-    lower = text.lower()
-    if not any(pattern.lower() in lower for pattern in _VIVADO_FAILURE_PATTERNS):
-        return None
-
-    if "valid license was not found" in lower or "failed to get the license" in lower:
-        error_type = "vivado_license_failure"
-    else:
-        error_type = "vivado_command_failure"
-
-    return {
-        "success": False,
-        "error_type": error_type,
-        "command": command,
-        "message": text.strip(),
-    }
-
-
-def structured_or_text(command: str, output: str) -> str:
-    failure = classify_vivado_failure(command, output)
-    if failure:
-        logger.warning("Vivado command failed: %s", failure["error_type"])
-        return json.dumps(failure, indent=2)
-    return output
 
 
 def get_vivado_path() -> str:
@@ -193,10 +143,6 @@ def start_vivado(log_file: Optional[str] = None, journal_file: Optional[str] = N
     # Get the PID for reliable cleanup
     _vivado_pid = _vivado_process.pid
     logger.info(f"Vivado process started with PID: {_vivado_pid}")
-    try:
-        _vivado_process.setecho(False)
-    except Exception:
-        logger.debug("Could not disable Vivado pty echo", exc_info=True)
     
     # Wait for Vivado prompt
     logger.info("Waiting for Vivado prompt...")
@@ -218,73 +164,6 @@ def wait_for_prompt(proc: pexpect.spawn, timeout: float) -> str:
     """Wait for Vivado prompt and return captured output."""
     proc.expect(VIVADO_PROMPT, timeout=timeout)
     return proc.before
-
-
-def make_command_token() -> str:
-    """Create a unique token for bracketing one Tcl command's output."""
-    global _command_sequence
-    _command_sequence += 1
-    return f"{_command_sequence}_{uuid.uuid4().hex}"
-
-
-def wrap_tcl_command(command: str, token: str) -> tuple[str, str, str]:
-    """Wrap Tcl in unique sentinels and print command return values explicitly."""
-    begin = f"VIVADO_CMD_BEGIN_{token}"
-    end = f"VIVADO_CMD_END_{token}"
-    wrapped = (
-        "set __codex_begin {VIVADO_CMD_BEGIN_}\n"
-        f"append __codex_begin {{{token}}}\n"
-        "set __codex_end {VIVADO_CMD_END_}\n"
-        f"append __codex_end {{{token}}}\n"
-        "puts $__codex_begin\n"
-        "flush stdout\n"
-        "set __codex_cmd_result {}\n"
-        "if {[catch {\n"
-        f"{command}\n"
-        "} __codex_cmd_result __codex_cmd_options]} {\n"
-        "    puts {__VIVADO_CMD_ERROR__}\n"
-        "    puts $__codex_cmd_result\n"
-        "} elseif {$__codex_cmd_result ne {}} {\n"
-        "    puts $__codex_cmd_result\n"
-        "}\n"
-        "puts $__codex_end\n"
-        "flush stdout"
-    )
-    return wrapped, begin, end
-
-
-def detect_pipe_desync(output: str, token: str, command: str) -> Optional[str]:
-    """Detect obvious evidence that another command's output leaked into this one."""
-    text = output or ""
-    for marker in _LEGACY_SENTINEL_PATTERNS:
-        if marker in text:
-            return f"captured legacy sentinel marker {marker!r}"
-
-    for match in re.finditer(r"VIVADO_CMD_(?:BEGIN|END)_([0-9]+_[0-9a-f]{32})", text):
-        if match.group(1) != token:
-            return f"captured sentinel for another command: {match.group(0)}"
-
-    if re.search(r"\r?\nVivado% ", text):
-        return "captured Vivado prompt inside command output"
-
-    return None
-
-
-def effective_command_timeout(command: str, requested_timeout: Optional[float]) -> float:
-    """Use long timeout floors for implementation commands that legitimately run for minutes."""
-    timeout = requested_timeout if requested_timeout is not None else 300
-    stripped = command.strip().lower()
-    long_running_prefixes = (
-        "route_design",
-        "place_design",
-        "phys_opt_design",
-        "opt_design",
-        "write_checkpoint",
-        "open_checkpoint",
-    )
-    if stripped.startswith(long_running_prefixes):
-        return max(float(timeout), 3600.0)
-    return float(timeout)
 
 
 def sync_after_timeout(proc: pexpect.spawn) -> str:
@@ -323,57 +202,43 @@ def run_tcl_command(command: str, timeout: Optional[float] = None) -> str:
     
     proc = ensure_vivado()
     
+    # If a previous command timed out, wait for it to complete first
     if _command_pending:
-        logger.error("vivado_pipe_desync_detected: previous command timed out; restarting Vivado before new command.")
-        restart_vivado_process()
-        raise VivadoPipeDesyncError("Previous Vivado command timed out; process restarted to avoid pipe desync.")
+        sync_output = sync_after_timeout(proc)
+        if sync_output:
+            # Previous command completed, we can continue
+            pass
     
-    # Use provided timeout or default, with floors for long-running commands.
-    effective_timeout = effective_command_timeout(command, timeout)
+    # Use provided timeout or default
+    effective_timeout = timeout if timeout is not None else 300
     
     # Log the command (truncate if very long)
     cmd_log = command if len(command) < 200 else command[:200] + "..."
     logger.info(f"Executing Tcl command: {cmd_log}")
     
-    token = make_command_token()
-    wrapped_command, begin_sentinel, end_sentinel = wrap_tcl_command(command, token)
-    
-    # Send command wrapped in unique begin/end sentinels.  We wait for the
-    # matching end sentinel, then drain the Tcl prompt, so verbose commands
-    # cannot bleed unread output into the next command.
-    proc.sendline(wrapped_command)
+    # Send command
+    proc.sendline(command)
     
     try:
-        proc.expect(re.escape(begin_sentinel), timeout=effective_timeout)
-        proc.expect(re.escape(end_sentinel), timeout=effective_timeout)
+        # Wait for prompt and capture output
+        proc.expect(VIVADO_PROMPT, timeout=effective_timeout)
+        
+        # Get output (everything between command echo and prompt)
         output = proc.before
-        wait_for_prompt(proc, timeout=60)
-        _command_pending = False
-
-        desync_reason = detect_pipe_desync(output, token, command)
-        if desync_reason:
-            logger.error("vivado_pipe_desync_detected: %s while running %s", desync_reason, cmd_log)
-            restart_vivado_process()
-            raise VivadoPipeDesyncError(desync_reason)
-
-        if "__VIVADO_CMD_ERROR__" in output:
-            logger.warning("Vivado command reported Tcl error: %s", cmd_log)
-
+        
+        # Remove the echoed command from output (first line)
+        lines = output.split("\n")
+        if lines and command in lines[0]:
+            output = "\n".join(lines[1:])
+        
         logger.info(f"Command completed successfully")
         return output.strip()
     
     except pexpect.TIMEOUT:
+        # Mark that we have a pending command
         _command_pending = True
-        logger.error(
-            "vivado_pipe_desync_detected: command timed out after %ss before unique sentinel %s: %s",
-            effective_timeout,
-            end_sentinel,
-            cmd_log,
-        )
-        restart_vivado_process()
-        raise VivadoPipeDesyncError(
-            f"Command timed out before unique end sentinel {end_sentinel}; Vivado restarted to resync pipe."
-        )
+        logger.error(f"Command timed out after {effective_timeout}s: {cmd_log}")
+        raise
 
 
 def restart_vivado_process() -> str:
@@ -414,6 +279,9 @@ def get_critical_high_fanout_nets(
     """
     import re
     from collections import defaultdict
+    
+    # Flush buffer before generating timing report
+    run_tcl_command("puts {fanout_analysis_start}", timeout=5)
     
     # Generate detailed timing report for multiple paths
     cmd = f"report_timing -return_string -max_paths {num_paths} -delay_type max -sort_by slack"
@@ -1112,7 +980,6 @@ def create_and_apply_pblock(
     """
     result_lines = []
     current_ranges = ranges
-    final_validation = None
     
     logger.info(f"Creating pblock '{pblock_name}' with range: {ranges}")
     logger.info(f"validate_resources={validate_resources}, max_expansion_attempts={max_expansion_attempts}")
@@ -1147,59 +1014,16 @@ def create_and_apply_pblock(
             
             # Apply pblock to cells
             if apply_to == "current_design":
-                cell_query = "get_cells -hierarchical -quiet"
+                add_cmd = f"add_cells_to_pblock {pblock_name} [get_cells -hierarchical]"
             else:
-                cell_query = f"get_cells -hierarchical -quiet {{{apply_to}}}"
-
-            count_cmd = f"set pblock_cells [{cell_query}]; puts \"PBLOCK_CELL_COUNT:[llength $pblock_cells]\""
-            count_result = run_tcl_command(count_cmd, timeout=timeout)
-            count_match = re.search(r"PBLOCK_CELL_COUNT:(\d+)", count_result)
-            cell_count = int(count_match.group(1)) if count_match else 0
-            result_lines.append(f"Matched cells for pblock: {cell_count}")
-            if cell_count <= 0:
-                return json.dumps({
-                    "success": False,
-                    "error_type": "pblock_no_cells",
-                    "command": "create_and_apply_pblock",
-                    "message": f"Pblock target '{apply_to}' matched zero cells; refusing to create an empty pblock.",
-                    "pblock_name": pblock_name,
-                    "ranges": current_ranges,
-                    "apply_to": apply_to,
-                    "cells_matched": cell_count,
-                    "log": "\n".join(result_lines),
-                }, indent=2)
-
-            add_cmd = f"add_cells_to_pblock {pblock_name} $pblock_cells"
+                add_cmd = f"add_cells_to_pblock {pblock_name} [get_cells {apply_to}]"
             
             result = run_tcl_command(add_cmd, timeout=timeout)
             result_lines.append(f"Applied pblock to: {apply_to}")
-
-            assigned_cmd = (
-                f"set assigned_cells [get_cells -quiet -of_objects [get_pblocks {pblock_name}]]; "
-                "puts \"PBLOCK_ASSIGNED_COUNT:[llength $assigned_cells]\""
-            )
-            assigned_result = run_tcl_command(assigned_cmd, timeout=timeout)
-            assigned_match = re.search(r"PBLOCK_ASSIGNED_COUNT:(\d+)", assigned_result)
-            assigned_count = int(assigned_match.group(1)) if assigned_match else 0
-            result_lines.append(f"Assigned cells to pblock: {assigned_count}")
-            if assigned_count <= 0:
-                return json.dumps({
-                    "success": False,
-                    "error_type": "pblock_empty_assignment",
-                    "command": "create_and_apply_pblock",
-                    "message": f"Pblock '{pblock_name}' was created but no cells were assigned.",
-                    "pblock_name": pblock_name,
-                    "ranges": current_ranges,
-                    "apply_to": apply_to,
-                    "cells_matched": cell_count,
-                    "cells_assigned": assigned_count,
-                    "log": "\n".join(result_lines),
-                }, indent=2)
             
             # Validate resources if requested
             if validate_resources:
                 validation = validate_pblock_resources(pblock_name)
-                final_validation = validation
                 
                 if not validation['is_valid']:
                     result_lines.append(f"\n⚠ Resource validation FAILED:")
@@ -1241,33 +1065,12 @@ def create_and_apply_pblock(
                 "3. Check timing with report_timing_summary"
             ])
             
-            return json.dumps({
-                "success": True,
-                "status": "success",
-                "message": f"Pblock {pblock_name} created and assigned to {assigned_count} cells.",
-                "pblock_name": pblock_name,
-                "ranges": current_ranges,
-                "apply_to": apply_to,
-                "is_soft": is_soft,
-                "cells_matched": cell_count,
-                "cells_assigned": assigned_count,
-                "resource_validation": final_validation,
-                "log": "\n".join(result_lines),
-            }, indent=2)
+            return "\n".join(result_lines)
             
         except Exception as e:
             result_lines.append(f"Error in attempt {attempt}: {str(e)}")
             if attempt >= max_expansion_attempts:
-                return json.dumps({
-                    "success": False,
-                    "error_type": "pblock_command_failure",
-                    "command": "create_and_apply_pblock",
-                    "message": str(e),
-                    "pblock_name": pblock_name,
-                    "ranges": current_ranges,
-                    "apply_to": apply_to,
-                    "log": "\n".join(result_lines),
-                }, indent=2)
+                return f"Error creating/applying pblock: {str(e)}\n" + "\n".join(result_lines)
     
     return "\n".join(result_lines)
 
@@ -1799,41 +1602,36 @@ async def call_tool(name: str, arguments: dict):
         
         elif name == "report_route_status":
             timeout = arguments.get("timeout", 300)
+            # Run a quick command first to flush any leftover output from previous commands
+            run_tcl_command("puts {route_status_start}", timeout=5)
             output = run_tcl_command("report_route_status -return_string", timeout=timeout)
             return [TextContent(type="text", text=output)]
         
         elif name == "report_timing_summary":
             timeout = arguments.get("timeout", 300)
+            # Run a quick command first to flush any leftover output from previous commands
+            run_tcl_command("puts {timing_summary_start}", timeout=5)
             output = run_tcl_command("report_timing_summary -return_string", timeout=timeout)
             return [TextContent(type="text", text=output)]
         
         elif name == "get_wns":
             timeout = arguments.get("timeout", 60)
             clock = arguments.get("clock", None)
+            # Flush buffer first
+            run_tcl_command("puts {get_wns_start}", timeout=5)
             if clock:
                 tcl_cmd = (
                     f"set clk_obj [get_clocks -quiet {{{clock}}}]; "
                     f"if {{$clk_obj ne {{}}}} {{ "
                     f"  set wns_path [get_timing_paths -max_paths 1 -setup -to $clk_obj]; "
-                    f"  if {{[llength $wns_path] > 0}} {{set wns_value [get_property SLACK $wns_path]}} else {{set wns_value 0.0}} "
-                    f"}} else {{error {{clock not found}}}}; "
-                    f"puts {{WNS_VALUE_BEGIN}}; puts $wns_value; puts {{WNS_VALUE_END}}"
+                    f"  if {{[llength $wns_path] > 0}} {{get_property SLACK $wns_path}} else {{puts 0.0}} "
+                    f"}} else {{puts {{ERROR: clock not found}}}}"
                 )
             else:
-                tcl_cmd = (
-                    "set wns_path [get_timing_paths -max_paths 1 -slack_lesser_than 999]; "
-                    "if {[llength $wns_path] > 0} {set wns_value [get_property SLACK $wns_path]} else {set wns_value 0.0}; "
-                    "puts {WNS_VALUE_BEGIN}; puts $wns_value; puts {WNS_VALUE_END}"
-                )
+                tcl_cmd = "set wns_path [get_timing_paths -max_paths 1 -slack_lesser_than 999]; if {[llength $wns_path] > 0} {get_property SLACK $wns_path} else {puts 0.0}"
             output = run_tcl_command(tcl_cmd, timeout=timeout)
-            match = re.search(
-                r"WNS_VALUE_BEGIN\s*([-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?)\s*WNS_VALUE_END",
-                output,
-                re.MULTILINE,
-            )
-            if not match:
-                raise ValueError(f"Could not parse sentinel-delimited WNS from Vivado output: {output[:300]}")
-            wns_value = match.group(1)
+            # Clean up the output to just return the number
+            wns_value = output.strip().split('\n')[-1].strip()
             return [TextContent(type="text", text=wns_value)]
         
         elif name == "place_design":
@@ -1845,9 +1643,6 @@ async def call_tool(name: str, arguments: dict):
                 cmd += f" -directive {directive}"
             
             output = run_tcl_command(cmd, timeout=timeout)
-            failure = classify_vivado_failure(cmd, output)
-            if failure:
-                return [TextContent(type="text", text=json.dumps(failure, indent=2))]
             return [TextContent(type="text", text=f"Placement complete.\n\n{output}")]
         
         elif name == "route_design":
@@ -1859,18 +1654,12 @@ async def call_tool(name: str, arguments: dict):
                 cmd += f" -directive {directive}"
             
             output = run_tcl_command(cmd, timeout=timeout)
-            failure = classify_vivado_failure(cmd, output)
-            if failure:
-                return [TextContent(type="text", text=json.dumps(failure, indent=2))]
             return [TextContent(type="text", text=f"Routing complete.\n\n{output}")]
         
         elif name == "run_tcl":
             command = arguments["command"]
             timeout = arguments.get("timeout", 300)
             output = run_tcl_command(command, timeout=timeout)
-            failure = classify_vivado_failure(command, output)
-            if failure:
-                return [TextContent(type="text", text=json.dumps(failure, indent=2))]
             return [TextContent(type="text", text=output)]
         
         elif name == "restart_vivado":
@@ -1972,9 +1761,6 @@ async def call_tool(name: str, arguments: dict):
                     cmd += f" -path_groups {{{path_groups}}}"
             
             output = run_tcl_command(cmd, timeout=timeout)
-            failure = classify_vivado_failure(cmd, output)
-            if failure:
-                return [TextContent(type="text", text=json.dumps(failure, indent=2))]
             return [TextContent(type="text", text=f"Physical optimization complete.\n\n{output}")]
         
         else:
@@ -1989,16 +1775,6 @@ async def call_tool(name: str, arguments: dict):
         return [TextContent(
             type="text",
             text="Error: Vivado process terminated unexpectedly. Use restart_vivado to restart."
-        )]
-    except VivadoPipeDesyncError as e:
-        return [TextContent(
-            type="text",
-            text=json.dumps({
-                "success": False,
-                "error_type": "vivado_pipe_desync_detected",
-                "command": name,
-                "message": str(e),
-            }, indent=2)
         )]
     except Exception as e:
         return [TextContent(type="text", text=f"Error: {str(e)}")]
