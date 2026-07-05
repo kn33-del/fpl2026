@@ -18,6 +18,7 @@ import re
 import signal
 import shutil
 import sys
+import uuid
 from typing import Optional, Dict, Any
 
 import pexpect
@@ -168,19 +169,35 @@ def wait_for_prompt(proc: pexpect.spawn, timeout: float) -> str:
 
 def sync_after_timeout(proc: pexpect.spawn) -> str:
     """
-    After a timeout, wait for the previous command to complete.
-    Returns the output from the command that was running.
+    After a timeout, wait for the previously-stuck command(s) to complete and
+    fully drain any backlog before letting a new command be sent.
+
+    A single client-side timeout can leave more than one command's worth of
+    output queued up in the pty (e.g. a slow flush timing out while a long
+    operation is still running underneath it). Draining only one prompt here
+    would resync to the wrong boundary and cause every subsequent call to
+    silently return the *previous* call's output. Instead, keep consuming
+    prompts until the pty has genuinely gone quiet.
     """
     global _command_pending
     if not _command_pending:
         return ""
-    
-    # Wait indefinitely for the prompt (command to complete)
-    # Use a very long timeout (1 hour) as a safety
+
+    drained_chunks = []
     try:
-        output = wait_for_prompt(proc, timeout=3600)
+        # First wait, potentially for a long time, for the stuck command to
+        # actually finish.
+        drained_chunks.append(wait_for_prompt(proc, timeout=3600))
+        # Then keep draining with a short timeout: if more prompts are
+        # already queued up (backlog from other commands), consume them too.
+        # A TIMEOUT here just means the pty is quiet, i.e. we're caught up.
+        while True:
+            try:
+                drained_chunks.append(wait_for_prompt(proc, timeout=2))
+            except pexpect.TIMEOUT:
+                break
         _command_pending = False
-        return f"[Previous command completed]\n{output}"
+        return "[Previous command(s) completed]\n" + "\n".join(drained_chunks)
     except pexpect.TIMEOUT:
         # Still stuck after 1 hour - Vivado is truly hung
         _command_pending = True
@@ -241,6 +258,38 @@ def run_tcl_command(command: str, timeout: Optional[float] = None) -> str:
         raise
 
 
+def run_tcl_command_flushed(command: str, timeout: Optional[float] = None, marker_prefix: str = "cmd") -> str:
+    """
+    Run a Tcl command guarded by a unique, single-call flush marker.
+
+    Previously, callers flushed stale buffer content by sending a throwaway
+    `puts {some_static_marker}` as its own separate run_tcl_command call,
+    then issued the real command in a second call. That left a window where
+    another call could interleave between the two, and a static marker gave
+    no way to detect when that had happened - a later call could silently
+    receive output meant for an earlier one (e.g. get_wns returning
+    "timing_summary_start"). 
+
+    Here, the marker and the real command are sent as ONE Tcl statement in a
+    single sendline/expect round-trip, so nothing can interleave between
+    them. The marker is unique per call (uuid), and we verify it's actually
+    present in the captured output before trusting anything after it. If the
+    marker is missing, we're desynced - raise loudly instead of silently
+    parsing the wrong text.
+    """
+    token = f"__{marker_prefix}_{uuid.uuid4().hex[:8]}__"
+    combined = f"puts {{{token}}}; {command}"
+    output = run_tcl_command(combined, timeout=timeout)
+
+    idx = output.rfind(token)
+    if idx == -1:
+        raise RuntimeError(
+            f"Vivado MCP desync detected: expected marker {token!r} not found in output. "
+            f"Got (truncated): {output[:300]!r}. Use restart_vivado to recover."
+        )
+    return output[idx + len(token):].strip()
+
+
 def restart_vivado_process() -> str:
     """Kill and restart Vivado process."""
     global _design_open, _command_pending, _vivado_log_file, _vivado_journal_file
@@ -280,14 +329,11 @@ def get_critical_high_fanout_nets(
     import re
     from collections import defaultdict
     
-    # Flush buffer before generating timing report
-    run_tcl_command("puts {fanout_analysis_start}", timeout=5)
-    
     # Generate detailed timing report for multiple paths
     cmd = f"report_timing -return_string -max_paths {num_paths} -delay_type max -sort_by slack"
     
     try:
-        timing_report = run_tcl_command(cmd, timeout=timeout)
+        timing_report = run_tcl_command_flushed(cmd, timeout=timeout, marker_prefix="fanout_analysis")
     except Exception as e:
         return f"Error generating timing report: {str(e)}"
     
@@ -1602,23 +1648,21 @@ async def call_tool(name: str, arguments: dict):
         
         elif name == "report_route_status":
             timeout = arguments.get("timeout", 300)
-            # Run a quick command first to flush any leftover output from previous commands
-            run_tcl_command("puts {route_status_start}", timeout=5)
-            output = run_tcl_command("report_route_status -return_string", timeout=timeout)
+            output = run_tcl_command_flushed(
+                "report_route_status -return_string", timeout=timeout, marker_prefix="route_status"
+            )
             return [TextContent(type="text", text=output)]
         
         elif name == "report_timing_summary":
             timeout = arguments.get("timeout", 300)
-            # Run a quick command first to flush any leftover output from previous commands
-            run_tcl_command("puts {timing_summary_start}", timeout=5)
-            output = run_tcl_command("report_timing_summary -return_string", timeout=timeout)
+            output = run_tcl_command_flushed(
+                "report_timing_summary -return_string", timeout=timeout, marker_prefix="timing_summary"
+            )
             return [TextContent(type="text", text=output)]
         
         elif name == "get_wns":
             timeout = arguments.get("timeout", 60)
             clock = arguments.get("clock", None)
-            # Flush buffer first
-            run_tcl_command("puts {get_wns_start}", timeout=5)
             if clock:
                 tcl_cmd = (
                     f"set clk_obj [get_clocks -quiet {{{clock}}}]; "
@@ -1629,7 +1673,7 @@ async def call_tool(name: str, arguments: dict):
                 )
             else:
                 tcl_cmd = "set wns_path [get_timing_paths -max_paths 1 -slack_lesser_than 999]; if {[llength $wns_path] > 0} {get_property SLACK $wns_path} else {puts 0.0}"
-            output = run_tcl_command(tcl_cmd, timeout=timeout)
+            output = run_tcl_command_flushed(tcl_cmd, timeout=timeout, marker_prefix="get_wns")
             # Clean up the output to just return the number
             wns_value = output.strip().split('\n')[-1].strip()
             return [TextContent(type="text", text=wns_value)]
