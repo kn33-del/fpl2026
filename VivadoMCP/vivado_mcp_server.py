@@ -1102,21 +1102,33 @@ def create_and_apply_pblock(
             # (add_cells_to_pblock itself returns no useful count, and the
             # caller needs a real number here - not just "it didn't error" -
             # to tell an empty assignment apart from a real one.)
+            # Note: -of_objects already returns the full cell membership list;
+            # combining it with -hierarchical is an invalid switch combination
+            # in Vivado and errors out, so don't add it here.
+            cells_matched = None
             try:
                 count_result = run_tcl_command(
-                    f"llength [get_cells -of_objects [get_pblocks {pblock_name}] -hierarchical]",
+                    f"llength [get_cells -of_objects [get_pblocks {pblock_name}]]",
                     timeout=30.0,
                 )
                 cells_matched = int(count_result.strip().split('\n')[-1].strip())
             except Exception as e:
-                logger.warning(f"Could not determine pblock cell count: {e}")
-                cells_matched = -1  # unknown, distinct from a genuine zero
-            result_lines.append(f"Cells assigned to pblock: {cells_matched}")
+                logger.warning(f"Could not determine pblock cell count directly: {e}")
+            result_lines.append(f"Cells assigned to pblock (direct query): {cells_matched}")
             
             # Validate resources if requested
             validation = None
             if validate_resources:
                 validation = validate_pblock_resources(pblock_name)
+
+                # If the direct llength query above failed for any reason,
+                # fall back to the primitive_count already parsed here from
+                # report_property - it's a real, working count (confirmed to
+                # correctly reflect a full-design assignment), just a
+                # different metric than the flattened cell membership list.
+                if cells_matched is None:
+                    cells_matched = int(validation.get('primitive_count') or 0)
+                    result_lines.append(f"Cells assigned to pblock (fallback via primitive_count): {cells_matched}")
                 
                 if not validation['is_valid']:
                     result_lines.append(f"\n⚠ Resource validation FAILED:")
@@ -1143,6 +1155,15 @@ def create_and_apply_pblock(
             # Verify the pblock
             verify_cmd = f"report_property [get_pblocks {pblock_name}]"
             verify_result = run_tcl_command(verify_cmd, timeout=30.0)
+
+            if cells_matched is None:
+                # Both the direct query and (if it ran) the validation
+                # fallback failed to produce a number. Don't fabricate a
+                # sentinel that downstream truthiness checks could
+                # misinterpret as success - report 0 so this is treated as
+                # "could not confirm assignment" rather than silently passing.
+                logger.warning("Could not determine pblock cell count via any method; reporting 0.")
+                cells_matched = 0
             
             result_lines.extend([
                 "",
@@ -1187,8 +1208,8 @@ def create_and_apply_pblock(
         "error": "Pblock resource validation failed after all expansion attempts",
         "error_type": "pblock_resource_validation_failed",
         "pblock_name": pblock_name,
-        "cells_matched": locals().get('cells_matched', 0),
-        "cells_assigned": locals().get('cells_matched', 0),
+        "cells_matched": locals().get('cells_matched', 0) or 0,
+        "cells_assigned": locals().get('cells_matched', 0) or 0,
         "message": "\n".join(result_lines),
     })
 

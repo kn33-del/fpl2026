@@ -2965,7 +2965,30 @@ class DCPOptimizer(DCPOptimizerBase):
                     "Pblock action completed but assigned zero cells.",
                     command="pblock",
                 )
-            return result
+            # Creating/applying the pblock only constrains a region for
+            # future placement - it does not move any cells by itself, so
+            # WNS cannot change as a result of this call alone. Re-place
+            # (now respecting the new pblock) and re-route before returning,
+            # or this action can never have any measurable timing effect.
+            place_result = await self.call_tool(
+                "vivado_place_design", {"directive": "Explore", "timeout": 3600}, internal=True
+            )
+            if self._action_failure(place_result, default_command="vivado_place_design"):
+                return self._failure_json(
+                    "pblock_place_failed",
+                    f"Pblock applied but re-placement failed: {place_result[:300]}",
+                    command="pblock",
+                )
+            route_result = await self.call_tool(
+                "vivado_route_design", {"directive": "Explore", "timeout": 3600}, internal=True
+            )
+            if self._action_failure(route_result, default_command="vivado_route_design"):
+                return self._failure_json(
+                    "pblock_route_failed",
+                    f"Pblock applied and re-placed but routing failed: {route_result[:300]}",
+                    command="pblock",
+                )
+            return result + "\n\n" + place_result + "\n\n" + route_result
         if action == "rapidwright_analyze_fabric_for_pblock":
             params, error = await self._compute_pblock_ranges(dict(params), timing_context)
             if error:
