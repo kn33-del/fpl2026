@@ -18,6 +18,7 @@ import re
 import signal
 import shutil
 import sys
+import threading
 import uuid
 from typing import Optional, Dict, Any
 
@@ -47,6 +48,18 @@ _vivado_log_file: Optional[str] = None
 _vivado_journal_file: Optional[str] = None
 _design_open: bool = False
 _command_pending: bool = False  # True if a command timed out and may still be running
+
+# Vivado talks over a single pty via pexpect, which is NOT safe for
+# concurrent access: two overlapping sendline()/expect() round-trips will
+# interleave their command text and output in the same buffer (this is what
+# was causing e.g. get_wns to come back with another call's raw command
+# text). This can happen whenever the caller dispatches more than one tool
+# call without waiting for the previous one to finish - concurrent asyncio
+# tasks, or a framework that runs sync tool handlers in a thread pool.
+# Every round-trip with _vivado_process must happen while holding this lock.
+# RLock so a function that already holds it (e.g. run_tcl_command calling
+# sync_after_timeout) can call another locking function without deadlocking.
+_vivado_lock = threading.RLock()
 
 
 def get_vivado_path() -> str:
@@ -216,46 +229,47 @@ def run_tcl_command(command: str, timeout: Optional[float] = None) -> str:
         Command output as string
     """
     global _command_pending
-    
-    proc = ensure_vivado()
-    
-    # If a previous command timed out, wait for it to complete first
-    if _command_pending:
-        sync_output = sync_after_timeout(proc)
-        if sync_output:
-            # Previous command completed, we can continue
-            pass
-    
-    # Use provided timeout or default
-    effective_timeout = timeout if timeout is not None else 300
-    
-    # Log the command (truncate if very long)
-    cmd_log = command if len(command) < 200 else command[:200] + "..."
-    logger.info(f"Executing Tcl command: {cmd_log}")
-    
-    # Send command
-    proc.sendline(command)
-    
-    try:
-        # Wait for prompt and capture output
-        proc.expect(VIVADO_PROMPT, timeout=effective_timeout)
-        
-        # Get output (everything between command echo and prompt)
-        output = proc.before
-        
-        # Remove the echoed command from output (first line)
-        lines = output.split("\n")
-        if lines and command in lines[0]:
-            output = "\n".join(lines[1:])
-        
-        logger.info(f"Command completed successfully")
-        return output.strip()
-    
-    except pexpect.TIMEOUT:
-        # Mark that we have a pending command
-        _command_pending = True
-        logger.error(f"Command timed out after {effective_timeout}s: {cmd_log}")
-        raise
+
+    with _vivado_lock:
+        proc = ensure_vivado()
+
+        # If a previous command timed out, wait for it to complete first
+        if _command_pending:
+            sync_output = sync_after_timeout(proc)
+            if sync_output:
+                # Previous command completed, we can continue
+                pass
+
+        # Use provided timeout or default
+        effective_timeout = timeout if timeout is not None else 300
+
+        # Log the command (truncate if very long)
+        cmd_log = command if len(command) < 200 else command[:200] + "..."
+        logger.info(f"Executing Tcl command: {cmd_log}")
+
+        # Send command
+        proc.sendline(command)
+
+        try:
+            # Wait for prompt and capture output
+            proc.expect(VIVADO_PROMPT, timeout=effective_timeout)
+
+            # Get output (everything between command echo and prompt)
+            output = proc.before
+
+            # Remove the echoed command from output (first line)
+            lines = output.split("\n")
+            if lines and command in lines[0]:
+                output = "\n".join(lines[1:])
+
+            logger.info(f"Command completed successfully")
+            return output.strip()
+
+        except pexpect.TIMEOUT:
+            # Mark that we have a pending command
+            _command_pending = True
+            logger.error(f"Command timed out after {effective_timeout}s: {cmd_log}")
+            raise
 
 
 def run_tcl_command_flushed(command: str, timeout: Optional[float] = None, marker_prefix: str = "cmd") -> str:
@@ -293,10 +307,11 @@ def run_tcl_command_flushed(command: str, timeout: Optional[float] = None, marke
 def restart_vivado_process() -> str:
     """Kill and restart Vivado process."""
     global _design_open, _command_pending, _vivado_log_file, _vivado_journal_file
-    cleanup_vivado()
-    _design_open = False
-    _command_pending = False
-    start_vivado(_vivado_log_file, _vivado_journal_file)
+    with _vivado_lock:
+        cleanup_vivado()
+        _design_open = False
+        _command_pending = False
+        start_vivado(_vivado_log_file, _vivado_journal_file)
     return "Vivado restarted successfully."
 
 
