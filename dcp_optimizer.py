@@ -76,12 +76,19 @@ RAPIDWRIGHT_STRUCTURAL_ACTIONS = [
     "rapidwright_convert_fabric_region_to_pblock",
     "pblock",
 ]
+# Used specifically when spread analysis flags high dispersion + net-delay-bound
+# paths (see the avg_spread/net_pct reorder below). Deliberately different order
+# from RAPIDWRIGHT_STRUCTURAL_ACTIONS: local cell nudging (rapidwright_optimize_
+# cell_placement) is a weak, greedy fix for widely-spread critical paths and has
+# been observed to actively regress WNS in that regime, while the pblock track
+# addresses the actual dispersion. Put the pblock track first so it's genuinely
+# prioritized instead of just re-deriving the same default order.
 RAPIDWRIGHT_PLACEMENT_ACTIONS = [
-    "rapidwright_optimize_cell_placement",
-    "rapidwright_analyze_net_detour",
     "rapidwright_analyze_fabric_for_pblock",
     "rapidwright_convert_fabric_region_to_pblock",
     "pblock",
+    "rapidwright_analyze_net_detour",
+    "rapidwright_optimize_cell_placement",
 ]
 VIVADO_INCREMENTAL_IMPLEMENTATION_ACTIONS = {
     "phys_opt_design",
@@ -1636,8 +1643,20 @@ class DCPOptimizer(DCPOptimizerBase):
             and structural_override_age < STRUCTURAL_OVERRIDE_MAX_ITERS
         )
         self.structural_override_active = structural_override
+        high_spread = (
+            avg_spread is not None
+            and net_pct is not None
+            and avg_spread > DECISION_SPREAD_TILE_THRESHOLD
+            and net_pct > DECISION_SPREAD_NET_THRESHOLD
+        )
         if structural_override:
-            structural_allowed = [action for action in RAPIDWRIGHT_STRUCTURAL_ACTIONS if action in allowed]
+            # Even when forcing a structural action after repeated stalls,
+            # still respect the spread-based ordering below - otherwise a
+            # design stuck specifically because cell_placement keeps
+            # regressing would have that same action handed back to it
+            # first, just from a shorter list.
+            structural_source = RAPIDWRIGHT_PLACEMENT_ACTIONS if high_spread else RAPIDWRIGHT_STRUCTURAL_ACTIONS
+            structural_allowed = [action for action in structural_source if action in allowed]
             if structural_allowed:
                 allowed = structural_allowed
                 for action in RAPIDWRIGHT_STRUCTURAL_ACTIONS:
@@ -1655,6 +1674,17 @@ class DCPOptimizer(DCPOptimizerBase):
             )
         allowed = self._filter_exhausted_actions(allowed)
         exhausted_actions = self._active_exhausted_actions()
+        recommendation = None
+        if high_spread:
+            recommendation = (
+                f"High critical-path spread detected (avg {avg_spread:.1f} tiles, "
+                f"threshold {DECISION_SPREAD_TILE_THRESHOLD}) on a net-delay-bound path "
+                f"({net_pct:.0%} net delay). Local cell placement nudges are a weak fix "
+                f"for this regime and have been observed to regress WNS; prefer the "
+                f"pblock track (rapidwright_analyze_fabric_for_pblock -> "
+                f"rapidwright_convert_fabric_region_to_pblock -> pblock) unless it is "
+                f"already exhausted for this target set."
+            )
         return {
             "iteration": self.iteration,
             "wns_ns": current_wns,
@@ -1686,6 +1716,7 @@ class DCPOptimizer(DCPOptimizerBase):
             "exhausted_actions": exhausted_actions,
             "allowed_actions": allowed,
             "forbidden_actions": forbidden,
+            "recommendation": recommendation,
         }
 
     def _classify_endpoint_type(self, endpoint: str) -> str:
@@ -2309,6 +2340,16 @@ class DCPOptimizer(DCPOptimizerBase):
         self.last_recorded_wns = wns
         if iteration.get("status") in {"improved", "marginal"}:
             self._reset_action_failure_memory(self.last_recipe)
+        else:
+            # The action executed successfully but made WNS worse (or did
+            # nothing useful) and got rolled back. This used to only bump the
+            # generic stall counter, which doesn't discriminate between
+            # actions - an action that empirically regresses this exact
+            # target set could keep getting picked again every iteration.
+            # Route it through the same failure-memory/cooldown mechanism
+            # used for hard tool failures so it actually gets suppressed
+            # after repeated regressions on the same targets.
+            self._remember_no_action_failure(self.last_recipe, self.last_targets)
 
         history_fields = {
             "target_tier": self.target_tier,
