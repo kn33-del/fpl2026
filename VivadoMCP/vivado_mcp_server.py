@@ -243,12 +243,27 @@ def run_tcl_command(command: str, timeout: Optional[float] = None) -> str:
         # Use provided timeout or default
         effective_timeout = timeout if timeout is not None else 300
 
+        # Vivado's -mode tcl is a line-based interactive REPL: it evaluates
+        # and prints its OWN prompt after every complete line it receives,
+        # not just once at the end of a "logical" multi-statement command.
+        # Callers sometimes build commands with embedded literal newlines
+        # between separate statements (e.g. "stmt1\nstmt2") intending them
+        # as one command. Sent as-is, Vivado executes stmt1, prints a
+        # prompt, then executes stmt2 and prints another prompt - but our
+        # expect() below matches the FIRST prompt and returns immediately,
+        # leaving stmt2's echo/output/prompt sitting unread in the pty for
+        # whatever unrelated call happens next to accidentally consume.
+        # Collapsing embedded newlines into semicolons keeps it as a single
+        # physical line, so Tcl treats it as one input and Vivado only
+        # emits one prompt for the whole thing.
+        single_line_command = re.sub(r'[ \t]*\n[ \t]*', '; ', command.strip())
+
         # Log the command (truncate if very long)
-        cmd_log = command if len(command) < 200 else command[:200] + "..."
+        cmd_log = single_line_command if len(single_line_command) < 200 else single_line_command[:200] + "..."
         logger.info(f"Executing Tcl command: {cmd_log}")
 
         # Send command
-        proc.sendline(command)
+        proc.sendline(single_line_command)
 
         try:
             # Wait for prompt and capture output
@@ -259,7 +274,7 @@ def run_tcl_command(command: str, timeout: Optional[float] = None) -> str:
 
             # Remove the echoed command from output (first line)
             lines = output.split("\n")
-            if lines and command in lines[0]:
+            if lines and single_line_command in lines[0]:
                 output = "\n".join(lines[1:])
 
             logger.info(f"Command completed successfully")
