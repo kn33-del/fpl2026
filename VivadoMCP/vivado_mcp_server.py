@@ -12,6 +12,7 @@ Usage:
 
 import argparse
 import atexit
+import json
 import logging
 import os
 import re
@@ -1096,8 +1097,24 @@ def create_and_apply_pblock(
             
             result = run_tcl_command(add_cmd, timeout=timeout)
             result_lines.append(f"Applied pblock to: {apply_to}")
+
+            # Count how many cells actually ended up assigned to the pblock.
+            # (add_cells_to_pblock itself returns no useful count, and the
+            # caller needs a real number here - not just "it didn't error" -
+            # to tell an empty assignment apart from a real one.)
+            try:
+                count_result = run_tcl_command(
+                    f"llength [get_cells -of_objects [get_pblocks {pblock_name}] -hierarchical]",
+                    timeout=30.0,
+                )
+                cells_matched = int(count_result.strip().split('\n')[-1].strip())
+            except Exception as e:
+                logger.warning(f"Could not determine pblock cell count: {e}")
+                cells_matched = -1  # unknown, distinct from a genuine zero
+            result_lines.append(f"Cells assigned to pblock: {cells_matched}")
             
             # Validate resources if requested
+            validation = None
             if validate_resources:
                 validation = validate_pblock_resources(pblock_name)
                 
@@ -1141,14 +1158,39 @@ def create_and_apply_pblock(
                 "3. Check timing with report_timing_summary"
             ])
             
-            return "\n".join(result_lines)
+            return json.dumps({
+                "success": True,
+                "pblock_name": pblock_name,
+                "ranges": current_ranges,
+                "apply_to": apply_to,
+                "is_soft": is_soft,
+                "cells_matched": cells_matched,
+                "cells_assigned": cells_matched,
+                "resource_validation": validation,
+                "attempts": attempt + 1,
+                "message": "\n".join(result_lines),
+            })
             
         except Exception as e:
             result_lines.append(f"Error in attempt {attempt}: {str(e)}")
             if attempt >= max_expansion_attempts:
-                return f"Error creating/applying pblock: {str(e)}\n" + "\n".join(result_lines)
+                return json.dumps({
+                    "success": False,
+                    "error": str(e),
+                    "error_type": "pblock_assignment_failed",
+                    "pblock_name": pblock_name,
+                    "message": f"Error creating/applying pblock: {str(e)}\n" + "\n".join(result_lines),
+                })
     
-    return "\n".join(result_lines)
+    return json.dumps({
+        "success": False,
+        "error": "Pblock resource validation failed after all expansion attempts",
+        "error_type": "pblock_resource_validation_failed",
+        "pblock_name": pblock_name,
+        "cells_matched": locals().get('cells_matched', 0),
+        "cells_assigned": locals().get('cells_matched', 0),
+        "message": "\n".join(result_lines),
+    })
 
 
 # Create MCP server
