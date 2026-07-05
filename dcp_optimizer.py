@@ -69,6 +69,21 @@ STRUCTURAL_OVERRIDE_MAX_ITERS = 6
 WNS_IMPROVEMENT_EPSILON_NS = 1e-4
 ACTION_FAILURE_EXHAUSTION_THRESHOLD = 3
 ACTION_FAILURE_COOLDOWN_ITERS = 5
+# --- Cluster-aware cell placement guard (fix #4) ---
+# rapidwright_optimize_cell_placement moves each requested cell independently.
+# If cells on the same critical path are tightly coupled, moving one without
+# the others can increase the spread between them even though each individual
+# move looked locally reasonable. This threshold gates the move: if the
+# post-move spread across the targeted cluster is worse than before the move
+# by more than this fraction, the move is rejected before it is ever routed
+# (saving a full route cycle and avoiding a checkpoint that we know regressed).
+CLUSTER_SPREAD_REGRESSION_FRACTION = 0.15
+# --- Pblock region validation (fix #2) ---
+# Reject RapidWright-recommended pblock regions that would be packed too
+# densely (congestion risk) or that overlap a pblock already applied earlier
+# in this run (Vivado handles overlapping pblocks poorly and it creates
+# ambiguous, hard-to-solve placement scenarios).
+PBLOCK_MAX_UTILIZATION_FRACTION = 0.85
 RAPIDWRIGHT_STRUCTURAL_ACTIONS = [
     "rapidwright_optimize_cell_placement",
     "rapidwright_analyze_net_detour",
@@ -823,6 +838,18 @@ class DCPOptimizer(DCPOptimizerBase):
         self.last_no_action_failure_key: Optional[tuple] = None
         self.phys_opt_retime_supported: Optional[bool] = None
         self.implementation_license_available: Optional[bool] = None
+        # Fix #1 (action-key bookkeeping): last_recipe is a human-readable
+        # history label and gets renamed by _remember_recipe() for display
+        # purposes (e.g. "rapidwright_optimize_cell_placement" -> displayed
+        # as "rapidwright_cell_placement"). Every piece of code that decides
+        # whether an action is suppressed/cooling-down must instead key off
+        # last_action_key, which is set exactly once per dispatched action in
+        # execute_validated_action() and is NEVER touched by _remember_recipe.
+        self.last_action_key: str = "initial"
+        # Fix #2 (pblock validation): remember every pblock region that has
+        # been successfully applied this run so future regions can be
+        # checked for overlap before being applied.
+        self.applied_pblock_regions: list[dict] = []
     
     async def start_servers(self):
         """Start and connect to both MCP servers."""
@@ -1031,7 +1058,15 @@ class DCPOptimizer(DCPOptimizerBase):
         print(f"Run safety enabled: checkpoint history at {checkpoint_dir / 'history.json'}")
 
     def _remember_recipe(self, tool_name: str, arguments: dict) -> None:
-        """Track the most recent optimization operation for checkpoint records."""
+        """Track the most recent optimization operation for checkpoint records.
+
+        NOTE: this method sets self.last_recipe, which is a human-readable
+        history/display label ONLY. It intentionally renames some actions
+        (e.g. "rapidwright_optimize_cell_placement" -> "rapidwright_cell_placement")
+        for nicer history entries. Because of that renaming, nothing that
+        gates action selection (cooldowns, exhaustion, blacklisting) may key
+        off self.last_recipe -- use self.last_action_key for that instead.
+        """
         if tool_name == "rapidwright_optimize_cell_placement":
             targets = [str(name) for name in arguments.get("cell_names", [])]
             self.last_recipe = "rapidwright_cell_placement"
@@ -1518,7 +1553,16 @@ class DCPOptimizer(DCPOptimizerBase):
         if failure.get("error_type") == "vivado_license_failure":
             self.implementation_license_available = False
             logger.warning("Vivado Implementation license failure observed; future implementation actions will be filtered.")
-        failed_action = str(failure.get("command") or self.last_decision_trace.get("llm_chosen_action") or self.last_recipe or "")
+        # Fix #1: use last_action_key (never renamed) instead of last_recipe
+        # (a display label that _remember_recipe() may have rewritten) so the
+        # failure gets attributed to the same key that gating logic reads.
+        failed_action = str(
+            failure.get("command")
+            or self.last_decision_trace.get("llm_chosen_action")
+            or self.last_action_key
+            or self.last_recipe
+            or ""
+        )
         failed_targets = list(self.last_targets)
         if self._is_no_action_failure(failure):
             failure_key = (failed_action, tuple(failed_targets), self.iteration)
@@ -2093,6 +2137,17 @@ class DCPOptimizer(DCPOptimizerBase):
         if not all(key in region for key in required_region_keys):
             return None, f"RapidWright fabric analysis did not return recommended_region: {fabric_text[:300]}"
 
+        # --- Fix #2a: reject regions that overlap a pblock already applied
+        # this run. Vivado handles overlapping pblocks poorly, and it creates
+        # complex, hard-to-solve placement scenarios. ---
+        overlap = self._find_pblock_overlap(region)
+        if overlap is not None:
+            return None, (
+                f"RapidWright fabric analysis recommended region {region} which overlaps "
+                f"an already-applied pblock {overlap.get('pblock_name')} at "
+                f"{overlap.get('region')}; skipping to avoid overlapping pblocks."
+            )
+
         convert_args = {
             "col_min": int(region["col_min"]),
             "col_max": int(region["col_max"]),
@@ -2109,6 +2164,19 @@ class DCPOptimizer(DCPOptimizerBase):
         if not ranges:
             return None, f"RapidWright pblock range conversion returned no pblock_ranges: {range_text[:300]}"
 
+        # --- Fix #2b: reject regions that would be packed too densely.
+        # High-utilization pblocks are a known congestion risk; better to ask
+        # for a larger/different region than to hand Vivado a region that is
+        # very likely to fail to place-and-route cleanly. ---
+        site_counts = range_payload.get("site_counts") or {}
+        utilization_error = self._check_pblock_utilization(
+            site_counts, target_lut_count, target_ff_count,
+            int(params.get("target_dsp_count") or 0),
+            int(params.get("target_bram_count") or 0),
+        )
+        if utilization_error:
+            return None, utilization_error
+
         computed = dict(params)
         computed["ranges"] = ranges
         computed.setdefault("pblock_name", f"{DEFAULT_PBLOCK_NAME_PREFIX}_{self.iteration:03d}")
@@ -2124,8 +2192,76 @@ class DCPOptimizer(DCPOptimizerBase):
             "target_ff_count": target_ff_count,
             "site_counts": range_payload.get("site_counts"),
         }
+        # Stash the raw fabric region alongside the computed params so the
+        # caller can register it in applied_pblock_regions once the pblock
+        # is actually, successfully applied (not just computed).
+        computed["_fabric_region"] = region
         logger.info("Computed pblock ranges via RapidWright: %s", ranges)
         return computed, None
+
+    def _find_pblock_overlap(self, region: dict) -> Optional[dict]:
+        """Return the first previously-applied pblock region that overlaps `region`, or None."""
+        try:
+            col_min, col_max = int(region["col_min"]), int(region["col_max"])
+            row_min, row_max = int(region["row_min"]), int(region["row_max"])
+        except (KeyError, TypeError, ValueError):
+            return None
+        for applied in self.applied_pblock_regions:
+            applied_region = applied.get("region") or {}
+            try:
+                a_col_min, a_col_max = int(applied_region["col_min"]), int(applied_region["col_max"])
+                a_row_min, a_row_max = int(applied_region["row_min"]), int(applied_region["row_max"])
+            except (KeyError, TypeError, ValueError):
+                continue
+            cols_overlap = col_min <= a_col_max and a_col_min <= col_max
+            rows_overlap = row_min <= a_row_max and a_row_min <= row_max
+            if cols_overlap and rows_overlap:
+                return applied
+        return None
+
+    def _check_pblock_utilization(
+        self,
+        site_counts: dict,
+        target_lut_count: int,
+        target_ff_count: int,
+        target_dsp_count: int,
+        target_bram_count: int,
+    ) -> Optional[str]:
+        """Return an error string if the requested targets would over-pack the region, else None."""
+        if not site_counts:
+            # No capacity data returned -- nothing to validate against, let it through.
+            return None
+        checks = [
+            ("LUT", target_lut_count, site_counts.get("lut_capacity") or site_counts.get("luts")),
+            ("FF", target_ff_count, site_counts.get("ff_capacity") or site_counts.get("ffs")),
+            ("DSP", target_dsp_count, site_counts.get("dsp_capacity") or site_counts.get("dsps")),
+            ("BRAM", target_bram_count, site_counts.get("bram_capacity") or site_counts.get("brams")),
+        ]
+        for label, requested, capacity in checks:
+            if not requested or not capacity:
+                continue
+            utilization = requested / float(capacity)
+            if utilization > PBLOCK_MAX_UTILIZATION_FRACTION:
+                return (
+                    f"Rejected pblock region: projected {label} utilization "
+                    f"{utilization:.0%} exceeds the {PBLOCK_MAX_UTILIZATION_FRACTION:.0%} "
+                    f"congestion-safety limit ({requested} requested vs {capacity} available). "
+                    f"Retry with a larger region or lower target_{label.lower()}_count."
+                )
+        return None
+
+    def _register_applied_pblock(self, region: Optional[dict], pblock_name: Optional[str]) -> None:
+        """Record a successfully-applied pblock region so future regions can be checked for overlap."""
+        if not region:
+            return
+        required_region_keys = ("col_min", "col_max", "row_min", "row_max")
+        if not all(key in region for key in required_region_keys):
+            return
+        self.applied_pblock_regions.append({
+            "region": dict(region),
+            "pblock_name": pblock_name,
+            "iteration": self.iteration,
+        })
 
     def _summarize_cell_placement(self, payload: dict, requested_cells: list[str]) -> dict:
         results = payload.get("results") if isinstance(payload.get("results"), list) else []
@@ -2170,6 +2306,38 @@ class DCPOptimizer(DCPOptimizerBase):
             "resource_validation": payload.get("resource_validation"),
         }
 
+    async def _measure_cluster_spread(self, cell_names: list[str]) -> Optional[dict]:
+        """
+        Fix #4 helper (cluster-level optimization guard): measure how spread
+        out a set of cells targeted together for a move currently is, using
+        the same RapidWright spread-analysis tool already used during
+        initial design analysis (rapidwright_analyze_critical_path_spread).
+
+        Returns a dict with avg_distance/max_distance, or None if the
+        measurement could not be taken (in which case callers should not
+        block the action -- absence of data isn't evidence of regression).
+        """
+        if not cell_names:
+            return None
+        try:
+            cluster_file = Path(self.temp_dir) / f"cluster_spread_iter_{self.iteration:03d}.json"
+            cluster_file.write_text(json.dumps([cell_names]))
+            spread_result = await self.call_tool(
+                "rapidwright_analyze_critical_path_spread",
+                {"input_file": str(cluster_file)},
+                internal=True,
+            )
+            spread_data = self._parse_json_result(spread_result)
+            if not spread_data or self._result_has_error(spread_data):
+                return None
+            return {
+                "avg_distance": spread_data.get("avg_max_distance"),
+                "max_distance": spread_data.get("max_distance_found"),
+            }
+        except Exception as exc:
+            logger.warning("Could not measure cluster spread for %s: %s", cell_names, exc)
+            return None
+
     async def _route_candidate_with_eco(self, arguments: dict) -> str:
         """Apply shields and run preserve-fixed-route ECO routing for RW candidates."""
         if self.eco_router is None:
@@ -2177,7 +2345,10 @@ class DCPOptimizer(DCPOptimizerBase):
 
         moved_cells: list[str] = []
         preserved_nets: list[str] = []
-        if self.last_recipe == "rapidwright_cell_placement":
+        # Fix #1: gate on last_action_key (never renamed) rather than the
+        # display-only last_recipe, which _remember_recipe() rewrites to
+        # "rapidwright_cell_placement" for this same action.
+        if self.last_action_key == "rapidwright_optimize_cell_placement":
             moved_cells = list(self.last_targets)
 
         shield_result = await self._apply_shields_async(moved_cells, preserved_nets)
@@ -2338,8 +2509,16 @@ class DCPOptimizer(DCPOptimizerBase):
         self.no_improvement_count = self.checkpoint_manager.stall_count
         self.consecutive_no_improvement = self.checkpoint_manager.stall_count
         self.last_recorded_wns = wns
+        # Fix #1: gate the reset/remember-failure bookkeeping on
+        # last_action_key (the never-renamed dispatch key), not last_recipe
+        # (a display label _remember_recipe() may have rewritten). Before
+        # this fix, e.g. rapidwright_optimize_cell_placement's failures were
+        # recorded under "rapidwright_cell_placement", a key that nothing
+        # reading action_failure_memory during action-selection ever checks,
+        # so a 100%-regression action was never actually suppressed.
+        action_key = self.last_action_key or self.last_recipe
         if iteration.get("status") in {"improved", "marginal"}:
-            self._reset_action_failure_memory(self.last_recipe)
+            self._reset_action_failure_memory(action_key)
         else:
             # The action executed successfully but made WNS worse (or did
             # nothing useful) and got rolled back. This used to only bump the
@@ -2349,7 +2528,7 @@ class DCPOptimizer(DCPOptimizerBase):
             # Route it through the same failure-memory/cooldown mechanism
             # used for hard tool failures so it actually gets suppressed
             # after repeated regressions on the same targets.
-            self._remember_no_action_failure(self.last_recipe, self.last_targets)
+            self._remember_no_action_failure(action_key, self.last_targets)
 
         history_fields = {
             "target_tier": self.target_tier,
@@ -2901,6 +3080,11 @@ class DCPOptimizer(DCPOptimizerBase):
         action = decision.get("chosen_action")
         params = decision.get("action_parameters") or {}
         self.last_rapidwright_edit_summary = None
+        # Fix #1: set the never-renamed dispatch key exactly once per action,
+        # before any of the per-action branches below run. _remember_recipe()
+        # is still allowed to rewrite self.last_recipe for display purposes;
+        # self.last_action_key is the one all gating logic should read.
+        self.last_action_key = str(action)
         if action in {"phys_opt_design", "phys_opt_design_retime"}:
             if not await self._check_implementation_license():
                 return self._failure_json(
@@ -2947,6 +3131,11 @@ class DCPOptimizer(DCPOptimizerBase):
                 logger.error("pblock action aborted: %s", error)
                 return self._failure_json("pblock_range_computation_failed", error, command="pblock")
             assert params is not None
+            # Fix #2: _compute_pblock_ranges tucks the raw fabric region into
+            # "_fabric_region" so it can be registered as applied (for future
+            # overlap checks) once we know the pblock call actually succeeded
+            # -- pop it out here so it never gets sent to Vivado as an arg.
+            fabric_region = params.pop("_fabric_region", None)
             self.last_recipe = action
             self.last_targets = [str(params.get("pblock_name", "pblock_opt")), str(params.get("ranges"))]
             self.last_batch_size = 1
@@ -2988,6 +3177,10 @@ class DCPOptimizer(DCPOptimizerBase):
                     f"Pblock applied and re-placed but routing failed: {route_result[:300]}",
                     command="pblock",
                 )
+            # Fix #2: only now, after placement + routing succeeded, register
+            # this region as applied so future pblock recommendations are
+            # checked against it for overlap.
+            self._register_applied_pblock(fabric_region, params.get("pblock_name"))
             return result + "\n\n" + place_result + "\n\n" + route_result
         if action == "rapidwright_analyze_fabric_for_pblock":
             params, error = await self._compute_pblock_ranges(dict(params), timing_context)
@@ -2995,6 +3188,7 @@ class DCPOptimizer(DCPOptimizerBase):
                 logger.error("RapidWright fabric/pblock analysis aborted: %s", error)
                 return self._failure_json("pblock_range_computation_failed", error, command=action)
             assert params is not None
+            params.pop("_fabric_region", None)
             self.last_recipe = action
             self.last_targets = [str(params.get("ranges"))]
             self.last_batch_size = 1
@@ -3013,6 +3207,7 @@ class DCPOptimizer(DCPOptimizerBase):
                 logger.error("RapidWright pblock range conversion aborted: %s", error)
                 return self._failure_json("pblock_range_computation_failed", error, command=action)
             assert params is not None
+            params.pop("_fabric_region", None)
             self.last_recipe = action
             self.last_targets = [str(params.get("ranges"))]
             self.last_batch_size = 1
@@ -3102,6 +3297,18 @@ class DCPOptimizer(DCPOptimizerBase):
                 )
             max_candidates = int(params.get("max_candidates") or min(10, len(cell_names)))
             cell_names = cell_names[:max_candidates]
+            # --- Fix #4 (cluster-level optimization guard) ---
+            # rapidwright_optimize_cell_placement moves each cell in
+            # cell_names independently. If these cells are tightly coupled
+            # (on the same critical path), moving them one at a time can
+            # increase the distance between them even though each move
+            # looked locally reasonable -- this was the likely root cause of
+            # the 11/11 regression rate observed for this action on the
+            # LogicNets benchmark. Measure the cluster's spread before and
+            # after the move; if the move made the cluster measurably worse
+            # spread out, reject it before it is ever routed (saving a full
+            # route cycle and a checkpoint we already know regressed).
+            spread_before = await self._measure_cluster_spread(cell_names)
             self.last_recipe = action
             self.last_targets = list(cell_names)
             self.last_batch_size = len(cell_names)
@@ -3134,6 +3341,49 @@ class DCPOptimizer(DCPOptimizerBase):
                     "rapidwright_optimize_cell_placement completed but moved zero cells.",
                     command=action,
                 )
+            # Fix #4 continued: now that cells have actually moved, re-measure
+            # cluster spread and compare. If it got meaningfully worse, treat
+            # this as a proactive regression -- reject before writing a
+            # checkpoint or spending a route cycle on a move we can already
+            # tell hurt locality. The RapidWright session still has the
+            # moved (unwritten) placement active; the caller's normal
+            # rollback-on-regression path (via checkpoint history) will
+            # restore the last-good checkpoint on the *next* successful
+            # write, but we still want the explicit failure recorded now so
+            # action_failure_memory learns from it immediately rather than
+            # waiting a full route+timing cycle to find out.
+            moved_cell_names = self.last_rapidwright_edit_summary.get("moved_cells") or cell_names
+            spread_after = await self._measure_cluster_spread(moved_cell_names)
+            if (
+                spread_before
+                and spread_after
+                and spread_before.get("avg_distance")
+                and spread_after.get("avg_distance") is not None
+            ):
+                before_val = float(spread_before["avg_distance"])
+                after_val = float(spread_after["avg_distance"])
+                if before_val > 0 and (after_val - before_val) / before_val > CLUSTER_SPREAD_REGRESSION_FRACTION:
+                    logger.warning(
+                        "Cluster spread guard: cell placement increased avg cluster spread from "
+                        "%.1f to %.1f tiles (+%.0f%%) for cells %s; rejecting before routing.",
+                        before_val,
+                        after_val,
+                        100.0 * (after_val - before_val) / before_val,
+                        moved_cell_names,
+                    )
+                    self._blacklist_failure_targets(action, moved_cell_names)
+                    self._remember_no_action_failure(action, moved_cell_names)
+                    self.last_no_action_failure_key = (action, tuple(moved_cell_names), self.iteration)
+                    return self._failure_json(
+                        "cluster_spread_regression",
+                        (
+                            f"rapidwright_optimize_cell_placement moved cells independently and "
+                            f"increased average cluster spread from {before_val:.1f} to {after_val:.1f} "
+                            f"tiles (+{100.0 * (after_val - before_val) / before_val:.0f}%), which is "
+                            f"expected to worsen net delay; rejected before routing."
+                        ),
+                        command=action,
+                    )
             dcp = self.run_dir / f"cell_placement_iter_{self.iteration:03d}.dcp"
             result += "\n\n" + await self.call_tool("rapidwright_write_checkpoint", {"dcp_path": str(dcp), "overwrite": True})
             result += "\n\n" + await self.call_tool("vivado_open_checkpoint", {"dcp_path": str(dcp), "timeout": 600})
