@@ -1,0 +1,235 @@
+#-----------------------------------------------------------
+# Vivado v2025.1 (64-bit)
+# SW Build 6140274 on Wed May 21 22:58:25 MDT 2025
+# IP Build 6138677 on Thu May 22 03:10:11 MDT 2025
+# SharedData Build 6139179 on Tue May 20 17:58:58 MDT 2025
+# Start of session at: Sun Jul  5 03:33:28 2026
+# Process ID         : 3817
+# Current directory  : /home/ubuntu/fpl2026/dcp_optimizer_run-20260705_033316
+# Command line       : vivado -mode tcl -log /home/ubuntu/fpl2026/dcp_optimizer_run-20260705_033316/vivado.log -journal /home/ubuntu/fpl2026/dcp_optimizer_run-20260705_033316/vivado.jou
+# Log file           : /home/ubuntu/fpl2026/dcp_optimizer_run-20260705_033316/vivado.log
+# Journal file       : /home/ubuntu/fpl2026/dcp_optimizer_run-20260705_033316/vivado.jou
+# Running On         : ip-172-31-35-93
+# Platform           : Ubuntu
+# Operating System   : Ubuntu 22.04.5 LTS
+# Processor Detail   : AMD EPYC 9R14
+# CPU Frequency      : 3701.268 MHz
+# CPU Physical cores : 8
+# CPU Logical cores  : 8
+# Host memory        : 32911 MB
+# Swap memory        : 0 MB
+# Total Virtual      : 32911 MB
+# Available Virtual  : 31003 MB
+#-----------------------------------------------------------
+open_checkpoint {/home/ubuntu/fpl2026/fpl26_contest_benchmarks/logicnets_jscl_2025.1.dcp}
+puts {timing_summary_start}
+report_timing_summary -return_string
+set contest_clk [get_clocks -quiet clk_fpl26contest]; if {$contest_clk ne {}} {   puts "CLOCK:clk_fpl26contest";   puts [get_property PERIOD $contest_clk]; } else {   set tp [get_timing_paths -max_paths 1 -setup];   if {$tp ne {}} {     set clk [get_property ENDPOINT_CLOCK $tp];     if {$clk ne {}} {       puts "CLOCK:$clk";       puts [get_property PERIOD [get_clocks $clk]];     }   } }
+set clk_obj [get_clocks -quiet {clk_fpl26contest}]; if {$clk_obj ne {}} {   set tp [get_timing_paths -max_paths 1 -setup -to $clk_obj];   if {[llength $tp] > 0} {set wns_value [get_property SLACK $tp]} else {set wns_value 0.0}; } else {   set tp [get_timing_paths -max_paths 1 -slack_lesser_than 999];   if {[llength $tp] > 0} {set wns_value [get_property SLACK $tp]} else {set wns_value 0.0} }; puts {WNS_VALUE_BEGIN}; puts $wns_value; puts {WNS_VALUE_END}
+set paths [get_timing_paths -max_paths 20 -setup -slack_lesser_than 0]; if {[llength $paths] == 0} {set paths [get_timing_paths -max_paths 20 -setup]}; foreach p $paths {   set slack [get_property SLACK $p];   set start [get_property STARTPOINT_PIN $p];   set end [get_property ENDPOINT_PIN $p];   if {$start eq {}} {set start [get_property STARTPOINT_CELL $p]};   if {$end eq {}} {set end [get_property ENDPOINT_CELL $p]};   puts "PATH|$slack|$start|$end"; }
+report_timing -return_string -max_paths 1 -delay_type max
+puts {fanout_analysis_start}
+report_timing -return_string -max_paths 50 -delay_type max -sort_by slack
+get_nets {layer1_inst/layer1_N28_inst/data_out[86]_i_2_0}
+get_property PARENT [get_nets {layer1_inst/layer1_N28_inst/data_out[86]_i_2_0}]
+get_nets {layer0_inst/layer0_N25_inst/M0w[5]}
+get_property PARENT [get_nets {layer0_inst/layer0_N25_inst/M0w[5]}]
+get_nets {layer1_inst/layer1_N37_inst/M1w[2]}
+get_property PARENT [get_nets {layer1_inst/layer1_N37_inst/M1w[2]}]
+get_nets {layer2_reg/M2w[166]}
+get_property PARENT [get_nets {layer2_reg/M2w[166]}]
+get_nets {layer0_inst/layer0_N3_inst/M0w[3]}
+get_property PARENT [get_nets {layer0_inst/layer0_N3_inst/M0w[3]}]
+get_nets {layer1_inst/layer1_N42_inst/data_out[127]_i_15_4}
+get_property PARENT [get_nets {layer1_inst/layer1_N42_inst/data_out[127]_i_15_4}]
+get_nets {layer0_inst/layer0_N29_inst/M0w[4]}
+get_property PARENT [get_nets {layer0_inst/layer0_N29_inst/M0w[4]}]
+get_nets {layer2_reg/M2w[30]}
+get_property PARENT [get_nets {layer2_reg/M2w[30]}]
+get_nets {layer1_inst/layer1_N0_inst/data_out[2]_i_12_1}
+get_property PARENT [get_nets {layer1_inst/layer1_N0_inst/data_out[2]_i_12_1}]
+get_nets {layer2_reg/M2w[108]}
+get_property PARENT [get_nets {layer2_reg/M2w[108]}]
+get_nets {layer1_inst/layer1_N44_inst/M1w[2]}
+get_property PARENT [get_nets {layer1_inst/layer1_N44_inst/M1w[2]}]
+get_nets {layer0_inst/layer0_N30_inst/M0w[1]}
+get_property PARENT [get_nets {layer0_inst/layer0_N30_inst/M0w[1]}]
+get_nets {layer0_inst/layer0_N31_inst/M0w[2]}
+get_property PARENT [get_nets {layer0_inst/layer0_N31_inst/M0w[2]}]
+get_nets {layer1_inst/layer1_N48_inst/M1w[5]}
+get_property PARENT [get_nets {layer1_inst/layer1_N48_inst/M1w[5]}]
+get_nets {layer2_inst/layer2_N171_inst/M2w[1]}
+get_property PARENT [get_nets {layer2_inst/layer2_N171_inst/M2w[1]}]
+get_nets {layer1_inst/layer1_N45_inst/M1w[0]}
+get_property PARENT [get_nets {layer1_inst/layer1_N45_inst/M1w[0]}]
+get_nets {layer2_reg/M2w[142]}
+get_property PARENT [get_nets {layer2_reg/M2w[142]}]
+get_nets {layer1_inst/layer1_N22_inst/data_out[67]_i_9_0}
+get_property PARENT [get_nets {layer1_inst/layer1_N22_inst/data_out[67]_i_9_0}]
+get_nets {layer1_inst/layer1_N9_inst/data_out_reg[28]_i_21_0}
+get_property PARENT [get_nets {layer1_inst/layer1_N9_inst/data_out_reg[28]_i_21_0}]
+get_nets {layer0_inst/layer0_N19_inst/M0w[8]}
+get_property PARENT [get_nets {layer0_inst/layer0_N19_inst/M0w[8]}]
+get_nets {layer0_inst/layer0_N20_inst/M0w[0]}
+get_property PARENT [get_nets {layer0_inst/layer0_N20_inst/M0w[0]}]
+get_nets {layer1_inst/layer1_N44_inst/data_out_reg[133]_i_21_1}
+get_property PARENT [get_nets {layer1_inst/layer1_N44_inst/data_out_reg[133]_i_21_1}]
+get_nets {layer2_reg/data_out_reg[191]_0[83]}
+get_property PARENT [get_nets {layer2_reg/data_out_reg[191]_0[83]}]
+get_nets {layer2_reg/data_out_reg[91]_rep_n_0}
+get_property PARENT [get_nets {layer2_reg/data_out_reg[91]_rep_n_0}]
+get_nets {layer1_inst/layer1_N33_inst/data_out[100]_i_7_0}
+get_property PARENT [get_nets {layer1_inst/layer1_N33_inst/data_out[100]_i_7_0}]
+report_timing -return_string -max_paths 50 -delay_type max -sort_by slack -nworst 1
+puts {get_wns_start}
+set clk_obj [get_clocks -quiet {clk_fpl26contest}]; if {$clk_obj ne {}} {   set wns_path [get_timing_paths -max_paths 1 -setup -to $clk_obj];   if {[llength $wns_path] > 0} {get_property SLACK $wns_path} else {puts 0.0} } else {puts {ERROR: clock not found}}
+set paths [get_timing_paths -max_paths 20 -setup -slack_lesser_than 0]; if {[llength $paths] == 0} {set paths [get_timing_paths -max_paths 20 -setup]}; foreach p $paths {   set slack [get_property SLACK $p];   set start [get_property STARTPOINT_PIN $p];   set end [get_property ENDPOINT_PIN $p];   if {$start eq {}} {set start [get_property STARTPOINT_CELL $p]};   if {$end eq {}} {set end [get_property ENDPOINT_CELL $p]};   puts "PATH|$slack|$start|$end"; }
+report_timing -return_string -max_paths 1 -delay_type max
+report_timing -return_string -max_paths 20 -delay_type max -sort_by slack -nworst 1
+close_design
+open_checkpoint {/home/ubuntu/fpl2026/dcp_optimizer_run-20260705_033316/cell_placement_iter_001.dcp}
+set locked_cells [get_cells -filter {IS_LOC_FIXED == 1}]
+if {[llength $locked_cells] > 0} {
+    set_property IS_LOC_FIXED 0 $locked_cells
+    set_property IS_BEL_FIXED 0 $locked_cells
+}
+set locked_nets [get_nets -filter {DONT_TOUCH == 1}]
+if {[llength $locked_nets] > 0} {
+    set_property DONT_TOUCH 0 $locked_nets
+}
+set objs [get_cells {{layer2_reg/layer2_N132_inst/data_out_reg[396]_i_13} {layer2_reg/layer2_N132_inst/data_out[396]_i_7} {layer0_inst/layer0_N25_inst/data_out_reg[76]_i_7} {layer0_inst/layer0_N25_inst/data_out[76]_i_3} {layer1_inst/layer1_N0_inst/data_out_reg[2]_i_1} {layer0_inst/layer0_N3_inst/data_out[11]_i_18} {layer0_inst/layer0_N30_inst/data_out[90]_i_19}}]
+set_property IS_LOC_FIXED 1 $objs
+set_property IS_BEL_FIXED 1 $objs
+puts {route_status_start}
+report_route_status -return_string
+route_design -directive {Default}
+report_route_status -return_string
+puts {timing_summary_start}
+report_timing_summary -return_string
+set clk_obj [get_clocks -quiet {clk_fpl26contest}]; if {$clk_obj ne {}} {   set tp [get_timing_paths -max_paths 1 -setup -to $clk_obj];   if {[llength $tp] > 0} {set wns_value [get_property SLACK $tp]} else {set wns_value 0.0}; } else {   set tp [get_timing_paths -max_paths 1 -slack_lesser_than 999];   if {[llength $tp] > 0} {set wns_value [get_property SLACK $tp]} else {set wns_value 0.0} }; puts {WNS_VALUE_BEGIN}; puts $wns_value; puts {WNS_VALUE_END}
+puts {get_wns_start}
+set clk_obj [get_clocks -quiet {clk_fpl26contest}]; if {$clk_obj ne {}} {   set wns_path [get_timing_paths -max_paths 1 -setup -to $clk_obj];   if {[llength $wns_path] > 0} {get_property SLACK $wns_path} else {puts 0.0} } else {puts {ERROR: clock not found}}
+puts {get_wns_start}
+set clk_obj [get_clocks -quiet {clk_fpl26contest}]; if {$clk_obj ne {}} {   set wns_path [get_timing_paths -max_paths 1 -setup -to $clk_obj];   if {[llength $wns_path] > 0} {get_property SLACK $wns_path} else {puts 0.0} } else {puts {ERROR: clock not found}}
+report_timing -return_string -max_paths 1 -delay_type max
+report_timing -return_string -max_paths 20 -delay_type max -sort_by slack -nworst 1
+close_design
+open_checkpoint {/home/ubuntu/fpl2026/dcp_optimizer_run-20260705_033316/cell_placement_iter_002.dcp}
+set locked_cells [get_cells -filter {IS_LOC_FIXED == 1}]
+if {[llength $locked_cells] > 0} {
+    set_property IS_LOC_FIXED 0 $locked_cells
+    set_property IS_BEL_FIXED 0 $locked_cells
+}
+set locked_nets [get_nets -filter {DONT_TOUCH == 1}]
+if {[llength $locked_nets] > 0} {
+    set_property DONT_TOUCH 0 $locked_nets
+}
+set objs [get_cells {{layer0_reg/data_out_reg[41]} {layer1_reg} {layer1_reg/data_out_reg[76]_rep__0} {layer1_reg/data_out_reg[21]_rep__0} {layer2_reg/data_out_reg[84]} {layer0_reg/data_out_reg[38]} {layer1_reg/data_out_reg[75]_rep} {layer1_reg/data_out_reg[76]_rep__2} {layer1_reg/data_out_reg[47]} {layer2_reg/data_out_reg[111]_rep__3}}]
+set_property IS_LOC_FIXED 1 $objs
+set_property IS_BEL_FIXED 1 $objs
+puts {route_status_start}
+report_route_status -return_string
+route_design -directive {Default}
+report_route_status -return_string
+puts {get_wns_start}
+set clk_obj [get_clocks -quiet {clk_fpl26contest}]; if {$clk_obj ne {}} {   set wns_path [get_timing_paths -max_paths 1 -setup -to $clk_obj];   if {[llength $wns_path] > 0} {get_property SLACK $wns_path} else {puts 0.0} } else {puts {ERROR: clock not found}}
+report_timing -return_string -max_paths 1 -delay_type max
+puts {get_wns_start}
+set clk_obj [get_clocks -quiet {clk_fpl26contest}]; if {$clk_obj ne {}} {   set wns_path [get_timing_paths -max_paths 1 -setup -to $clk_obj];   if {[llength $wns_path] > 0} {get_property SLACK $wns_path} else {puts 0.0} } else {puts {ERROR: clock not found}}
+phys_opt_design -directive AggressiveExplore -retime
+puts {get_wns_start}
+set clk_obj [get_clocks -quiet {clk_fpl26contest}]; if {$clk_obj ne {}} {   set wns_path [get_timing_paths -max_paths 1 -setup -to $clk_obj];   if {[llength $wns_path] > 0} {get_property SLACK $wns_path} else {puts 0.0} } else {puts {ERROR: clock not found}}
+puts {timing_summary_start}
+report_timing_summary -return_string
+set clk_obj [get_clocks -quiet {clk_fpl26contest}]; if {$clk_obj ne {}} {   set tp [get_timing_paths -max_paths 1 -setup -to $clk_obj];   if {[llength $tp] > 0} {set wns_value [get_property SLACK $tp]} else {set wns_value 0.0}; } else {   set tp [get_timing_paths -max_paths 1 -slack_lesser_than 999];   if {[llength $tp] > 0} {set wns_value [get_property SLACK $tp]} else {set wns_value 0.0} }; puts {WNS_VALUE_BEGIN}; puts $wns_value; puts {WNS_VALUE_END}
+puts {get_wns_start}
+set clk_obj [get_clocks -quiet {clk_fpl26contest}]; if {$clk_obj ne {}} {   set wns_path [get_timing_paths -max_paths 1 -setup -to $clk_obj];   if {[llength $wns_path] > 0} {get_property SLACK $wns_path} else {puts 0.0} } else {puts {ERROR: clock not found}}
+puts {get_wns_start}
+set clk_obj [get_clocks -quiet {clk_fpl26contest}]; if {$clk_obj ne {}} {   set wns_path [get_timing_paths -max_paths 1 -setup -to $clk_obj];   if {[llength $wns_path] > 0} {get_property SLACK $wns_path} else {puts 0.0} } else {puts {ERROR: clock not found}}
+report_timing -return_string -max_paths 1 -delay_type max
+report_timing -return_string -max_paths 20 -delay_type max -sort_by slack -nworst 1
+close_design
+open_checkpoint {/home/ubuntu/fpl2026/dcp_optimizer_run-20260705_033316/cell_placement_iter_004.dcp}
+set locked_cells [get_cells -filter {IS_LOC_FIXED == 1}]
+if {[llength $locked_cells] > 0} {
+    set_property IS_LOC_FIXED 0 $locked_cells
+    set_property IS_BEL_FIXED 0 $locked_cells
+}
+set locked_nets [get_nets -filter {DONT_TOUCH == 1}]
+if {[llength $locked_nets] > 0} {
+    set_property DONT_TOUCH 0 $locked_nets
+}
+set objs [get_cells {{layer0_reg/data_out_reg[41]} {layer1_reg} {layer1_reg/data_out_reg[76]_rep__0} {layer1_reg/data_out_reg[21]_rep__0} {layer2_reg/data_out_reg[84]} {layer0_reg/data_out_reg[38]} {layer1_reg/data_out_reg[75]_rep} {layer1_reg/data_out_reg[76]_rep__2} {layer1_reg/data_out_reg[47]} {layer2_reg/data_out_reg[111]_rep__3}}]
+set_property IS_LOC_FIXED 1 $objs
+set_property IS_BEL_FIXED 1 $objs
+puts {route_status_start}
+report_route_status -return_string
+route_design -directive {Default}
+report_route_status -return_string
+puts {timing_summary_start}
+report_timing_summary -return_string
+set clk_obj [get_clocks -quiet {clk_fpl26contest}]; if {$clk_obj ne {}} {   set tp [get_timing_paths -max_paths 1 -setup -to $clk_obj];   if {[llength $tp] > 0} {set wns_value [get_property SLACK $tp]} else {set wns_value 0.0}; } else {   set tp [get_timing_paths -max_paths 1 -slack_lesser_than 999];   if {[llength $tp] > 0} {set wns_value [get_property SLACK $tp]} else {set wns_value 0.0} }; puts {WNS_VALUE_BEGIN}; puts $wns_value; puts {WNS_VALUE_END}
+puts {get_wns_start}
+set clk_obj [get_clocks -quiet {clk_fpl26contest}]; if {$clk_obj ne {}} {   set wns_path [get_timing_paths -max_paths 1 -setup -to $clk_obj];   if {[llength $wns_path] > 0} {get_property SLACK $wns_path} else {puts 0.0} } else {puts {ERROR: clock not found}}
+puts {get_wns_start}
+set clk_obj [get_clocks -quiet {clk_fpl26contest}]; if {$clk_obj ne {}} {   set wns_path [get_timing_paths -max_paths 1 -setup -to $clk_obj];   if {[llength $wns_path] > 0} {get_property SLACK $wns_path} else {puts 0.0} } else {puts {ERROR: clock not found}}
+report_timing -return_string -max_paths 1 -delay_type max
+puts {get_wns_start}
+set clk_obj [get_clocks -quiet {clk_fpl26contest}]; if {$clk_obj ne {}} {   set wns_path [get_timing_paths -max_paths 1 -setup -to $clk_obj];   if {[llength $wns_path] > 0} {get_property SLACK $wns_path} else {puts 0.0} } else {puts {ERROR: clock not found}}
+phys_opt_design -directive AggressiveExplore -retime
+puts {get_wns_start}
+puts {timing_summary_start}
+report_timing_summary -return_string
+set clk_obj [get_clocks -quiet {clk_fpl26contest}]; if {$clk_obj ne {}} {   set tp [get_timing_paths -max_paths 1 -setup -to $clk_obj];   if {[llength $tp] > 0} {set wns_value [get_property SLACK $tp]} else {set wns_value 0.0}; } else {   set tp [get_timing_paths -max_paths 1 -slack_lesser_than 999];   if {[llength $tp] > 0} {set wns_value [get_property SLACK $tp]} else {set wns_value 0.0} }; puts {WNS_VALUE_BEGIN}; puts $wns_value; puts {WNS_VALUE_END}
+puts {get_wns_start}
+set clk_obj [get_clocks -quiet {clk_fpl26contest}]; if {$clk_obj ne {}} {   set wns_path [get_timing_paths -max_paths 1 -setup -to $clk_obj];   if {[llength $wns_path] > 0} {get_property SLACK $wns_path} else {puts 0.0} } else {puts {ERROR: clock not found}}
+puts {get_wns_start}
+set clk_obj [get_clocks -quiet {clk_fpl26contest}]; if {$clk_obj ne {}} {   set wns_path [get_timing_paths -max_paths 1 -setup -to $clk_obj];   if {[llength $wns_path] > 0} {get_property SLACK $wns_path} else {puts 0.0} } else {puts {ERROR: clock not found}}
+report_timing -return_string -max_paths 1 -delay_type max
+report_timing -return_string -max_paths 20 -delay_type max -sort_by slack -nworst 1
+close_design
+open_checkpoint {/home/ubuntu/fpl2026/dcp_optimizer_run-20260705_033316/cell_placement_iter_006.dcp}
+set locked_cells [get_cells -filter {IS_LOC_FIXED == 1}]
+if {[llength $locked_cells] > 0} {
+    set_property IS_LOC_FIXED 0 $locked_cells
+    set_property IS_BEL_FIXED 0 $locked_cells
+}
+set locked_nets [get_nets -filter {DONT_TOUCH == 1}]
+if {[llength $locked_nets] > 0} {
+    set_property DONT_TOUCH 0 $locked_nets
+}
+set objs [get_cells {{layer0_reg/data_out_reg[41]} {layer1_reg} {layer1_reg/data_out_reg[76]_rep__0} {layer1_reg/data_out_reg[21]_rep__0} {layer2_reg/data_out_reg[84]} {layer0_reg/data_out_reg[38]} {layer1_reg/data_out_reg[75]_rep} {layer1_reg/data_out_reg[76]_rep__2} {layer1_reg/data_out_reg[47]} {layer2_reg/data_out_reg[111]_rep__3}}]
+set_property IS_LOC_FIXED 1 $objs
+set_property IS_BEL_FIXED 1 $objs
+puts {route_status_start}
+report_route_status -return_string
+route_design -directive {Default}
+report_route_status -return_string
+puts {timing_summary_start}
+report_timing_summary -return_string
+set clk_obj [get_clocks -quiet {clk_fpl26contest}]; if {$clk_obj ne {}} {   set tp [get_timing_paths -max_paths 1 -setup -to $clk_obj];   if {[llength $tp] > 0} {set wns_value [get_property SLACK $tp]} else {set wns_value 0.0}; } else {   set tp [get_timing_paths -max_paths 1 -slack_lesser_than 999];   if {[llength $tp] > 0} {set wns_value [get_property SLACK $tp]} else {set wns_value 0.0} }; puts {WNS_VALUE_BEGIN}; puts $wns_value; puts {WNS_VALUE_END}
+puts {get_wns_start}
+set clk_obj [get_clocks -quiet {clk_fpl26contest}]; if {$clk_obj ne {}} {   set wns_path [get_timing_paths -max_paths 1 -setup -to $clk_obj];   if {[llength $wns_path] > 0} {get_property SLACK $wns_path} else {puts 0.0} } else {puts {ERROR: clock not found}}
+puts {get_wns_start}
+report_timing -return_string -max_paths 1 -delay_type max
+report_timing -return_string -max_paths 20 -delay_type max -sort_by slack -nworst 1
+close_design
+open_checkpoint {/home/ubuntu/fpl2026/dcp_optimizer_run-20260705_033316/cell_placement_iter_007.dcp}
+set locked_cells [get_cells -filter {IS_LOC_FIXED == 1}]
+if {[llength $locked_cells] > 0} {
+    set_property IS_LOC_FIXED 0 $locked_cells
+    set_property IS_BEL_FIXED 0 $locked_cells
+}
+set locked_nets [get_nets -filter {DONT_TOUCH == 1}]
+if {[llength $locked_nets] > 0} {
+    set_property DONT_TOUCH 0 $locked_nets
+}
+set objs [get_cells {{layer0_reg/data_out_reg[41]} {layer1_reg} {layer1_reg/data_out_reg[76]_rep__0} {layer1_reg/data_out_reg[21]_rep__0} {layer2_reg/data_out_reg[84]} {layer0_reg/data_out_reg[38]} {layer1_reg/data_out_reg[75]_rep} {layer1_reg/data_out_reg[76]_rep__2} {layer1_reg/data_out_reg[47]} {layer2_reg/data_out_reg[111]_rep__3}}]
+set_property IS_LOC_FIXED 1 $objs
+set_property IS_BEL_FIXED 1 $objs
+puts {route_status_start}
+report_route_status -return_string
+route_design -directive {Default}
+report_route_status -return_string
+puts {timing_summary_start}
+report_timing_summary -return_string
