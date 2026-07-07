@@ -87,9 +87,9 @@ CLUSTER_SPREAD_REGRESSION_FRACTION = 0.15
 PBLOCK_MAX_UTILIZATION_FRACTION = 0.85
 RAPIDWRIGHT_STRUCTURAL_ACTIONS = [
     "rapidwright_optimize_cell_placement",
-    "rapidwright_analyze_net_detour",
-    "rapidwright_analyze_fabric_for_pblock",
-    "rapidwright_convert_fabric_region_to_pblock",
+    # "rapidwright_analyze_net_detour",
+    # "rapidwright_analyze_fabric_for_pblock",
+    # "rapidwright_convert_fabric_region_to_pblock",
     "pblock",
 ]
 PBLOCK_ACTION_FAMILY = {
@@ -105,10 +105,10 @@ PBLOCK_ACTION_FAMILY = {
 # addresses the actual dispersion. Put the pblock track first so it's genuinely
 # prioritized instead of just re-deriving the same default order.
 RAPIDWRIGHT_PLACEMENT_ACTIONS = [
-    "rapidwright_analyze_fabric_for_pblock",
-    "rapidwright_convert_fabric_region_to_pblock",
+    # "rapidwright_analyze_fabric_for_pblock",
+    # "rapidwright_convert_fabric_region_to_pblock",
     "pblock",
-    "rapidwright_analyze_net_detour",
+    # "rapidwright_analyze_net_detour",
     "rapidwright_optimize_cell_placement",
 ]
 VIVADO_INCREMENTAL_IMPLEMENTATION_ACTIONS = {
@@ -1126,7 +1126,7 @@ class DCPOptimizer(DCPOptimizerBase):
         tcl_cmd = (
             f"set paths [get_timing_paths -max_paths {TIER2_TOP_PATHS_DEFAULT} -setup{tcl_filter}]; "
             "if {[llength $paths] == 0} {set paths [get_timing_paths -max_paths "
-            f"{TIER2_TOP_PATHS_DEFAULT} -setup]}}; "
+            f"{TIER2_TOP_PATHS_DEFAULT} -setup]; "
             "foreach p $paths { "
             "  set slack [get_property SLACK $p]; "
             "  set start [get_property STARTPOINT_PIN $p]; "
@@ -1697,10 +1697,11 @@ class DCPOptimizer(DCPOptimizerBase):
             current_wns,
         )
         structural_override_age = self.consecutive_no_improvement - STUCK_ITERATION_THRESHOLD
-        structural_override = (
-            structural_override_age >= 0
-            and structural_override_age < STRUCTURAL_OVERRIDE_MAX_ITERS
-        )
+        if structural_override_age >= 0:
+            cycle_len = STRUCTURAL_OVERRIDE_MAX_ITERS + STUCK_ITERATION_THRESHOLD
+            structural_override = (structural_override_age % cycle_len) < STRUCTURAL_OVERRIDE_MAX_ITERS
+        else:
+            structural_override = False
         self.structural_override_active = structural_override
         high_spread = (
             avg_spread is not None
