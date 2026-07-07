@@ -1606,7 +1606,7 @@ class DCPOptimizer(DCPOptimizerBase):
         persist = getattr(self.checkpoint_manager, "_persist_history", None)
         if callable(persist):
              persist()
-         logger.warning("Recorded failed optimization action: %s", failure.get("error_type"))
+        logger.warning("Recorded failed optimization action: %s", failure.get("error_type"))
         if self.checkpoint_manager is not None and self.checkpoint_manager.should_escalate():
             message = (
                 f"Checkpoint manager observed repeated stalls after a failed action. "
