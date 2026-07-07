@@ -1604,7 +1604,7 @@ class DCPOptimizer(DCPOptimizerBase):
         self.consecutive_no_improvement += 1
         self.checkpoint_manager.iterations.append(iteration)
         persist = getattr(self.checkpoint_manager, "_persist_history", None)
-         if callable(persist):
+        if callable(persist):
              persist()
          logger.warning("Recorded failed optimization action: %s", failure.get("error_type"))
         if self.checkpoint_manager is not None and self.checkpoint_manager.should_escalate():
