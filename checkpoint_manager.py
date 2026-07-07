@@ -139,7 +139,7 @@ class CheckpointManager:
 
     def should_escalate(self) -> bool:
         """Return True when repeated stalls should trigger a recipe escalation."""
-        return self.stall_count >= 3 and self.stall_count % 3 == 0
+        return self.stall_count >= 3 
 
     def should_continue(self) -> bool:
         """Return True while the wall-clock and iteration budgets remain."""

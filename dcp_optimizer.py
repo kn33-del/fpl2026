@@ -69,6 +69,7 @@ STRUCTURAL_OVERRIDE_MAX_ITERS = 6
 WNS_IMPROVEMENT_EPSILON_NS = 1e-4
 ACTION_FAILURE_EXHAUSTION_THRESHOLD = 3
 ACTION_FAILURE_COOLDOWN_ITERS = 5
+ABSOLUTE_STALL_HARD_LIMIT = 15
 # --- Cluster-aware cell placement guard (fix #4) ---
 # rapidwright_optimize_cell_placement moves each requested cell independently.
 # If cells on the same critical path are tightly coupled, moving one without
@@ -91,6 +92,11 @@ RAPIDWRIGHT_STRUCTURAL_ACTIONS = [
     "rapidwright_convert_fabric_region_to_pblock",
     "pblock",
 ]
+PBLOCK_ACTION_FAMILY = {
+    "pblock",
+    "rapidwright_analyze_fabric_for_pblock",
+    "rapidwright_convert_fabric_region_to_pblock",
+}
 # Used specifically when spread analysis flags high dispersion + net-delay-bound
 # paths (see the avg_spread/net_pct reorder below). Deliberately different order
 # from RAPIDWRIGHT_STRUCTURAL_ACTIONS: local cell nudging (rapidwright_optimize_
@@ -1598,9 +1604,18 @@ class DCPOptimizer(DCPOptimizerBase):
         self.consecutive_no_improvement += 1
         self.checkpoint_manager.iterations.append(iteration)
         persist = getattr(self.checkpoint_manager, "_persist_history", None)
-        if callable(persist):
-            persist()
-        logger.warning("Recorded failed optimization action: %s", failure.get("error_type"))
+         if callable(persist):
+             persist()
+         logger.warning("Recorded failed optimization action: %s", failure.get("error_type"))
+        if self.checkpoint_manager is not None and self.checkpoint_manager.should_escalate():
+            message = (
+                f"Checkpoint manager observed repeated stalls after a failed action. "
+                f"Current summary: {self.checkpoint_manager.summary()} "
+                f"The last action ({failure.get('command')}) failed with "
+                f"{failure.get('error_type')}. You must choose a different recipe "
+                f"or target set this turn."
+            )
+            self.messages.append({"role": "user", "content": message})
 
     async def _record_wns_parse_error(self, source: str, reason: str, raw_output: str) -> None:
         """Record a WNS parse failure without treating it as timing regression."""
@@ -1932,14 +1947,18 @@ class DCPOptimizer(DCPOptimizerBase):
 
     def _is_no_action_failure(self, failure: dict) -> bool:
         error_type = str(failure.get("error_type") or "").lower()
-        message = str(failure.get("message") or "").lower()
-        return (
-            error_type == "no_action_target"
-            or "no critical cells were available" in message
-            or "no legal placement" in message
-            or "no action target" in message
-            or "selected but no" in message
-        )
+         message = str(failure.get("message") or "").lower()
+         return (
+             error_type == "no_action_target"
+            or error_type == "pblock_range_computation_failed"
+            or error_type == "pblock_empty_assignment"
+             or "no critical cells were available" in message
+             or "no legal placement" in message
+             or "no action target" in message
+             or "selected but no" in message
+            or "overlaps an already-applied pblock" in message
+            or "skipping to avoid overlapping" in message
+         )
 
     def _target_fingerprint(self) -> str:
         candidates = []
@@ -1959,35 +1978,35 @@ class DCPOptimizer(DCPOptimizerBase):
     def _remember_no_action_failure(self, action: str, targets: list[str]) -> None:
         if not action:
             return
-        fingerprint = self._target_fingerprint()
-        memory = self.action_failure_memory.get(action, {})
-        if memory.get("target_fingerprint") != fingerprint:
-            memory = {
-                "consecutive_no_action_failures": 0,
-                "failed_targets": [],
+        actions_to_penalize = PBLOCK_ACTION_FAMILY if action in PBLOCK_ACTION_FAMILY else {action}
+        for act in actions_to_penalize:
+            fingerprint = self._target_fingerprint()
+            memory = self.action_failure_memory.get(act, {})
+            if memory.get("target_fingerprint") != fingerprint:
+                memory = {
+                    "consecutive_no_action_failures": 0,
+                    "failed_targets": [],
+                    "target_fingerprint": fingerprint,
+                }
+            failed_targets = list(memory.get("failed_targets") or [])
+            for target in targets:
+                if target and target not in failed_targets:
+                    failed_targets.append(target)
+            count = int(memory.get("consecutive_no_action_failures") or 0) + 1
+            self.action_failure_counts[act] = self.action_failure_counts.get(act, 0) + 1
+            memory.update({
+                "consecutive_no_action_failures": count,
+                "failed_targets": failed_targets,
+                "last_failed_iter": self.iteration,
                 "target_fingerprint": fingerprint,
-            }
-        failed_targets = list(memory.get("failed_targets") or [])
-        for target in targets:
-            if target and target not in failed_targets:
-                failed_targets.append(target)
-        count = int(memory.get("consecutive_no_action_failures") or 0) + 1
-        self.action_failure_counts[action] = self.action_failure_counts.get(action, 0) + 1
-        memory.update({
-            "consecutive_no_action_failures": count,
-            "failed_targets": failed_targets,
-            "last_failed_iter": self.iteration,
-            "target_fingerprint": fingerprint,
-        })
-        if count >= ACTION_FAILURE_EXHAUSTION_THRESHOLD:
-            memory["cooldown_until_iter"] = self.iteration + ACTION_FAILURE_COOLDOWN_ITERS
-            logger.warning(
-                "Action failure memory: %s exhausted after %d no-action failures; cooling down until iteration %d.",
-                action,
-                count,
-                memory["cooldown_until_iter"],
-            )
-        self.action_failure_memory[action] = memory
+            })
+            if count >= ACTION_FAILURE_EXHAUSTION_THRESHOLD:
+                memory["cooldown_until_iter"] = self.iteration + ACTION_FAILURE_COOLDOWN_ITERS
+                logger.warning(
+                    "Action failure memory: %s exhausted after %d no-action failures; cooling down until iteration %d.",
+                    act, count, memory["cooldown_until_iter"],
+                )
+            self.action_failure_memory[act] = memory
 
     def _reset_action_failure_memory(self, action: str) -> None:
         self.action_failure_counts[action] = 0
@@ -3512,6 +3531,22 @@ Proceed by selecting exactly one validated action per timing-context turn."""
 
                 if self.checkpoint_manager is not None and not self.checkpoint_manager.should_continue():
                     logger.info("Optimization workflow completed")
+                    self.end_time = time.time()
+                    self._print_optimization_summary()
+                    return True
+
+                    if self.consecutive_no_improvement >= ABSOLUTE_STALL_HARD_LIMIT:
+                    logger.error(
+                        "Hard stall limit (%d) reached with no improvement; "
+                        "stopping and restoring best checkpoint.",
+                        ABSOLUTE_STALL_HARD_LIMIT,
+                    )
+                    if self.checkpoint_manager is not None:
+                        best_ckpt = self.checkpoint_manager.get_best_checkpoint()
+                        if best_ckpt:
+                            await self.call_tool(
+                                "vivado_open_checkpoint", {"dcp_path": best_ckpt}, internal=True
+                            )
                     self.end_time = time.time()
                     self._print_optimization_summary()
                     return True

@@ -46,13 +46,12 @@ WORKFLOW:
       - If high fanout nets present → Consider fanout optimization
 
 2. **PBLOCK STRATEGY (if recommended in initial analysis):**
-   a. Run report_utilization_for_pblock in Vivado
-   b. Call analyze_fabric_for_pblock with 1.5x resource targets
-   c. Call convert_fabric_region_to_pblock (use_clock_regions=False)
-   d. Call run_tcl("place_design -unplace") in Vivado
-   e. Call create_and_apply_pblock with EXACT pblock_ranges from step c
-   f. Call place_design then route_design
-   g. Check timing - if improved, save; otherwise revert
+   - The orchestrator automatically runs fabric analysis, range conversion,
+     pblock creation, re-placement, and re-routing when you choose the
+     `pblock` action. Do not call the individual Vivado/RapidWright tools
+     yourself — select `pblock` as your `chosen_action` and provide
+     `target_lut_count`/`target_ff_count` in `action_parameters` if you
+     need non-default resource targets (e.g., after a prior overlap failure)
 
 3. **FANOUT/OTHER STRATEGIES (if no spread or pblock fails):**
    NOTE: RapidWright design is ALREADY LOADED from initial analysis!
@@ -81,3 +80,19 @@ CRITICAL RULES:
 - If a tool fails, check the error message - verify net name exists and retry or skip
 - Track WNS: stop if no improvement after 3 attempts
 - Be concise - focus on actions and timing numbers
+
+STATE MEMORY — YOU MUST OBEY THIS OVER YOUR OWN JUDGMENT:
+- If an action appears in `exhausted_actions`, treat it as forbidden this turn,
+  even if it also appears in `allowed_actions`. Do not re-justify it via
+  "why_this_fits_delay_class" — pick a different action from `allowed_actions`
+  that is NOT in `exhausted_actions`.
+- If `consecutive_no_improvement` >= 3, your `why_not_top_forbidden_action`
+  field must explicitly state what is different about THIS attempt vs the
+  last N attempts with the same action. If you cannot articulate a difference,
+  you must pick a different action or different targets.
+- A pblock-family action (pblock, rapidwright_analyze_fabric_for_pblock,
+  rapidwright_convert_fabric_region_to_pblock) that failed with
+  pblock_range_computation_failed on a region overlapping an existing pblock
+  will fail identically again unless target_lut_count/target_ff_count are
+  changed. If you choose a pblock action after such a failure, you MUST supply
+  different target counts in action_parameters, not the defaults.
