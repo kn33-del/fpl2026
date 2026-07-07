@@ -1123,10 +1123,19 @@ class DCPOptimizer(DCPOptimizerBase):
             self.target_tier = "tier2_worst_slack_paths"
             tcl_filter = ""
 
+        # NOTE (bug fix): the previous version of this command nested the
+        # foreach/puts loop *inside* the "if {[llength $paths] == 0}" branch,
+        # so path data was only ever emitted in the empty-fallback case, and
+        # the "if" body itself was missing a closing brace (9 open braces vs
+        # 8 close braces), which is a Tcl parse error on every call. Fixed by
+        # (a) balancing the fallback's own braces, and (b) moving the
+        # foreach/puts loop outside the if so it always runs against
+        # whichever $paths ended up populated, filtered or fallback.
         tcl_cmd = (
             f"set paths [get_timing_paths -max_paths {TIER2_TOP_PATHS_DEFAULT} -setup{tcl_filter}]; "
-            "if {[llength $paths] == 0} {set paths [get_timing_paths -max_paths "
-            f"{TIER2_TOP_PATHS_DEFAULT} -setup]; "
+            "if {[llength $paths] == 0} {"
+            f"set paths [get_timing_paths -max_paths {TIER2_TOP_PATHS_DEFAULT} -setup]"
+            "}; "
             "foreach p $paths { "
             "  set slack [get_property SLACK $p]; "
             "  set start [get_property STARTPOINT_PIN $p]; "
@@ -1894,12 +1903,17 @@ class DCPOptimizer(DCPOptimizerBase):
         return bool(payload.get("error") or payload.get("success") is False)
 
     def _filter_exhausted_actions(self, allowed: list[str]) -> list[str]:
+        # BUG FIX: this used to also exclude any action whose *cumulative*
+        # action_failure_counts had ever reached ACTION_FAILURE_EXHAUSTION_THRESHOLD,
+        # regardless of whether its cooldown had expired. Since that counter
+        # is never decremented (only reset to 0 on a later *successful*
+        # improving attempt), and an excluded action can never be attempted
+        # again to earn that reset, this created a permanent catch-22 lockout:
+        # once an action hit the threshold once, it was gone for the rest of
+        # the run even though _active_exhausted_actions() (which correctly
+        # tracks cooldown_until_iter and target fingerprint) had already
+        # cleared it. Rely solely on the cooldown-aware check.
         active_exhausted = set(self._active_exhausted_actions())
-        active_exhausted.update(
-            action
-            for action, count in self.action_failure_counts.items()
-            if count >= ACTION_FAILURE_EXHAUSTION_THRESHOLD
-        )
         if not active_exhausted:
             return allowed
         filtered = [action for action in allowed if action not in active_exhausted]
@@ -2537,7 +2551,28 @@ class DCPOptimizer(DCPOptimizerBase):
         # reading action_failure_memory during action-selection ever checks,
         # so a 100%-regression action was never actually suppressed.
         action_key = self.last_action_key or self.last_recipe
-        if iteration.get("status") in {"improved", "marginal"}:
+        # BUG FIX: analysis-only actions (rapidwright_analyze_net_detour,
+        # rapidwright_analyze_fabric_for_pblock,
+        # rapidwright_convert_fabric_region_to_pblock) never change the
+        # design by themselves (they set last_rapidwright_edit_summary's
+        # "changed_design" to False) - they exist purely to compute inputs
+        # for a *later* real action. Judging them by "did WNS improve" and
+        # feeding a "no improvement" verdict into the same failure-memory
+        # mechanism used for genuine regressions was mis-attributing an
+        # always-true tautology (an analysis step never moves WNS) as a
+        # failure. In practice this exhausted the pblock family (which
+        # lacked any offsetting self-reset) after only 3 routine analysis
+        # calls, while rapidwright_analyze_net_detour happened to dodge this
+        # by resetting its own counter right after execution - an
+        # inconsistency that isn't a real fix. Skip this bookkeeping
+        # entirely for actions that never attempted a design change.
+        is_analysis_only = bool(
+            self.last_rapidwright_edit_summary
+            and self.last_rapidwright_edit_summary.get("changed_design") is False
+        )
+        if is_analysis_only:
+            pass
+        elif iteration.get("status") in {"improved", "marginal"}:
             self._reset_action_failure_memory(action_key)
         else:
             # The action executed successfully but made WNS worse (or did
