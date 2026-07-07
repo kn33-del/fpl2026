@@ -1947,18 +1947,18 @@ class DCPOptimizer(DCPOptimizerBase):
 
     def _is_no_action_failure(self, failure: dict) -> bool:
         error_type = str(failure.get("error_type") or "").lower()
-         message = str(failure.get("message") or "").lower()
-         return (
-             error_type == "no_action_target"
+        message = str(failure.get("message") or "").lower()
+        return (
+            error_type == "no_action_target"
             or error_type == "pblock_range_computation_failed"
             or error_type == "pblock_empty_assignment"
-             or "no critical cells were available" in message
-             or "no legal placement" in message
-             or "no action target" in message
-             or "selected but no" in message
+            or "no critical cells were available" in message
+            or "no legal placement" in message
+            or "no action target" in message
+            or "selected but no" in message
             or "overlaps an already-applied pblock" in message
             or "skipping to avoid overlapping" in message
-         )
+        )
 
     def _target_fingerprint(self) -> str:
         candidates = []
@@ -3536,11 +3536,11 @@ Proceed by selecting exactly one validated action per timing-context turn."""
                     return True
 
                     if self.consecutive_no_improvement >= ABSOLUTE_STALL_HARD_LIMIT:
-                    logger.error(
-                        "Hard stall limit (%d) reached with no improvement; "
-                        "stopping and restoring best checkpoint.",
-                        ABSOLUTE_STALL_HARD_LIMIT,
-                    )
+                        logger.error(
+                            "Hard stall limit (%d) reached with no improvement; "
+                            "stopping and restoring best checkpoint.",
+                            ABSOLUTE_STALL_HARD_LIMIT,
+                        )
                     if self.checkpoint_manager is not None:
                         best_ckpt = self.checkpoint_manager.get_best_checkpoint()
                         if best_ckpt:
