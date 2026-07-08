@@ -68,6 +68,10 @@ STUCK_ITERATION_THRESHOLD = 3
 STRUCTURAL_OVERRIDE_MAX_ITERS = 6
 WNS_IMPROVEMENT_EPSILON_NS = 1e-4
 ACTION_FAILURE_EXHAUSTION_THRESHOLD = 3
+# Fix #6: how many iterations a cell stays blacklisted before it becomes
+# eligible again. Without this, cells_blacklisted only grows, and long runs
+# eventually exhaust the critical-path candidate pool entirely.
+BLACKLIST_TTL_ITERS = 15
 ACTION_FAILURE_COOLDOWN_ITERS = 5
 ABSOLUTE_STALL_HARD_LIMIT = 15
 # --- Cluster-aware cell placement guard (fix #4) ---
@@ -120,6 +124,21 @@ VIVADO_INCREMENTAL_IMPLEMENTATION_ACTIONS = {
 DEFAULT_PBLOCK_TARGET_LUT_COUNT = 20000
 DEFAULT_PBLOCK_TARGET_FF_COUNT = 40000
 DEFAULT_PBLOCK_NAME_PREFIX = "pblock_net_delay"
+# Fix #5 (pblock sizing): the old fallback chain used the WHOLE design's
+# lut_count/ff_count (from rapidwright_read_checkpoint) or a hardcoded 20000
+# whenever the LLM didn't pass an explicit target_lut_count. pblock is meant
+# to cluster a small batch of critical-path cells into a tight region, not
+# fit the entire design into a sub-region -- that's what produced
+# "353% utilization" rejections on every single call. These constants give a
+# much smaller, per-candidate-path estimate instead, and PBLOCK_SIZE_SHRINK_*
+# below let the sizing self-correct if even that estimate is still too big
+# for the recommended region, rather than failing outright on the first try.
+PBLOCK_LUTS_PER_CANDIDATE_PATH = 40
+PBLOCK_FFS_PER_CANDIDATE_PATH = 80
+PBLOCK_MIN_TARGET_LUT_COUNT = 200
+PBLOCK_MIN_TARGET_FF_COUNT = 200
+PBLOCK_SIZE_SHRINK_FACTOR = 0.5
+PBLOCK_SIZE_SHRINK_MAX_RETRIES = 3
 
 
 class WNSParseError(ValueError):
@@ -842,6 +861,15 @@ class DCPOptimizer(DCPOptimizerBase):
         self.action_failure_counts: dict[str, int] = {}
         self.action_failure_memory: dict[str, dict] = {}
         self.last_no_action_failure_key: Optional[tuple] = None
+        # Fix #6 (blacklist expiry): checkpoint_manager.cells_blacklisted is a
+        # plain append-only list with no decay. On long runs, every cell that
+        # ever failed/regressed once stays permanently blacklisted, so the
+        # critical-path candidate pool (which tends to be dominated by a small
+        # recurring set of cells) shrinks every iteration until placement
+        # candidate search comes back empty (no_action_target). This dict
+        # tracks *when* each cell was blacklisted so we can expire entries
+        # after BLACKLIST_TTL_ITERS instead of banning them forever.
+        self.cell_blacklist_added_iter: dict[str, int] = {}
         self.phys_opt_retime_supported: Optional[bool] = None
         self.implementation_license_available: Optional[bool] = None
         # Fix #1 (action-key bookkeeping): last_recipe is a human-readable
@@ -2045,6 +2073,10 @@ class DCPOptimizer(DCPOptimizerBase):
             for target in targets:
                 if self.checkpoint_manager._is_blacklistable_target(target) and target not in self.checkpoint_manager.cells_blacklisted:
                     self.checkpoint_manager.cells_blacklisted.append(str(target))
+                # Fix #6: (re)stamp the iteration this cell was blacklisted at,
+                # even if it was already on the list, so a cell that keeps
+                # failing keeps its TTL fresh rather than expiring mid-cooldown.
+                self.cell_blacklist_added_iter[str(target)] = self.iteration
             persist = getattr(self.checkpoint_manager, "_persist_history", None)
             if callable(persist):
                 persist()
@@ -2056,9 +2088,41 @@ class DCPOptimizer(DCPOptimizerBase):
             if callable(persist):
                 persist()
 
+    def _prune_expired_blacklist(self) -> None:
+        """Fix #6: drop cells whose TTL has elapsed so the candidate pool for
+        rapidwright_optimize_cell_placement can recover instead of shrinking
+        monotonically over a long run. Cells with no recorded blacklist
+        iteration (e.g. loaded from an older history file) are left alone
+        rather than guessed-expired."""
+        if self.checkpoint_manager is None:
+            return
+        current = list(getattr(self.checkpoint_manager, "cells_blacklisted", []) or [])
+        if not current:
+            return
+        still_blacklisted = []
+        expired = []
+        for cell in current:
+            added_at = self.cell_blacklist_added_iter.get(str(cell))
+            if added_at is not None and (self.iteration - added_at) >= BLACKLIST_TTL_ITERS:
+                expired.append(cell)
+            else:
+                still_blacklisted.append(cell)
+        if expired:
+            self.checkpoint_manager.cells_blacklisted = still_blacklisted
+            for cell in expired:
+                self.cell_blacklist_added_iter.pop(str(cell), None)
+            logger.info(
+                "Blacklist expiry: %d cell(s) re-eligible after %d+ iterations: %s",
+                len(expired), BLACKLIST_TTL_ITERS, expired,
+            )
+            persist = getattr(self.checkpoint_manager, "_persist_history", None)
+            if callable(persist):
+                persist()
+
     def _cell_blacklist(self) -> set[str]:
         if self.checkpoint_manager is None:
             return set()
+        self._prune_expired_blacklist()
         return set(self.checkpoint_manager.get_blacklist().get("cells", []))
 
     def _filter_blacklisted_cells(self, cells: list[str]) -> list[str]:
@@ -2152,73 +2216,103 @@ class DCPOptimizer(DCPOptimizerBase):
         if params.get("ranges"):
             return params, None
 
-        target_lut_count = int(
-            params.get("target_lut_count")
-            or self.last_design_info.get("lut_count")
-            or self.last_design_info.get("luts")
-            or DEFAULT_PBLOCK_TARGET_LUT_COUNT
+        # Fix #5: size the pblock request off the actual number of critical-path
+        # candidates we're clustering, not the whole design. last_design_info
+        # comes from rapidwright_read_checkpoint (whole-design counts), which is
+        # why the old fallback (design lut_count, or 20000) requested a region
+        # sized for the entire design and blew the 85% utilization check on
+        # every single call regardless of how small the real target was.
+        num_candidates = max(len(self.current_target_candidates), 1)
+        estimated_lut_count = max(
+            num_candidates * PBLOCK_LUTS_PER_CANDIDATE_PATH,
+            PBLOCK_MIN_TARGET_LUT_COUNT,
         )
-        target_ff_count = int(
-            params.get("target_ff_count")
-            or self.last_design_info.get("ff_count")
-            or self.last_design_info.get("ffs")
-            or DEFAULT_PBLOCK_TARGET_FF_COUNT
+        estimated_ff_count = max(
+            num_candidates * PBLOCK_FFS_PER_CANDIDATE_PATH,
+            PBLOCK_MIN_TARGET_FF_COUNT,
         )
-        analysis_args = {
-            "target_lut_count": target_lut_count,
-            "target_ff_count": target_ff_count,
-            "target_dsp_count": int(params.get("target_dsp_count") or 0),
-            "target_bram_count": int(params.get("target_bram_count") or 0),
-        }
-        fabric_text = await self.call_tool("rapidwright_analyze_fabric_for_pblock", analysis_args, internal=True)
-        fabric = self._parse_json_result(fabric_text)
-        if self._result_has_error(fabric):
-            return None, f"RapidWright fabric analysis failed: {fabric.get('error') or fabric_text[:300]}"
+        target_lut_count = int(params.get("target_lut_count") or estimated_lut_count)
+        target_ff_count = int(params.get("target_ff_count") or estimated_ff_count)
+        target_dsp_count = int(params.get("target_dsp_count") or 0)
+        target_bram_count = int(params.get("target_bram_count") or 0)
 
-        region = fabric.get("recommended_region") or {}
-        required_region_keys = ("col_min", "col_max", "row_min", "row_max")
-        if not all(key in region for key in required_region_keys):
-            return None, f"RapidWright fabric analysis did not return recommended_region: {fabric_text[:300]}"
+        # Fix #5 continued: if this sizing (explicit or estimated) still comes
+        # back over-utilized, shrink it and retry rather than failing outright
+        # on the first miss -- self-corrects instead of depending on the
+        # estimate being exactly right.
+        last_error: Optional[str] = None
+        for attempt in range(PBLOCK_SIZE_SHRINK_MAX_RETRIES + 1):
+            analysis_args = {
+                "target_lut_count": target_lut_count,
+                "target_ff_count": target_ff_count,
+                "target_dsp_count": target_dsp_count,
+                "target_bram_count": target_bram_count,
+            }
+            fabric_text = await self.call_tool("rapidwright_analyze_fabric_for_pblock", analysis_args, internal=True)
+            fabric = self._parse_json_result(fabric_text)
+            if self._result_has_error(fabric):
+                return None, f"RapidWright fabric analysis failed: {fabric.get('error') or fabric_text[:300]}"
 
-        # --- Fix #2a: reject regions that overlap a pblock already applied
-        # this run. Vivado handles overlapping pblocks poorly, and it creates
-        # complex, hard-to-solve placement scenarios. ---
-        overlap = self._find_pblock_overlap(region)
-        if overlap is not None:
-            return None, (
-                f"RapidWright fabric analysis recommended region {region} which overlaps "
-                f"an already-applied pblock {overlap.get('pblock_name')} at "
-                f"{overlap.get('region')}; skipping to avoid overlapping pblocks."
+            region = fabric.get("recommended_region") or {}
+            required_region_keys = ("col_min", "col_max", "row_min", "row_max")
+            if not all(key in region for key in required_region_keys):
+                return None, f"RapidWright fabric analysis did not return recommended_region: {fabric_text[:300]}"
+
+            # --- Fix #2a: reject regions that overlap a pblock already applied
+            # this run. Vivado handles overlapping pblocks poorly, and it creates
+            # complex, hard-to-solve placement scenarios. ---
+            overlap = self._find_pblock_overlap(region)
+            if overlap is not None:
+                return None, (
+                    f"RapidWright fabric analysis recommended region {region} which overlaps "
+                    f"an already-applied pblock {overlap.get('pblock_name')} at "
+                    f"{overlap.get('region')}; skipping to avoid overlapping pblocks."
+                )
+
+            convert_args = {
+                "col_min": int(region["col_min"]),
+                "col_max": int(region["col_max"]),
+                "row_min": int(region["row_min"]),
+                "row_max": int(region["row_max"]),
+                "use_clock_regions": bool(params.get("use_clock_regions", False)),
+            }
+            range_text = await self.call_tool("rapidwright_convert_fabric_region_to_pblock", convert_args, internal=True)
+            range_payload = self._parse_json_result(range_text)
+            if self._result_has_error(range_payload):
+                return None, f"RapidWright pblock range conversion failed: {range_payload.get('error') or range_text[:300]}"
+
+            ranges = range_payload.get("pblock_ranges")
+            if not ranges:
+                return None, f"RapidWright pblock range conversion returned no pblock_ranges: {range_text[:300]}"
+
+            # --- Fix #2b: reject regions that would be packed too densely.
+            # High-utilization pblocks are a known congestion risk; better to ask
+            # for a larger/different region than to hand Vivado a region that is
+            # very likely to fail to place-and-route cleanly. ---
+            site_counts = range_payload.get("site_counts") or {}
+            utilization_error = self._check_pblock_utilization(
+                site_counts, target_lut_count, target_ff_count,
+                target_dsp_count, target_bram_count,
             )
+            if not utilization_error:
+                last_error = None
+                break
 
-        convert_args = {
-            "col_min": int(region["col_min"]),
-            "col_max": int(region["col_max"]),
-            "row_min": int(region["row_min"]),
-            "row_max": int(region["row_max"]),
-            "use_clock_regions": bool(params.get("use_clock_regions", False)),
-        }
-        range_text = await self.call_tool("rapidwright_convert_fabric_region_to_pblock", convert_args, internal=True)
-        range_payload = self._parse_json_result(range_text)
-        if self._result_has_error(range_payload):
-            return None, f"RapidWright pblock range conversion failed: {range_payload.get('error') or range_text[:300]}"
+            last_error = utilization_error
+            if attempt < PBLOCK_SIZE_SHRINK_MAX_RETRIES:
+                logger.warning(
+                    "pblock sizing attempt %d over-utilized (%s); shrinking target "
+                    "lut/ff counts by %.0f%% and retrying.",
+                    attempt + 1, utilization_error, 100 * (1 - PBLOCK_SIZE_SHRINK_FACTOR),
+                )
+                target_lut_count = max(int(target_lut_count * PBLOCK_SIZE_SHRINK_FACTOR), PBLOCK_MIN_TARGET_LUT_COUNT // 4)
+                target_ff_count = max(int(target_ff_count * PBLOCK_SIZE_SHRINK_FACTOR), PBLOCK_MIN_TARGET_FF_COUNT // 4)
 
-        ranges = range_payload.get("pblock_ranges")
-        if not ranges:
-            return None, f"RapidWright pblock range conversion returned no pblock_ranges: {range_text[:300]}"
-
-        # --- Fix #2b: reject regions that would be packed too densely.
-        # High-utilization pblocks are a known congestion risk; better to ask
-        # for a larger/different region than to hand Vivado a region that is
-        # very likely to fail to place-and-route cleanly. ---
-        site_counts = range_payload.get("site_counts") or {}
-        utilization_error = self._check_pblock_utilization(
-            site_counts, target_lut_count, target_ff_count,
-            int(params.get("target_dsp_count") or 0),
-            int(params.get("target_bram_count") or 0),
-        )
-        if utilization_error:
-            return None, utilization_error
+        if last_error:
+            return None, (
+                f"{last_error} (gave up after {PBLOCK_SIZE_SHRINK_MAX_RETRIES + 1} "
+                f"sizing attempts, starting from an estimate of {num_candidates} candidate paths)"
+            )
 
         computed = dict(params)
         computed["ranges"] = ranges
