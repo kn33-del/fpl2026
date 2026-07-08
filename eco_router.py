@@ -52,7 +52,12 @@ class ECORouter:
 
     def route_incremental(self, design_cell_count: int, unrouted_net_count: int, directive: str = "Default") -> RouteResult:
         timeout = self._compute_timeout(design_cell_count, unrouted_net_count)
-        tcl = f"route_design -directive {{{directive}}}"
+        # BUG FIX: PRESERVE_FLAG was defined but never referenced anywhere in
+        # this file. Every route_design call -- incremental candidate attempts
+        # included -- ran as a full, non-preserving route, defeating the
+        # entire point of shielding/locking cells and nets beforehand: Vivado
+        # was never actually told to keep the fixed/shielded routing intact.
+        tcl = f"route_design -directive {{{directive}}} {PRESERVE_FLAG}"
         raw = self.vivado.run_tcl_command(tcl, timeout=timeout)
         # Immediately query route status
         status_raw = self.vivado.run_tcl_command("report_route_status -return_string", timeout=30)
@@ -80,7 +85,7 @@ class ECORouter:
 
     async def route_incremental_async(self, design_cell_count: int, unrouted_net_count: int, directive: str = "Default") -> RouteResult:
         timeout = self._compute_timeout(design_cell_count, unrouted_net_count)
-        tcl = f"route_design -directive {{{directive}}}"
+        tcl = f"route_design -directive {{{directive}}} {PRESERVE_FLAG}"
         await self._call_vivado(tcl, timeout=timeout)
         status_raw = await self._call_vivado("report_route_status -return_string", timeout=30)
         parsed = self.parse_route_status(status_raw)
@@ -100,7 +105,7 @@ class ECORouter:
         last_status_raw = ""
         last_parsed = {}
         for d in directives:
-            tcl = f"route_design -directive {{{d}}}"
+            tcl = f"route_design -directive {{{d}}} {PRESERVE_FLAG}"
             raw = self.vivado.run_tcl_command(tcl, timeout=timeout)
             status_raw = self.vivado.run_tcl_command("report_route_status -return_string", timeout=30)
             parsed = self.parse_route_status(status_raw)
@@ -143,7 +148,7 @@ class ECORouter:
         timeout = self._compute_timeout(design_cell_count, unrouted_net_count)
         last_parsed = {}
         for d in directives:
-            tcl = f"route_design -directive {{{d}}}"
+            tcl = f"route_design -directive {{{d}}} {PRESERVE_FLAG}"
             await self._call_vivado(tcl, timeout=timeout)
             status_raw = await self._call_vivado("report_route_status -return_string", timeout=30)
             parsed = self.parse_route_status(status_raw)
