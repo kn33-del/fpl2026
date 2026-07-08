@@ -1841,11 +1841,20 @@ class DCPOptimizer(DCPOptimizerBase):
 
         if endpoint_type in {"BRAM_CONTROL", "DSP_CONTROL"}:
             allowed = [action for action in allowed if action != "fanout_split"]
+            # BUG FIX: this used to also re-add "rapidwright_analyze_fabric_for_pblock"
+            # and "rapidwright_convert_fabric_region_to_pblock" here, undoing the
+            # deliberate exclusion of those two precursor-only actions from
+            # RAPIDWRIGHT_STRUCTURAL_ACTIONS / RAPIDWRIGHT_PLACEMENT_ACTIONS above.
+            # Choosing "pblock" already runs both of these internally via
+            # _compute_pblock_ranges before applying the region, so exposing them
+            # as independently selectable actions here just gave the LLM a way to
+            # burn iterations on a no-op precursor step (and, per the bug fixed in
+            # _record_iteration_timing above, drive that action into permanent
+            # cooldown) for any path landing on a BRAM/DSP control pin, without ever
+            # reaching a design-changing action.
             for action in [
                 "rapidwright_optimize_cell_placement",
                 "pblock",
-                "rapidwright_analyze_fabric_for_pblock",
-                "rapidwright_convert_fabric_region_to_pblock",
                 "replicate_register",
                 "place_design_explore",
             ]:
@@ -2253,6 +2262,15 @@ class DCPOptimizer(DCPOptimizerBase):
                 return applied
         return None
 
+    # UltraScale/UltraScale+ SLICE composition, used below to approximate LUT/FF
+    # capacity from a SLICE count when the fabric-analysis tool only reports
+    # site-type counts (see _check_pblock_utilization). These are architecture
+    # constants, not measured per-design values -- if RapidWrightMCP's tool
+    # ever starts returning explicit lut_capacity/ff_capacity fields directly,
+    # prefer those over this approximation.
+    LUTS_PER_SLICE = 8
+    FFS_PER_SLICE = 16
+
     def _check_pblock_utilization(
         self,
         site_counts: dict,
@@ -2265,11 +2283,43 @@ class DCPOptimizer(DCPOptimizerBase):
         if not site_counts:
             # No capacity data returned -- nothing to validate against, let it through.
             return None
+        # BUG FIX: this previously only looked for "lut_capacity"/"luts",
+        # "ff_capacity"/"ffs", "dsp_capacity"/"dsps", "bram_capacity"/"brams" --
+        # none of which are keys RapidWrightMCP's analyze_fabric_for_pblock tool
+        # actually returns. In practice it returns site-type counts like
+        # {"SLICE": 709, "DSP48E2": 0, "RAMB18": 0, "RAMB36": 0, "URAM288": 0},
+        # so every lookup above was always None, "if not requested or not
+        # capacity: continue" always fired, and this congestion-safety guard
+        # never once actually validated a region -- confirmed by the history
+        # of a prior run where a region with 709 SLICEs (~5,672 LUT / ~11,344
+        # FF capacity) was recommended against a 20,000 LUT / 40,000 FF
+        # target (~3.5x over capacity on both) and passed straight through
+        # uncaught. Derive LUT/FF capacity from SLICE count using standard
+        # UltraScale+ composition when explicit capacity fields aren't present.
+        slice_count = site_counts.get("SLICE")
+        lut_capacity = site_counts.get("lut_capacity") or site_counts.get("luts")
+        ff_capacity = site_counts.get("ff_capacity") or site_counts.get("ffs")
+        if lut_capacity is None and slice_count:
+            lut_capacity = slice_count * self.LUTS_PER_SLICE
+        if ff_capacity is None and slice_count:
+            ff_capacity = slice_count * self.FFS_PER_SLICE
+        dsp_capacity = (
+            site_counts.get("dsp_capacity")
+            or site_counts.get("dsps")
+            or site_counts.get("DSP48E2")
+        )
+        bram_capacity = (
+            site_counts.get("bram_capacity")
+            or site_counts.get("brams")
+            or (
+                (site_counts.get("RAMB36") or 0) + (site_counts.get("RAMB18") or 0)
+            ) or None
+        )
         checks = [
-            ("LUT", target_lut_count, site_counts.get("lut_capacity") or site_counts.get("luts")),
-            ("FF", target_ff_count, site_counts.get("ff_capacity") or site_counts.get("ffs")),
-            ("DSP", target_dsp_count, site_counts.get("dsp_capacity") or site_counts.get("dsps")),
-            ("BRAM", target_bram_count, site_counts.get("bram_capacity") or site_counts.get("brams")),
+            ("LUT", target_lut_count, lut_capacity),
+            ("FF", target_ff_count, ff_capacity),
+            ("DSP", target_dsp_count, dsp_capacity),
+            ("BRAM", target_bram_count, bram_capacity),
         ]
         for label, requested, capacity in checks:
             if not requested or not capacity:
