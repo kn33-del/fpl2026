@@ -1,0 +1,3802 @@
+{
+  "model": "x-ai/grok-4.3",
+  "timestamp": "2026-07-09 03:39:42",
+  "summary": {
+    "total_runtime_seconds": 1206.0818462371826,
+    "total_llm_calls": 53,
+    "total_iterations": 50,
+    "total_prompt_tokens": 4979674,
+    "total_completion_tokens": 13202,
+    "total_tokens": 4992876,
+    "total_cached_tokens": 0,
+    "total_reasoning_tokens": 0,
+    "total_cost": 1.4853223000000002,
+    "clock_period_ns": 1.5,
+    "current_period_ns": 1.5,
+    "initial_wns": -0.978,
+    "best_wns": -0.92,
+    "wns_improvement": 0.05799999999999994,
+    "initial_fmax_mhz": 403.5512510088782,
+    "best_fmax_mhz": 413.22314049586777,
+    "fmax_improvement_mhz": 9.671889486989585,
+    "total_tool_calls": 536,
+    "total_tool_time_seconds": 964.3004810810089,
+    "tool_call_counts": {
+      "rapidwright_initialize_rapidwright": 1,
+      "vivado_open_checkpoint": 29,
+      "vivado_report_timing_summary": 16,
+      "vivado_run_tcl": 176,
+      "vivado_get_critical_high_fanout_nets": 1,
+      "rapidwright_read_checkpoint": 1,
+      "vivado_extract_critical_path_cells": 36,
+      "rapidwright_analyze_critical_path_spread": 44,
+      "vivado_get_wns": 65,
+      "vivado_extract_critical_path_pins": 40,
+      "rapidwright_analyze_net_detour": 40,
+      "rapidwright_optimize_cell_placement": 21,
+      "rapidwright_write_checkpoint": 14,
+      "vivado_report_route_status": 14,
+      "vivado_route_design": 15,
+      "vivado_write_checkpoint": 15,
+      "rapidwright_analyze_fabric_for_pblock": 4,
+      "rapidwright_convert_fabric_region_to_pblock": 1,
+      "vivado_create_and_apply_pblock": 2,
+      "vivado_place_design": 1
+    }
+  },
+  "per_llm_call_details": [],
+  "per_tool_call_details": [
+    {
+      "tool_name": "rapidwright_initialize_rapidwright",
+      "iteration": 0,
+      "elapsed_time": 0.470487117767334,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_open_checkpoint",
+      "iteration": 0,
+      "elapsed_time": 146.5558524131775,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_timing_summary",
+      "iteration": 0,
+      "elapsed_time": 3.0974442958831787,
+      "wns": -0.978,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 0,
+      "elapsed_time": 0.055246829986572266,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 0,
+      "elapsed_time": 0.06129741668701172,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 0,
+      "elapsed_time": 0.06247901916503906,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 0,
+      "elapsed_time": 0.1398465633392334,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_critical_high_fanout_nets",
+      "iteration": 0,
+      "elapsed_time": 2.738917350769043,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_read_checkpoint",
+      "iteration": 0,
+      "elapsed_time": 2.5048696994781494,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_extract_critical_path_cells",
+      "iteration": 0,
+      "elapsed_time": 0.16496753692626953,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_critical_path_spread",
+      "iteration": 0,
+      "elapsed_time": 0.013873100280761719,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 1,
+      "elapsed_time": 0.06099987030029297,
+      "wns": -0.978,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 1,
+      "elapsed_time": 0.06165337562561035,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 1,
+      "elapsed_time": 0.1403055191040039,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_critical_path_spread",
+      "iteration": 1,
+      "elapsed_time": 0.003383159637451172,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_extract_critical_path_pins",
+      "iteration": 1,
+      "elapsed_time": 0.15297460556030273,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_net_detour",
+      "iteration": 1,
+      "elapsed_time": 0.11407899856567383,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_critical_path_spread",
+      "iteration": 1,
+      "elapsed_time": 0.003021717071533203,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_optimize_cell_placement",
+      "iteration": 1,
+      "elapsed_time": 0.1315157413482666,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_critical_path_spread",
+      "iteration": 1,
+      "elapsed_time": 0.003106832504272461,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_write_checkpoint",
+      "iteration": 1,
+      "elapsed_time": 1.1854116916656494,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_open_checkpoint",
+      "iteration": 1,
+      "elapsed_time": 12.19835615158081,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 1,
+      "elapsed_time": 0.05867266654968262,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 1,
+      "elapsed_time": 0.05829763412475586,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_route_status",
+      "iteration": 1,
+      "elapsed_time": 0.9357092380523682,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 1,
+      "elapsed_time": 0.190781831741333,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 1,
+      "elapsed_time": 0.09072566032409668,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_route_design",
+      "iteration": 1,
+      "elapsed_time": 1.33449125289917,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 1,
+      "elapsed_time": 0.0612180233001709,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_write_checkpoint",
+      "iteration": 1,
+      "elapsed_time": 2.4300014972686768,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_open_checkpoint",
+      "iteration": 1,
+      "elapsed_time": 11.556953430175781,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_timing_summary",
+      "iteration": 1,
+      "elapsed_time": 54.81035113334656,
+      "wns": -2.719,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 1,
+      "elapsed_time": 1.9306156635284424,
+      "wns": -0.978,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 2,
+      "elapsed_time": 0.06038403511047363,
+      "wns": -0.978,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 2,
+      "elapsed_time": 0.062371253967285156,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 2,
+      "elapsed_time": 0.16872477531433105,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_critical_path_spread",
+      "iteration": 2,
+      "elapsed_time": 0.00356292724609375,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_fabric_for_pblock",
+      "iteration": 2,
+      "elapsed_time": 2.672792434692383,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_convert_fabric_region_to_pblock",
+      "iteration": 2,
+      "elapsed_time": 0.7737236022949219,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 2,
+      "elapsed_time": 0.16649413108825684,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_create_and_apply_pblock",
+      "iteration": 2,
+      "elapsed_time": 2.345853090286255,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_create_and_apply_pblock",
+      "iteration": 2,
+      "elapsed_time": 2.5125932693481445,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_place_design",
+      "iteration": 2,
+      "elapsed_time": 20.411208629608154,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_route_design",
+      "iteration": 2,
+      "elapsed_time": 44.879212856292725,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 2,
+      "elapsed_time": 0.06180143356323242,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_write_checkpoint",
+      "iteration": 2,
+      "elapsed_time": 2.194713592529297,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_timing_summary",
+      "iteration": 2,
+      "elapsed_time": 0.6805877685546875,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 2,
+      "elapsed_time": 0.06158041954040527,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 3,
+      "elapsed_time": 0.05994606018066406,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 3,
+      "elapsed_time": 0.0626072883605957,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 3,
+      "elapsed_time": 0.1724262237548828,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_fabric_for_pblock",
+      "iteration": 3,
+      "elapsed_time": 2.677727222442627,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 4,
+      "elapsed_time": 0.06225275993347168,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 4,
+      "elapsed_time": 0.06187748908996582,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 4,
+      "elapsed_time": 0.17243528366088867,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_extract_critical_path_pins",
+      "iteration": 4,
+      "elapsed_time": 0.18705058097839355,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_net_detour",
+      "iteration": 4,
+      "elapsed_time": 0.08806824684143066,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_critical_path_spread",
+      "iteration": 4,
+      "elapsed_time": 0.0028259754180908203,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_optimize_cell_placement",
+      "iteration": 4,
+      "elapsed_time": 0.18730568885803223,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_critical_path_spread",
+      "iteration": 4,
+      "elapsed_time": 0.0029327869415283203,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_write_checkpoint",
+      "iteration": 4,
+      "elapsed_time": 0.6841094493865967,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_open_checkpoint",
+      "iteration": 4,
+      "elapsed_time": 12.549732685089111,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 4,
+      "elapsed_time": 0.05840754508972168,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 4,
+      "elapsed_time": 0.05713963508605957,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_route_status",
+      "iteration": 4,
+      "elapsed_time": 0.9665257930755615,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 4,
+      "elapsed_time": 0.05400896072387695,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 4,
+      "elapsed_time": 0.0926673412322998,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_route_design",
+      "iteration": 4,
+      "elapsed_time": 1.2290799617767334,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 4,
+      "elapsed_time": 0.061399221420288086,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_write_checkpoint",
+      "iteration": 4,
+      "elapsed_time": 2.1791183948516846,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_open_checkpoint",
+      "iteration": 4,
+      "elapsed_time": 12.234578371047974,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_timing_summary",
+      "iteration": 4,
+      "elapsed_time": 12.7651948928833,
+      "wns": -2.705,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 4,
+      "elapsed_time": 2.007626533508301,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 5,
+      "elapsed_time": 0.0604398250579834,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 5,
+      "elapsed_time": 0.06244397163391113,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 5,
+      "elapsed_time": 0.17999792098999023,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_extract_critical_path_pins",
+      "iteration": 5,
+      "elapsed_time": 0.18772363662719727,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_net_detour",
+      "iteration": 5,
+      "elapsed_time": 0.07971501350402832,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_critical_path_spread",
+      "iteration": 5,
+      "elapsed_time": 0.002874135971069336,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_optimize_cell_placement",
+      "iteration": 5,
+      "elapsed_time": 0.18448686599731445,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_critical_path_spread",
+      "iteration": 5,
+      "elapsed_time": 0.0030303001403808594,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 6,
+      "elapsed_time": 0.062476396560668945,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 6,
+      "elapsed_time": 0.06299161911010742,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 6,
+      "elapsed_time": 0.17502331733703613,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_extract_critical_path_pins",
+      "iteration": 6,
+      "elapsed_time": 0.18835759162902832,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_net_detour",
+      "iteration": 6,
+      "elapsed_time": 0.08559679985046387,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_critical_path_spread",
+      "iteration": 6,
+      "elapsed_time": 0.0028154850006103516,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_optimize_cell_placement",
+      "iteration": 6,
+      "elapsed_time": 0.019791126251220703,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_critical_path_spread",
+      "iteration": 6,
+      "elapsed_time": 0.002547740936279297,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_write_checkpoint",
+      "iteration": 6,
+      "elapsed_time": 0.6186411380767822,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_open_checkpoint",
+      "iteration": 6,
+      "elapsed_time": 12.517272710800171,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 6,
+      "elapsed_time": 0.05856609344482422,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 6,
+      "elapsed_time": 1.2336697578430176,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_route_status",
+      "iteration": 6,
+      "elapsed_time": 0.9942448139190674,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 6,
+      "elapsed_time": 0.05389738082885742,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 6,
+      "elapsed_time": 0.0924839973449707,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_route_design",
+      "iteration": 6,
+      "elapsed_time": 2.4332239627838135,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 6,
+      "elapsed_time": 0.061396121978759766,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_write_checkpoint",
+      "iteration": 6,
+      "elapsed_time": 2.2183096408843994,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_open_checkpoint",
+      "iteration": 6,
+      "elapsed_time": 12.42207646369934,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_timing_summary",
+      "iteration": 6,
+      "elapsed_time": 13.052972078323364,
+      "wns": -2.88,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 6,
+      "elapsed_time": 2.0276875495910645,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 7,
+      "elapsed_time": 0.06050610542297363,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 7,
+      "elapsed_time": 0.06241869926452637,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 7,
+      "elapsed_time": 0.18040227890014648,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_extract_critical_path_pins",
+      "iteration": 7,
+      "elapsed_time": 0.18845415115356445,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_net_detour",
+      "iteration": 7,
+      "elapsed_time": 0.04894733428955078,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_extract_critical_path_cells",
+      "iteration": 7,
+      "elapsed_time": 0.18764519691467285,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_critical_path_spread",
+      "iteration": 7,
+      "elapsed_time": 0.0034263134002685547,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_optimize_cell_placement",
+      "iteration": 7,
+      "elapsed_time": 0.2430713176727295,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_critical_path_spread",
+      "iteration": 7,
+      "elapsed_time": 0.0029582977294921875,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 8,
+      "elapsed_time": 0.06210970878601074,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 8,
+      "elapsed_time": 0.06286072731018066,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 8,
+      "elapsed_time": 0.17510318756103516,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_extract_critical_path_pins",
+      "iteration": 8,
+      "elapsed_time": 0.18726372718811035,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_net_detour",
+      "iteration": 8,
+      "elapsed_time": 0.04743695259094238,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_extract_critical_path_cells",
+      "iteration": 8,
+      "elapsed_time": 0.18635320663452148,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_critical_path_spread",
+      "iteration": 8,
+      "elapsed_time": 0.0033893585205078125,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_optimize_cell_placement",
+      "iteration": 8,
+      "elapsed_time": 0.042901039123535156,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_critical_path_spread",
+      "iteration": 8,
+      "elapsed_time": 0.0026848316192626953,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_write_checkpoint",
+      "iteration": 8,
+      "elapsed_time": 0.6127753257751465,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_open_checkpoint",
+      "iteration": 8,
+      "elapsed_time": 12.628177404403687,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 8,
+      "elapsed_time": 0.0585322380065918,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 8,
+      "elapsed_time": 0.06276631355285645,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_route_status",
+      "iteration": 8,
+      "elapsed_time": 1.0044305324554443,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 8,
+      "elapsed_time": 0.05396604537963867,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 8,
+      "elapsed_time": 0.09353232383728027,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_route_design",
+      "iteration": 8,
+      "elapsed_time": 1.2735610008239746,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 8,
+      "elapsed_time": 0.06115460395812988,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_write_checkpoint",
+      "iteration": 8,
+      "elapsed_time": 2.199697494506836,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_open_checkpoint",
+      "iteration": 8,
+      "elapsed_time": 12.481247663497925,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_timing_summary",
+      "iteration": 8,
+      "elapsed_time": 13.091714143753052,
+      "wns": -2.705,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 8,
+      "elapsed_time": 2.0590689182281494,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 9,
+      "elapsed_time": 0.060521841049194336,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 9,
+      "elapsed_time": 0.06252312660217285,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 9,
+      "elapsed_time": 0.1802215576171875,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_extract_critical_path_pins",
+      "iteration": 9,
+      "elapsed_time": 0.18833494186401367,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_net_detour",
+      "iteration": 9,
+      "elapsed_time": 0.038202524185180664,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_extract_critical_path_cells",
+      "iteration": 9,
+      "elapsed_time": 0.18770790100097656,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_critical_path_spread",
+      "iteration": 9,
+      "elapsed_time": 0.003437519073486328,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_optimize_cell_placement",
+      "iteration": 9,
+      "elapsed_time": 0.19405865669250488,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_critical_path_spread",
+      "iteration": 9,
+      "elapsed_time": 0.003520965576171875,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_write_checkpoint",
+      "iteration": 9,
+      "elapsed_time": 0.5114264488220215,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_open_checkpoint",
+      "iteration": 9,
+      "elapsed_time": 12.653945207595825,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 9,
+      "elapsed_time": 0.05834341049194336,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 9,
+      "elapsed_time": 0.0632016658782959,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_route_status",
+      "iteration": 9,
+      "elapsed_time": 1.0071890354156494,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 9,
+      "elapsed_time": 0.0539088249206543,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 9,
+      "elapsed_time": 0.09408760070800781,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_route_design",
+      "iteration": 9,
+      "elapsed_time": 1.277069330215454,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 9,
+      "elapsed_time": 0.061608076095581055,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_write_checkpoint",
+      "iteration": 9,
+      "elapsed_time": 2.2150301933288574,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_open_checkpoint",
+      "iteration": 9,
+      "elapsed_time": 12.664886951446533,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_timing_summary",
+      "iteration": 9,
+      "elapsed_time": 13.218212127685547,
+      "wns": -2.795,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 9,
+      "elapsed_time": 2.075934410095215,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 10,
+      "elapsed_time": 0.06045866012573242,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 10,
+      "elapsed_time": 0.06261539459228516,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 10,
+      "elapsed_time": 0.18093323707580566,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_extract_critical_path_pins",
+      "iteration": 10,
+      "elapsed_time": 0.188554048538208,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_net_detour",
+      "iteration": 10,
+      "elapsed_time": 0.03533339500427246,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_extract_critical_path_cells",
+      "iteration": 10,
+      "elapsed_time": 0.18764519691467285,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_critical_path_spread",
+      "iteration": 10,
+      "elapsed_time": 0.0034062862396240234,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_optimize_cell_placement",
+      "iteration": 10,
+      "elapsed_time": 0.18789243698120117,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_critical_path_spread",
+      "iteration": 10,
+      "elapsed_time": 0.0030362606048583984,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_write_checkpoint",
+      "iteration": 10,
+      "elapsed_time": 0.5550985336303711,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_open_checkpoint",
+      "iteration": 10,
+      "elapsed_time": 12.699434995651245,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 10,
+      "elapsed_time": 0.05839395523071289,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 10,
+      "elapsed_time": 0.06375741958618164,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_route_status",
+      "iteration": 10,
+      "elapsed_time": 1.0217390060424805,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 10,
+      "elapsed_time": 0.054062604904174805,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 10,
+      "elapsed_time": 0.0942373275756836,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_route_design",
+      "iteration": 10,
+      "elapsed_time": 1.2925300598144531,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 10,
+      "elapsed_time": 0.06107187271118164,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_write_checkpoint",
+      "iteration": 10,
+      "elapsed_time": 2.217191457748413,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_open_checkpoint",
+      "iteration": 10,
+      "elapsed_time": 12.682626247406006,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_timing_summary",
+      "iteration": 10,
+      "elapsed_time": 13.134554624557495,
+      "wns": -2.795,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 10,
+      "elapsed_time": 2.098597526550293,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 11,
+      "elapsed_time": 0.060512542724609375,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 11,
+      "elapsed_time": 0.06253480911254883,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 11,
+      "elapsed_time": 0.18099594116210938,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_extract_critical_path_pins",
+      "iteration": 11,
+      "elapsed_time": 0.18824982643127441,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_net_detour",
+      "iteration": 11,
+      "elapsed_time": 0.025521278381347656,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_extract_critical_path_cells",
+      "iteration": 11,
+      "elapsed_time": 0.18709969520568848,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_critical_path_spread",
+      "iteration": 11,
+      "elapsed_time": 0.003423452377319336,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_optimize_cell_placement",
+      "iteration": 11,
+      "elapsed_time": 0.18337225914001465,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_critical_path_spread",
+      "iteration": 11,
+      "elapsed_time": 0.002955913543701172,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 12,
+      "elapsed_time": 0.06216597557067871,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 12,
+      "elapsed_time": 0.06316709518432617,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 12,
+      "elapsed_time": 0.17574834823608398,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_extract_critical_path_pins",
+      "iteration": 12,
+      "elapsed_time": 0.18775415420532227,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_net_detour",
+      "iteration": 12,
+      "elapsed_time": 0.020177125930786133,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_extract_critical_path_cells",
+      "iteration": 12,
+      "elapsed_time": 0.18723344802856445,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_critical_path_spread",
+      "iteration": 12,
+      "elapsed_time": 0.003419637680053711,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_optimize_cell_placement",
+      "iteration": 12,
+      "elapsed_time": 0.02415013313293457,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_critical_path_spread",
+      "iteration": 12,
+      "elapsed_time": 0.002542734146118164,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_write_checkpoint",
+      "iteration": 12,
+      "elapsed_time": 0.5512638092041016,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_open_checkpoint",
+      "iteration": 12,
+      "elapsed_time": 12.752798795700073,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 12,
+      "elapsed_time": 0.05839991569519043,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 12,
+      "elapsed_time": 0.06472182273864746,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_route_status",
+      "iteration": 12,
+      "elapsed_time": 1.08070707321167,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 12,
+      "elapsed_time": 0.05400872230529785,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 12,
+      "elapsed_time": 0.09506893157958984,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_route_design",
+      "iteration": 12,
+      "elapsed_time": 1.3532495498657227,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 12,
+      "elapsed_time": 0.06155967712402344,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_write_checkpoint",
+      "iteration": 12,
+      "elapsed_time": 2.2550370693206787,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_open_checkpoint",
+      "iteration": 12,
+      "elapsed_time": 12.76686954498291,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_timing_summary",
+      "iteration": 12,
+      "elapsed_time": 13.184831857681274,
+      "wns": -3.327,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 12,
+      "elapsed_time": 2.101806879043579,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 13,
+      "elapsed_time": 0.06067609786987305,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 13,
+      "elapsed_time": 0.06241869926452637,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 13,
+      "elapsed_time": 0.18131589889526367,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_extract_critical_path_pins",
+      "iteration": 13,
+      "elapsed_time": 0.18861675262451172,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_net_detour",
+      "iteration": 13,
+      "elapsed_time": 0.016618728637695312,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_extract_critical_path_cells",
+      "iteration": 13,
+      "elapsed_time": 0.18792104721069336,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_critical_path_spread",
+      "iteration": 13,
+      "elapsed_time": 0.0034923553466796875,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_optimize_cell_placement",
+      "iteration": 13,
+      "elapsed_time": 0.1786024570465088,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_critical_path_spread",
+      "iteration": 13,
+      "elapsed_time": 0.002988576889038086,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_write_checkpoint",
+      "iteration": 13,
+      "elapsed_time": 0.5234661102294922,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_open_checkpoint",
+      "iteration": 13,
+      "elapsed_time": 12.83299446105957,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 13,
+      "elapsed_time": 0.058359622955322266,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 13,
+      "elapsed_time": 0.06606125831604004,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_route_status",
+      "iteration": 13,
+      "elapsed_time": 1.0428619384765625,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 13,
+      "elapsed_time": 0.05394124984741211,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 13,
+      "elapsed_time": 0.09746766090393066,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_route_design",
+      "iteration": 13,
+      "elapsed_time": 1.3190405368804932,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 13,
+      "elapsed_time": 0.06115102767944336,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_write_checkpoint",
+      "iteration": 13,
+      "elapsed_time": 2.221677303314209,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_open_checkpoint",
+      "iteration": 13,
+      "elapsed_time": 12.796981573104858,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_timing_summary",
+      "iteration": 13,
+      "elapsed_time": 13.239051580429077,
+      "wns": -3.327,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 13,
+      "elapsed_time": 2.111901044845581,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 14,
+      "elapsed_time": 0.06068539619445801,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 14,
+      "elapsed_time": 0.0627288818359375,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 14,
+      "elapsed_time": 0.1817467212677002,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_extract_critical_path_pins",
+      "iteration": 14,
+      "elapsed_time": 0.18906593322753906,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_net_detour",
+      "iteration": 14,
+      "elapsed_time": 0.013239383697509766,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_extract_critical_path_cells",
+      "iteration": 14,
+      "elapsed_time": 0.1876378059387207,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_critical_path_spread",
+      "iteration": 14,
+      "elapsed_time": 0.0034477710723876953,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_optimize_cell_placement",
+      "iteration": 14,
+      "elapsed_time": 0.19147300720214844,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_critical_path_spread",
+      "iteration": 14,
+      "elapsed_time": 0.0031113624572753906,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 15,
+      "elapsed_time": 0.06262755393981934,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 15,
+      "elapsed_time": 0.06353878974914551,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 15,
+      "elapsed_time": 0.17650175094604492,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_extract_critical_path_pins",
+      "iteration": 15,
+      "elapsed_time": 0.18886137008666992,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_net_detour",
+      "iteration": 15,
+      "elapsed_time": 0.011206626892089844,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_extract_critical_path_cells",
+      "iteration": 15,
+      "elapsed_time": 0.18728280067443848,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_critical_path_spread",
+      "iteration": 15,
+      "elapsed_time": 0.0033664703369140625,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_optimize_cell_placement",
+      "iteration": 15,
+      "elapsed_time": 0.030081510543823242,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_critical_path_spread",
+      "iteration": 15,
+      "elapsed_time": 0.002553701400756836,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 16,
+      "elapsed_time": 0.06264352798461914,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 16,
+      "elapsed_time": 0.06331562995910645,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 16,
+      "elapsed_time": 0.17600131034851074,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_extract_critical_path_pins",
+      "iteration": 16,
+      "elapsed_time": 0.18899869918823242,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_net_detour",
+      "iteration": 16,
+      "elapsed_time": 0.008631229400634766,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_extract_critical_path_cells",
+      "iteration": 16,
+      "elapsed_time": 0.18745636940002441,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_critical_path_spread",
+      "iteration": 16,
+      "elapsed_time": 0.0033109188079833984,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_optimize_cell_placement",
+      "iteration": 16,
+      "elapsed_time": 0.003635406494140625,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_critical_path_spread",
+      "iteration": 16,
+      "elapsed_time": 0.0022606849670410156,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_write_checkpoint",
+      "iteration": 16,
+      "elapsed_time": 0.5347476005554199,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_open_checkpoint",
+      "iteration": 16,
+      "elapsed_time": 12.886701822280884,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 16,
+      "elapsed_time": 0.05844306945800781,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 16,
+      "elapsed_time": 0.06513142585754395,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_route_status",
+      "iteration": 16,
+      "elapsed_time": 1.043039321899414,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 16,
+      "elapsed_time": 0.05396437644958496,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 16,
+      "elapsed_time": 0.09527039527893066,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_route_design",
+      "iteration": 16,
+      "elapsed_time": 1.316223382949829,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 16,
+      "elapsed_time": 0.0610504150390625,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_write_checkpoint",
+      "iteration": 16,
+      "elapsed_time": 2.177128553390503,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_open_checkpoint",
+      "iteration": 16,
+      "elapsed_time": 12.8170485496521,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_timing_summary",
+      "iteration": 16,
+      "elapsed_time": 13.253935813903809,
+      "wns": -3.327,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 16,
+      "elapsed_time": 2.129800796508789,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 17,
+      "elapsed_time": 0.06070399284362793,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 17,
+      "elapsed_time": 0.06258296966552734,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 17,
+      "elapsed_time": 0.18227601051330566,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_extract_critical_path_pins",
+      "iteration": 17,
+      "elapsed_time": 0.18956804275512695,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_net_detour",
+      "iteration": 17,
+      "elapsed_time": 0.009106874465942383,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_extract_critical_path_cells",
+      "iteration": 17,
+      "elapsed_time": 0.18741083145141602,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 18,
+      "elapsed_time": 0.061989545822143555,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 18,
+      "elapsed_time": 0.06300711631774902,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 18,
+      "elapsed_time": 0.17595386505126953,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_extract_critical_path_pins",
+      "iteration": 18,
+      "elapsed_time": 0.18900609016418457,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_net_detour",
+      "iteration": 18,
+      "elapsed_time": 0.008536577224731445,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_extract_critical_path_cells",
+      "iteration": 18,
+      "elapsed_time": 0.187697172164917,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 19,
+      "elapsed_time": 0.0621790885925293,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 19,
+      "elapsed_time": 0.0631263256072998,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 19,
+      "elapsed_time": 0.17719674110412598,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 20,
+      "elapsed_time": 0.06272578239440918,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 20,
+      "elapsed_time": 0.06313133239746094,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 20,
+      "elapsed_time": 0.17714381217956543,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_extract_critical_path_pins",
+      "iteration": 20,
+      "elapsed_time": 0.18929409980773926,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_net_detour",
+      "iteration": 20,
+      "elapsed_time": 0.008497238159179688,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_critical_path_spread",
+      "iteration": 20,
+      "elapsed_time": 0.002435922622680664,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_optimize_cell_placement",
+      "iteration": 20,
+      "elapsed_time": 0.17354154586791992,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_critical_path_spread",
+      "iteration": 20,
+      "elapsed_time": 0.0028617382049560547,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_write_checkpoint",
+      "iteration": 20,
+      "elapsed_time": 0.507549524307251,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_open_checkpoint",
+      "iteration": 20,
+      "elapsed_time": 12.856141805648804,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 20,
+      "elapsed_time": 0.05846047401428223,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 20,
+      "elapsed_time": 0.06592583656311035,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_route_status",
+      "iteration": 20,
+      "elapsed_time": 1.048732042312622,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 20,
+      "elapsed_time": 0.05402660369873047,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 20,
+      "elapsed_time": 0.09927964210510254,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_route_design",
+      "iteration": 20,
+      "elapsed_time": 1.326801061630249,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 20,
+      "elapsed_time": 0.06132102012634277,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_write_checkpoint",
+      "iteration": 20,
+      "elapsed_time": 2.144406795501709,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_open_checkpoint",
+      "iteration": 20,
+      "elapsed_time": 12.874186038970947,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_timing_summary",
+      "iteration": 20,
+      "elapsed_time": 13.185651779174805,
+      "wns": -3.327,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 20,
+      "elapsed_time": 2.1399986743927,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 21,
+      "elapsed_time": 0.060390472412109375,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 21,
+      "elapsed_time": 0.06257057189941406,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 21,
+      "elapsed_time": 0.18187475204467773,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_extract_critical_path_pins",
+      "iteration": 21,
+      "elapsed_time": 0.1895124912261963,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_net_detour",
+      "iteration": 21,
+      "elapsed_time": 0.008771419525146484,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_extract_critical_path_cells",
+      "iteration": 21,
+      "elapsed_time": 0.18900513648986816,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 22,
+      "elapsed_time": 0.06180620193481445,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 22,
+      "elapsed_time": 0.06292462348937988,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 22,
+      "elapsed_time": 0.17677879333496094,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_extract_critical_path_pins",
+      "iteration": 22,
+      "elapsed_time": 0.18924880027770996,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_net_detour",
+      "iteration": 22,
+      "elapsed_time": 0.00845026969909668,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_extract_critical_path_cells",
+      "iteration": 22,
+      "elapsed_time": 0.18752384185791016,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_critical_path_spread",
+      "iteration": 22,
+      "elapsed_time": 0.0034058094024658203,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_optimize_cell_placement",
+      "iteration": 22,
+      "elapsed_time": 0.1757187843322754,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_critical_path_spread",
+      "iteration": 22,
+      "elapsed_time": 0.002928018569946289,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 23,
+      "elapsed_time": 0.06220197677612305,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 23,
+      "elapsed_time": 0.06293559074401855,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 23,
+      "elapsed_time": 0.1777045726776123,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_extract_critical_path_pins",
+      "iteration": 23,
+      "elapsed_time": 0.18953657150268555,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_net_detour",
+      "iteration": 23,
+      "elapsed_time": 0.008354663848876953,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_extract_critical_path_cells",
+      "iteration": 23,
+      "elapsed_time": 0.18825602531433105,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_critical_path_spread",
+      "iteration": 23,
+      "elapsed_time": 0.003150463104248047,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_optimize_cell_placement",
+      "iteration": 23,
+      "elapsed_time": 0.0019652843475341797,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 24,
+      "elapsed_time": 0.06205129623413086,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 24,
+      "elapsed_time": 0.06298303604125977,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 24,
+      "elapsed_time": 0.17761802673339844,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_fabric_for_pblock",
+      "iteration": 24,
+      "elapsed_time": 2.6762940883636475,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 25,
+      "elapsed_time": 0.06269526481628418,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 25,
+      "elapsed_time": 0.06312417984008789,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 25,
+      "elapsed_time": 0.17712974548339844,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_extract_critical_path_pins",
+      "iteration": 25,
+      "elapsed_time": 0.18901658058166504,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_net_detour",
+      "iteration": 25,
+      "elapsed_time": 0.008449554443359375,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_extract_critical_path_cells",
+      "iteration": 25,
+      "elapsed_time": 0.18812227249145508,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 26,
+      "elapsed_time": 0.061994314193725586,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 26,
+      "elapsed_time": 0.06313037872314453,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 26,
+      "elapsed_time": 0.1768789291381836,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_extract_critical_path_pins",
+      "iteration": 26,
+      "elapsed_time": 0.18927240371704102,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_net_detour",
+      "iteration": 26,
+      "elapsed_time": 0.008425474166870117,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_extract_critical_path_cells",
+      "iteration": 26,
+      "elapsed_time": 0.18756508827209473,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_critical_path_spread",
+      "iteration": 26,
+      "elapsed_time": 0.0034308433532714844,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_optimize_cell_placement",
+      "iteration": 26,
+      "elapsed_time": 0.03161907196044922,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_critical_path_spread",
+      "iteration": 26,
+      "elapsed_time": 0.0025746822357177734,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_write_checkpoint",
+      "iteration": 26,
+      "elapsed_time": 0.5437698364257812,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_open_checkpoint",
+      "iteration": 26,
+      "elapsed_time": 13.126789569854736,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 26,
+      "elapsed_time": 0.058408260345458984,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 26,
+      "elapsed_time": 0.06686735153198242,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_route_status",
+      "iteration": 26,
+      "elapsed_time": 1.0548911094665527,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 26,
+      "elapsed_time": 0.05371713638305664,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 26,
+      "elapsed_time": 0.10125136375427246,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_route_design",
+      "iteration": 26,
+      "elapsed_time": 1.3354921340942383,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 26,
+      "elapsed_time": 0.0615692138671875,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_write_checkpoint",
+      "iteration": 26,
+      "elapsed_time": 2.192129611968994,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_open_checkpoint",
+      "iteration": 26,
+      "elapsed_time": 12.86029314994812,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_timing_summary",
+      "iteration": 26,
+      "elapsed_time": 13.212108135223389,
+      "wns": -3.279,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 26,
+      "elapsed_time": 2.157820701599121,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 27,
+      "elapsed_time": 0.060524702072143555,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 27,
+      "elapsed_time": 0.06261777877807617,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 27,
+      "elapsed_time": 0.1855325698852539,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_extract_critical_path_pins",
+      "iteration": 27,
+      "elapsed_time": 0.19295024871826172,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_net_detour",
+      "iteration": 27,
+      "elapsed_time": 0.00852823257446289,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_extract_critical_path_cells",
+      "iteration": 27,
+      "elapsed_time": 0.19130206108093262,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 28,
+      "elapsed_time": 0.06206941604614258,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 28,
+      "elapsed_time": 0.06300640106201172,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 28,
+      "elapsed_time": 0.18039822578430176,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_extract_critical_path_pins",
+      "iteration": 28,
+      "elapsed_time": 0.19246792793273926,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_net_detour",
+      "iteration": 28,
+      "elapsed_time": 0.008343219757080078,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_extract_critical_path_cells",
+      "iteration": 28,
+      "elapsed_time": 0.1919858455657959,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 29,
+      "elapsed_time": 0.062027931213378906,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 29,
+      "elapsed_time": 0.0631101131439209,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 29,
+      "elapsed_time": 0.18027973175048828,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_extract_critical_path_pins",
+      "iteration": 29,
+      "elapsed_time": 0.19269299507141113,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_net_detour",
+      "iteration": 29,
+      "elapsed_time": 0.00832056999206543,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_extract_critical_path_cells",
+      "iteration": 29,
+      "elapsed_time": 0.19162392616271973,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_critical_path_spread",
+      "iteration": 29,
+      "elapsed_time": 0.0033440589904785156,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_optimize_cell_placement",
+      "iteration": 29,
+      "elapsed_time": 0.18991899490356445,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_critical_path_spread",
+      "iteration": 29,
+      "elapsed_time": 0.0028052330017089844,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_write_checkpoint",
+      "iteration": 29,
+      "elapsed_time": 0.5011782646179199,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_open_checkpoint",
+      "iteration": 29,
+      "elapsed_time": 13.024774551391602,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 29,
+      "elapsed_time": 0.05846285820007324,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 29,
+      "elapsed_time": 0.06667947769165039,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_route_status",
+      "iteration": 29,
+      "elapsed_time": 1.0559031963348389,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 29,
+      "elapsed_time": 0.053945302963256836,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 29,
+      "elapsed_time": 0.10066008567810059,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_route_design",
+      "iteration": 29,
+      "elapsed_time": 1.3359992504119873,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 29,
+      "elapsed_time": 0.06155991554260254,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_write_checkpoint",
+      "iteration": 29,
+      "elapsed_time": 2.1101510524749756,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_open_checkpoint",
+      "iteration": 29,
+      "elapsed_time": 12.998352766036987,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_timing_summary",
+      "iteration": 29,
+      "elapsed_time": 13.215018510818481,
+      "wns": -3.235,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 29,
+      "elapsed_time": 2.1569583415985107,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 30,
+      "elapsed_time": 0.06137585639953613,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 30,
+      "elapsed_time": 0.06274700164794922,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 30,
+      "elapsed_time": 0.18610072135925293,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_extract_critical_path_pins",
+      "iteration": 30,
+      "elapsed_time": 0.19220614433288574,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_net_detour",
+      "iteration": 30,
+      "elapsed_time": 0.008764982223510742,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_extract_critical_path_cells",
+      "iteration": 30,
+      "elapsed_time": 0.19308972358703613,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_critical_path_spread",
+      "iteration": 30,
+      "elapsed_time": 0.003352642059326172,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_optimize_cell_placement",
+      "iteration": 30,
+      "elapsed_time": 0.1826612949371338,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_critical_path_spread",
+      "iteration": 30,
+      "elapsed_time": 0.002806425094604492,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_write_checkpoint",
+      "iteration": 30,
+      "elapsed_time": 0.5408322811126709,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_open_checkpoint",
+      "iteration": 30,
+      "elapsed_time": 12.904778003692627,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 30,
+      "elapsed_time": 0.058351755142211914,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 30,
+      "elapsed_time": 0.06557536125183105,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_route_status",
+      "iteration": 30,
+      "elapsed_time": 1.065965175628662,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 30,
+      "elapsed_time": 0.053833723068237305,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 30,
+      "elapsed_time": 0.10021615028381348,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_route_design",
+      "iteration": 30,
+      "elapsed_time": 1.3442931175231934,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 30,
+      "elapsed_time": 0.06133246421813965,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_write_checkpoint",
+      "iteration": 30,
+      "elapsed_time": 2.173994779586792,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_open_checkpoint",
+      "iteration": 30,
+      "elapsed_time": 13.08464241027832,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_timing_summary",
+      "iteration": 30,
+      "elapsed_time": 13.268918514251709,
+      "wns": -3.235,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 30,
+      "elapsed_time": 2.1818275451660156,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 31,
+      "elapsed_time": 0.06082487106323242,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 31,
+      "elapsed_time": 0.06283974647521973,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 31,
+      "elapsed_time": 0.1890711784362793,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_extract_critical_path_pins",
+      "iteration": 31,
+      "elapsed_time": 0.19596385955810547,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_net_detour",
+      "iteration": 31,
+      "elapsed_time": 0.008204460144042969,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_extract_critical_path_cells",
+      "iteration": 31,
+      "elapsed_time": 0.1939396858215332,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 32,
+      "elapsed_time": 0.06203150749206543,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 32,
+      "elapsed_time": 0.06313061714172363,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 32,
+      "elapsed_time": 0.18268108367919922,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_extract_critical_path_pins",
+      "iteration": 32,
+      "elapsed_time": 0.1959226131439209,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_net_detour",
+      "iteration": 32,
+      "elapsed_time": 0.007976293563842773,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_extract_critical_path_cells",
+      "iteration": 32,
+      "elapsed_time": 0.19452643394470215,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 33,
+      "elapsed_time": 0.06203150749206543,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 33,
+      "elapsed_time": 0.06275320053100586,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 33,
+      "elapsed_time": 0.18311691284179688,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 34,
+      "elapsed_time": 0.06262516975402832,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 34,
+      "elapsed_time": 0.06310915946960449,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 34,
+      "elapsed_time": 0.18343234062194824,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_extract_critical_path_pins",
+      "iteration": 34,
+      "elapsed_time": 0.19556927680969238,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_net_detour",
+      "iteration": 34,
+      "elapsed_time": 0.008137226104736328,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_extract_critical_path_cells",
+      "iteration": 34,
+      "elapsed_time": 0.1942884922027588,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 35,
+      "elapsed_time": 0.062308311462402344,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 35,
+      "elapsed_time": 0.06315088272094727,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 35,
+      "elapsed_time": 0.18333172798156738,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_extract_critical_path_pins",
+      "iteration": 35,
+      "elapsed_time": 0.19661736488342285,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_net_detour",
+      "iteration": 35,
+      "elapsed_time": 0.008016586303710938,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_extract_critical_path_cells",
+      "iteration": 35,
+      "elapsed_time": 0.1940302848815918,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 36,
+      "elapsed_time": 0.062165260314941406,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 36,
+      "elapsed_time": 0.06355619430541992,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 36,
+      "elapsed_time": 0.1836237907409668,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 37,
+      "elapsed_time": 0.06275343894958496,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 37,
+      "elapsed_time": 0.06349372863769531,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 37,
+      "elapsed_time": 0.18391013145446777,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 38,
+      "elapsed_time": 0.06249094009399414,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 38,
+      "elapsed_time": 0.06342220306396484,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 38,
+      "elapsed_time": 0.1837165355682373,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_extract_critical_path_pins",
+      "iteration": 38,
+      "elapsed_time": 0.1961808204650879,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_net_detour",
+      "iteration": 38,
+      "elapsed_time": 0.008171796798706055,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_extract_critical_path_cells",
+      "iteration": 38,
+      "elapsed_time": 0.19495534896850586,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_critical_path_spread",
+      "iteration": 38,
+      "elapsed_time": 0.0034363269805908203,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_optimize_cell_placement",
+      "iteration": 38,
+      "elapsed_time": 0.172133207321167,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_critical_path_spread",
+      "iteration": 38,
+      "elapsed_time": 0.0028722286224365234,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_write_checkpoint",
+      "iteration": 38,
+      "elapsed_time": 0.5310742855072021,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_open_checkpoint",
+      "iteration": 38,
+      "elapsed_time": 13.063415050506592,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 38,
+      "elapsed_time": 0.05839347839355469,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 38,
+      "elapsed_time": 0.06664824485778809,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_route_status",
+      "iteration": 38,
+      "elapsed_time": 1.0622434616088867,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 38,
+      "elapsed_time": 0.05391645431518555,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 38,
+      "elapsed_time": 0.10055899620056152,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_route_design",
+      "iteration": 38,
+      "elapsed_time": 1.3421196937561035,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 38,
+      "elapsed_time": 0.061510562896728516,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_write_checkpoint",
+      "iteration": 38,
+      "elapsed_time": 2.1134517192840576,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_open_checkpoint",
+      "iteration": 38,
+      "elapsed_time": 13.131018877029419,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_report_timing_summary",
+      "iteration": 38,
+      "elapsed_time": 13.231904029846191,
+      "wns": -3.235,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 38,
+      "elapsed_time": 2.1678669452667236,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 39,
+      "elapsed_time": 0.06094002723693848,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 39,
+      "elapsed_time": 0.06269240379333496,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 39,
+      "elapsed_time": 0.18974089622497559,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_extract_critical_path_pins",
+      "iteration": 39,
+      "elapsed_time": 0.1962873935699463,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_net_detour",
+      "iteration": 39,
+      "elapsed_time": 0.008142232894897461,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_extract_critical_path_cells",
+      "iteration": 39,
+      "elapsed_time": 0.19437861442565918,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 40,
+      "elapsed_time": 0.06214094161987305,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 40,
+      "elapsed_time": 0.06281042098999023,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 40,
+      "elapsed_time": 0.18312859535217285,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_extract_critical_path_pins",
+      "iteration": 40,
+      "elapsed_time": 0.1967926025390625,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_net_detour",
+      "iteration": 40,
+      "elapsed_time": 0.007986068725585938,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_extract_critical_path_cells",
+      "iteration": 40,
+      "elapsed_time": 0.19471383094787598,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 41,
+      "elapsed_time": 0.06209731101989746,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 41,
+      "elapsed_time": 0.06307125091552734,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 41,
+      "elapsed_time": 0.1833209991455078,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 42,
+      "elapsed_time": 0.0626983642578125,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 42,
+      "elapsed_time": 0.06339025497436523,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 42,
+      "elapsed_time": 0.18389177322387695,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_extract_critical_path_pins",
+      "iteration": 42,
+      "elapsed_time": 0.1959543228149414,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_net_detour",
+      "iteration": 42,
+      "elapsed_time": 0.007857799530029297,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_extract_critical_path_cells",
+      "iteration": 42,
+      "elapsed_time": 0.19548368453979492,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 43,
+      "elapsed_time": 0.06227278709411621,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 43,
+      "elapsed_time": 0.06287813186645508,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 43,
+      "elapsed_time": 0.18387722969055176,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 44,
+      "elapsed_time": 0.06284427642822266,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 44,
+      "elapsed_time": 0.06339812278747559,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 44,
+      "elapsed_time": 0.1836540699005127,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_extract_critical_path_pins",
+      "iteration": 44,
+      "elapsed_time": 0.196028470993042,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_net_detour",
+      "iteration": 44,
+      "elapsed_time": 0.008087873458862305,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_extract_critical_path_cells",
+      "iteration": 44,
+      "elapsed_time": 0.1942768096923828,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 45,
+      "elapsed_time": 0.06235241889953613,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 45,
+      "elapsed_time": 0.06299662590026855,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 45,
+      "elapsed_time": 0.18399858474731445,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_extract_critical_path_pins",
+      "iteration": 45,
+      "elapsed_time": 0.19618535041809082,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_net_detour",
+      "iteration": 45,
+      "elapsed_time": 0.007946968078613281,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_extract_critical_path_cells",
+      "iteration": 45,
+      "elapsed_time": 0.19446945190429688,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 46,
+      "elapsed_time": 0.06242561340332031,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 46,
+      "elapsed_time": 0.06345653533935547,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 46,
+      "elapsed_time": 0.18404746055603027,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_extract_critical_path_pins",
+      "iteration": 46,
+      "elapsed_time": 0.19640874862670898,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_net_detour",
+      "iteration": 46,
+      "elapsed_time": 0.008502721786499023,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_extract_critical_path_cells",
+      "iteration": 46,
+      "elapsed_time": 0.19631481170654297,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 47,
+      "elapsed_time": 0.062355756759643555,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 47,
+      "elapsed_time": 0.06330728530883789,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 47,
+      "elapsed_time": 0.18328332901000977,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_extract_critical_path_pins",
+      "iteration": 47,
+      "elapsed_time": 0.19584870338439941,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_net_detour",
+      "iteration": 47,
+      "elapsed_time": 0.00797891616821289,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_extract_critical_path_cells",
+      "iteration": 47,
+      "elapsed_time": 0.1954352855682373,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 48,
+      "elapsed_time": 0.06216239929199219,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 48,
+      "elapsed_time": 0.06333541870117188,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 48,
+      "elapsed_time": 0.18413019180297852,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_fabric_for_pblock",
+      "iteration": 48,
+      "elapsed_time": 2.654686212539673,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 49,
+      "elapsed_time": 0.06287860870361328,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 49,
+      "elapsed_time": 0.06368422508239746,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 49,
+      "elapsed_time": 0.1840686798095703,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_extract_critical_path_pins",
+      "iteration": 49,
+      "elapsed_time": 0.19630837440490723,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_net_detour",
+      "iteration": 49,
+      "elapsed_time": 0.007900476455688477,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_extract_critical_path_cells",
+      "iteration": 49,
+      "elapsed_time": 0.19484901428222656,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_get_wns",
+      "iteration": 50,
+      "elapsed_time": 0.06262016296386719,
+      "wns": -0.92,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 50,
+      "elapsed_time": 0.06382441520690918,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_run_tcl",
+      "iteration": 50,
+      "elapsed_time": 0.18384933471679688,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_extract_critical_path_pins",
+      "iteration": 50,
+      "elapsed_time": 0.19775080680847168,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "rapidwright_analyze_net_detour",
+      "iteration": 50,
+      "elapsed_time": 0.007858514785766602,
+      "wns": null,
+      "error": false
+    },
+    {
+      "tool_name": "vivado_extract_critical_path_cells",
+      "iteration": 50,
+      "elapsed_time": 0.19441723823547363,
+      "wns": null,
+      "error": false
+    }
+  ]
+}
