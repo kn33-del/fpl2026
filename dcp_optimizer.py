@@ -2218,23 +2218,35 @@ class DCPOptimizer(DCPOptimizerBase):
 
     def _critical_path_cell_candidates(self, timing_context: dict, limit: int = 10) -> list[str]:
         candidates: list[str] = []
+        critical_pins: dict[str, list[str]] = {}
         worst_path = timing_context.get("worst_path", {})
-        for key in ("start_cell", "end_cell"):
-            value = str(worst_path.get(key) or "").strip("{} ")
+
+        def _register(raw_value):
+            value = str(raw_value or "").strip("{} ")
             if not value:
-                continue
-            cell = value.rsplit("/", 1)[0] if "/" in value else value
+                return
+            if "/" in value:
+                cell, pin = value.rsplit("/", 1)
+            else:
+                cell, pin = value, None
             if cell and cell not in candidates:
                 candidates.append(cell)
+            if cell and pin:
+                pins = critical_pins.setdefault(cell, [])
+                if pin not in pins:
+                    pins.append(pin)
+
+        for key in ("start_cell", "end_cell"):
+            _register(worst_path.get(key))
 
         for candidate in self.current_target_candidates[:limit]:
             for key in ("startpoint", "endpoint"):
-                value = str(candidate.get(key) or "").strip("{} ")
-                cell = value.rsplit("/", 1)[0] if "/" in value else value
-                if cell and cell not in candidates:
-                    candidates.append(cell)
+                _register(candidate.get(key))
 
-        return self._filter_blacklisted_cells(candidates)[:limit]
+        filtered = self._filter_blacklisted_cells(candidates)[:limit]
+        # Side-channel: the caller reads this right after calling this method.
+        self._last_critical_pins = {c: critical_pins[c] for c in filtered if c in critical_pins}
+        return filtered
 
     def _high_fanout_cell_names(self) -> set[str]:
         """Best-effort mapping from self.high_fanout_nets (net names) to the
@@ -3686,6 +3698,12 @@ class DCPOptimizer(DCPOptimizerBase):
                 )
             max_candidates = int(params.get("max_candidates") or min(10, len(cell_names)))
             cell_names = cell_names[:max_candidates]
+
+            critical_pins = {
+            cell: pins
+                for cell, pins in getattr(self, "_last_critical_pins", {}).items()
+                if cell in cell_names
+            }
             # --- Fix #4 (cluster-level optimization guard) ---
             # rapidwright_optimize_cell_placement moves each cell in
             # cell_names independently. If these cells are tightly coupled
@@ -3703,7 +3721,7 @@ class DCPOptimizer(DCPOptimizerBase):
             self.last_batch_size = len(cell_names)
             result = await self.call_tool(
                 "rapidwright_optimize_cell_placement",
-                {"cell_names": cell_names, "max_candidates": max_candidates},
+                {"cell_names": cell_names, "max_candidates": max_candidates, "critical_pins": critical_pins, "max_move_distance": 15,},
             )
             payload = self._parse_json_result(result)
             if self._result_has_error(payload):

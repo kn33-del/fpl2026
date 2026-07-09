@@ -1595,6 +1595,8 @@ def analyze_net_detour(
 def optimize_cell_placement(
     cell_names: list,
     max_candidates: int = 10,
+    critical_pins: Dict[str, list] = None,
+    max_move_distance: int = 15,
 ) -> Dict[str, Any]:
     """
     Re-place cells at the centroid of their connections to reduce routing detours.
@@ -1616,6 +1618,15 @@ def optimize_cell_placement(
     Returns:
         Dictionary with per-cell re-placement results
     """
+    def _net_from_logical_pin(cell, pin_name):
+        try:
+            wire = cell.getSiteWireNameFromLogicalPin(pin_name)
+            if wire:
+                return cell.getSiteInst().getNetFromSiteWire(wire)
+        except Exception:
+            pass
+        return None
+
     if not _initialized:
         return {"error": "RapidWright not initialized. Call initialize_rapidwright first."}
 
@@ -1671,9 +1682,19 @@ def optimize_cell_placement(
                                 "message": "No connected nets found"})
                 continue
 
+            cell_critical_pins = (critical_pins or {}).get(cell_name, [])
+            target_nets = []
+            if cell_critical_pins:
+                for pin_name in cell_critical_pins:
+                    net = _net_from_logical_pin(cell, pin_name)
+                    if net is not None and net not in target_nets:
+                        target_nets.append(net)
+            if not target_nets:
+                # No critical-path info, or pin resolution failed — old behavior.
+                target_nets = connected_nets            
             # Collect all pin tile locations for centroid computation
             points = ArrayList()
-            for net in connected_nets:
+            for net in target_nets:
                 for pin in net.getPins():
                     try:
                         t = pin.getTile()
@@ -1721,6 +1742,8 @@ def optimize_cell_placement(
             ):
                 if idx >= search_limit:
                     break
+                if old_tile.getManhattanDistance(candidate.getTile()) > max_move_distance:
+                    continue                
                 if design.getSiteInstFromSite(candidate) is None:
                     bel_name = "AFF" if is_ff else "A6LUT" if is_lut else str(
                         old_bel.getName()) if old_bel else "A6LUT"
