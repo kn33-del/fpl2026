@@ -2155,10 +2155,18 @@ class DCPOptimizer(DCPOptimizerBase):
             for target in targets:
                 if self.checkpoint_manager._is_blacklistable_target(target) and target not in self.checkpoint_manager.cells_blacklisted:
                     self.checkpoint_manager.cells_blacklisted.append(str(target))
-                # Fix #6: (re)stamp the iteration this cell was blacklisted at,
-                # even if it was already on the list, so a cell that keeps
-                # failing keeps its TTL fresh rather than expiring mid-cooldown.
-                self.cell_blacklist_added_iter[str(target)] = self.iteration
+                # Fix #6b: only stamp the iteration on *first* blacklisting.
+                # The original comment here said to refresh the TTL on every
+                # repeat failure "so a cell that keeps failing keeps its TTL
+                # fresh" -- but when a cell is re-selected as a fallback
+                # target purely because it's the only candidate left (no
+                # other data was used), that refresh means the TTL never
+                # actually elapses. In the FPL run this locked
+                # layer1_reg/data_out_reg[72]_rep__0/C and
+                # layer2_reg/data_out_reg[84] out for the rest of a 50-iter
+                # run (16 consecutive re-blacklists). Stamp once; let it expire.
+                if str(target) not in self.cell_blacklist_added_iter:
+                    self.cell_blacklist_added_iter[str(target)] = self.iteration
             persist = getattr(self.checkpoint_manager, "_persist_history", None)
             if callable(persist):
                 persist()
@@ -3923,12 +3931,12 @@ Proceed by selecting exactly one validated action per timing-context turn."""
                     self._print_optimization_summary()
                     return True
 
-                    if self.consecutive_no_improvement >= ABSOLUTE_STALL_HARD_LIMIT:
-                        logger.error(
-                            "Hard stall limit (%d) reached with no improvement; "
-                            "stopping and restoring best checkpoint.",
-                            ABSOLUTE_STALL_HARD_LIMIT,
-                        )
+                if self.consecutive_no_improvement >= ABSOLUTE_STALL_HARD_LIMIT:
+                    logger.error(
+                        "Hard stall limit (%d) reached with no improvement; "
+                        "stopping and restoring best checkpoint.",
+                        ABSOLUTE_STALL_HARD_LIMIT,
+                    )
                     if self.checkpoint_manager is not None:
                         best_ckpt = self.checkpoint_manager.get_best_checkpoint()
                         if best_ckpt:
