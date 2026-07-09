@@ -28,6 +28,7 @@ from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 from openai import OpenAI
 
+from analysis_layer import AnalysisEngine, Diagnosis
 from checkpoint_manager import CheckpointManager, load_or_create
 from eco_router import ECORouter
 from shield_generator import ShieldGenerator, escape_tcl_name
@@ -72,6 +73,12 @@ ACTION_FAILURE_EXHAUSTION_THRESHOLD = 3
 # eligible again. Without this, cells_blacklisted only grows, and long runs
 # eventually exhaust the critical-path candidate pool entirely.
 BLACKLIST_TTL_ITERS = 15
+# Fix #7: how long "pblock" (and its family) is withheld from allowed_actions
+# once a recommended region is found to overlap an already-applied pblock.
+# Deliberately much longer than ACTION_FAILURE_COOLDOWN_ITERS, since this is
+# a geometric fact about the current pblock layout, not a transient failure
+# that's likely to succeed on the next retry.
+PBLOCK_OVERLAP_COOLDOWN_ITERS = 20
 ACTION_FAILURE_COOLDOWN_ITERS = 5
 ABSOLUTE_STALL_HARD_LIMIT = 15
 # --- Cluster-aware cell placement guard (fix #4) ---
@@ -870,6 +877,17 @@ class DCPOptimizer(DCPOptimizerBase):
         # tracks *when* each cell was blacklisted so we can expire entries
         # after BLACKLIST_TTL_ITERS instead of banning them forever.
         self.cell_blacklist_added_iter: dict[str, int] = {}
+        # Fix #7 (pblock overlap cooldown): a pblock overlapping an
+        # already-applied region is a deterministic geometric fact, not a
+        # flaky failure -- it will fail again every time until the applied
+        # pblock layout itself changes. The generic no-action cooldown
+        # (ACTION_FAILURE_COOLDOWN_ITERS=5) is keyed to target_fingerprint,
+        # which drifts as candidate lists shift slightly (e.g. due to
+        # blacklist churn), silently resetting the strike counter and letting
+        # "pblock" get re-offered and re-fail every few iterations for the
+        # rest of the run. This cooldown is tracked independently of
+        # fingerprint so it can't be reset by that drift.
+        self.pblock_region_cooldown_until_iter: int = -1
         self.phys_opt_retime_supported: Optional[bool] = None
         self.implementation_license_available: Optional[bool] = None
         # Fix #1 (action-key bookkeeping): last_recipe is a human-readable
@@ -884,6 +902,17 @@ class DCPOptimizer(DCPOptimizerBase):
         # been successfully applied this run so future regions can be
         # checked for overlap before being applied.
         self.applied_pblock_regions: list[dict] = []
+        # Analysis Layer (Stage 2): replaces the inside of
+        # _build_timing_context() with a normalize -> cluster -> diagnose ->
+        # gather_evidence -> rank_hypotheses pipeline. actions_for() still
+        # calls _allowed_forbidden_actions first as the base allowed/forbidden
+        # (unchanged), then applies at most one confidence-scored hypothesis
+        # (>= 0.75 confidence) on top -- see analysis_layer.py's module
+        # docstring for exactly which hypotheses are real vs. still deferred.
+        # last_diagnosis is kept around (like last_spread_info) for
+        # logging/inspection.
+        self.analysis_engine = AnalysisEngine(self)
+        self.last_diagnosis: Optional[Diagnosis] = None
     
     async def start_servers(self):
         """Start and connect to both MCP servers."""
@@ -1692,7 +1721,7 @@ class DCPOptimizer(DCPOptimizerBase):
             await self._refresh_target_candidates(current_wns)
         await self._classify_worst_path_delay()
         await self._check_implementation_license()
-        timing_context = self._build_timing_context(current_wns)
+        timing_context = await self._build_timing_context(current_wns)
         self.last_timing_context = timing_context
         prompt = (
             "Given the timing state above, select one action from `allowed_actions`.\n"
@@ -1711,28 +1740,35 @@ class DCPOptimizer(DCPOptimizerBase):
         )
         self.messages.append({"role": "user", "content": prompt})
 
-    def _build_timing_context(self, current_wns: Optional[float]) -> dict:
+    async def _build_timing_context(self, current_wns: Optional[float]) -> dict:
         if self.checkpoint_manager is not None:
             self.consecutive_no_improvement = self.checkpoint_manager.stall_count
             self.no_improvement_count = self.checkpoint_manager.stall_count
 
         worst = self.current_target_candidates[0] if self.current_target_candidates else {}
         endpoint = str(worst.get("endpoint") or "")
-        endpoint_type = self._classify_endpoint_type(endpoint)
         logic_pct = self.path_delay_breakdown.get("logic_pct")
-        net_pct = self.path_delay_breakdown.get("net_pct")
-        avg_spread = self.last_spread_info.get("avg_distance")
         max_spread = self.last_spread_info.get("max_distance")
-        delay_class = self.path_delay_classification
-        if delay_class == "unknown":
-            delay_class = "mixed"
-        allowed, forbidden = self._allowed_forbidden_actions(
-            delay_class,
-            endpoint_type,
-            net_pct,
-            avg_spread,
-            current_wns,
-        )
+
+        # Analysis Layer (Stage 2): normalize -> cluster -> diagnose (which
+        # internally gathers evidence and scores hypotheses). delay_class/
+        # endpoint_type/net_pct/avg_spread are computed identically to how
+        # this function computed them inline before Stage 1, so the
+        # structural_override / stuck-detector logic below is unaffected.
+        # allowed/forbidden CAN now differ from the pre-Analysis-Layer
+        # baseline: actions_for() calls _allowed_forbidden_actions with
+        # those same values first, then applies at most one hypothesis
+        # (veto and/or reorder) on top if it cleared CONFIDENCE_FLOOR --
+        # see diagnosis.action_adjustment / diagnosis.reasoning_trace below.
+        failures = self.analysis_engine.normalize(self.current_target_candidates)
+        clusters = self.analysis_engine.cluster(failures)
+        diagnosis = await self.analysis_engine.diagnose(clusters, current_wns)
+        self.last_diagnosis = diagnosis
+        endpoint_type = diagnosis.endpoint_type
+        net_pct = diagnosis.net_pct
+        avg_spread = diagnosis.avg_spread
+        delay_class = diagnosis.delay_class
+        allowed, forbidden = self.analysis_engine.actions_for(diagnosis, current_wns)
         structural_override_age = self.consecutive_no_improvement - STUCK_ITERATION_THRESHOLD
         if structural_override_age >= 0:
             cycle_len = STRUCTURAL_OVERRIDE_MAX_ITERS + STUCK_ITERATION_THRESHOLD
@@ -1814,6 +1850,15 @@ class DCPOptimizer(DCPOptimizerBase):
             "allowed_actions": allowed,
             "forbidden_actions": forbidden,
             "recommendation": recommendation,
+            # Analysis Layer (Stage 2): cluster_count/primary_diagnosis/
+            # reasoning_trace are always descriptive/logging. action_adjustment
+            # is the one field that reflects an actual change to allowed/
+            # forbidden above -- None means the primary hypothesis either
+            # didn't clear CONFIDENCE_FLOOR or had nothing to veto/reorder.
+            "cluster_count": len(diagnosis.clusters),
+            "primary_diagnosis": diagnosis.primary_hypothesis.name,
+            "diagnosis_reasoning_trace": diagnosis.reasoning_trace,
+            "diagnosis_action_adjustment": diagnosis.action_adjustment,
         }
 
     def _classify_endpoint_type(self, endpoint: str) -> str:
@@ -1981,6 +2026,14 @@ class DCPOptimizer(DCPOptimizerBase):
             cooldown_until = int(memory.get("cooldown_until_iter") or -1)
             if cooldown_until >= self.iteration:
                 exhausted.append(action)
+        # Fix #7: pblock's overlap cooldown is tracked independently of
+        # target_fingerprint (see _compute_pblock_ranges) precisely because
+        # fingerprint drift was letting it slip back into allowed_actions
+        # every few iterations. Apply it here regardless of fingerprint match.
+        if self.iteration <= self.pblock_region_cooldown_until_iter:
+            for act in PBLOCK_ACTION_FAMILY:
+                if act not in exhausted:
+                    exhausted.append(act)
         return exhausted
 
     def _serializable_action_failure_memory(self) -> dict:
@@ -2216,6 +2269,17 @@ class DCPOptimizer(DCPOptimizerBase):
         if params.get("ranges"):
             return params, None
 
+        # Fix #7 continued: if we already know pblock is in its overlap
+        # cooldown, don't spend two RapidWright round trips (analyze_fabric +
+        # convert_region) just to rediscover the same collision -- this is
+        # the "smarter selection" half of the fix, not just a longer wait.
+        if self.iteration <= self.pblock_region_cooldown_until_iter:
+            return None, (
+                f"pblock is in overlap cooldown until iteration {self.pblock_region_cooldown_until_iter} "
+                f"(a previous attempt this run collided with an already-applied pblock region); "
+                f"skipping fabric analysis and letting other actions run instead."
+            )
+
         # Fix #5: size the pblock request off the actual number of critical-path
         # candidates we're clustering, not the whole design. last_design_info
         # comes from rapidwright_read_checkpoint (whole-design counts), which is
@@ -2263,6 +2327,19 @@ class DCPOptimizer(DCPOptimizerBase):
             # complex, hard-to-solve placement scenarios. ---
             overlap = self._find_pblock_overlap(region)
             if overlap is not None:
+                # Fix #7: this is a deterministic geometric fact (the recommended
+                # region collides with a pblock we already applied), not a flaky
+                # failure -- set a long, fingerprint-independent cooldown right
+                # away instead of waiting for the generic 3-strike counter, which
+                # keeps resetting as candidate fingerprints drift and lets pblock
+                # get re-offered (and re-fail) every few iterations for the rest
+                # of the run.
+                self.pblock_region_cooldown_until_iter = self.iteration + PBLOCK_OVERLAP_COOLDOWN_ITERS
+                logger.warning(
+                    "pblock region overlap: recommended region collides with already-applied "
+                    "pblock %s; withholding pblock from allowed_actions until iteration %d.",
+                    overlap.get("pblock_name"), self.pblock_region_cooldown_until_iter,
+                )
                 return None, (
                     f"RapidWright fabric analysis recommended region {region} which overlaps "
                     f"an already-applied pblock {overlap.get('pblock_name')} at "
@@ -3213,6 +3290,10 @@ class DCPOptimizer(DCPOptimizerBase):
             "reprompt_count": reprompt_count,
             "why_not_top_forbidden_action": decision.get("why_not_top_forbidden_action"),
             "raw_response": raw_text,
+            "cluster_count": timing_context.get("cluster_count"),
+            "primary_diagnosis": timing_context.get("primary_diagnosis"),
+            "diagnosis_reasoning_trace": list(timing_context.get("diagnosis_reasoning_trace", [])),
+            "diagnosis_action_adjustment": timing_context.get("diagnosis_action_adjustment"),
         }
         logger.info(
             "Action selection: offered=%s picked=%s structural_override=%s stuck_iterations=%s",
