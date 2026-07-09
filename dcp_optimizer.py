@@ -90,6 +90,12 @@ ABSOLUTE_STALL_HARD_LIMIT = 15
 # by more than this fraction, the move is rejected before it is ever routed
 # (saving a full route cycle and avoiding a checkpoint that we know regressed).
 CLUSTER_SPREAD_REGRESSION_FRACTION = 0.15
+PBLOCK_OVERLAP_MAX_RETRIES = 3
+PBLOCK_OVERLAP_GROW_FACTOR = 1.5
+CELL_PLACEMENT_FANOUT_GUARD_ENABLED = True
+ACTION_STRUCTURAL_FAILURE_WINDOW_ITERS = 10
+ACTION_STRUCTURAL_FAILURE_THRESHOLD = 3
+ACTION_STRUCTURAL_FAILURE_COOLDOWN_ITERS = 15
 # --- Pblock region validation (fix #2) ---
 # Reject RapidWright-recommended pblock regions that would be packed too
 # densely (congestion risk) or that overlap a pblock already applied earlier
@@ -146,7 +152,6 @@ PBLOCK_MIN_TARGET_LUT_COUNT = 200
 PBLOCK_MIN_TARGET_FF_COUNT = 200
 PBLOCK_SIZE_SHRINK_FACTOR = 0.5
 PBLOCK_SIZE_SHRINK_MAX_RETRIES = 3
-
 
 class WNSParseError(ValueError):
     """Raised when Vivado WNS output cannot be parsed into a plausible slack."""
@@ -396,6 +401,10 @@ class DCPOptimizerBase:
         # Log file handles
         self._rw_log_file = None
         self._v_log_file = None
+
+        # Structural-action failure/cooldown tracking (fix #7)
+        self.action_structural_failure_iters: dict[str, list[int]] = {}
+        self.action_structural_cooldown_until_iter: dict[str, int] = {}
     
     async def start_servers(self, log_prefix: str = ""):
         """Start and connect to both MCP servers."""
@@ -2034,6 +2043,9 @@ class DCPOptimizer(DCPOptimizerBase):
             for act in PBLOCK_ACTION_FAMILY:
                 if act not in exhausted:
                     exhausted.append(act)
+        for act, cooldown_until in self.action_structural_cooldown_until_iter.items():
+            if cooldown_until >= self.iteration and act not in exhausted:
+                exhausted.append(act)
         return exhausted
 
     def _serializable_action_failure_memory(self) -> dict:
@@ -2112,12 +2124,29 @@ class DCPOptimizer(DCPOptimizerBase):
                     act, count, memory["cooldown_until_iter"],
                 )
             self.action_failure_memory[act] = memory
+            history = self.action_structural_failure_iters.setdefault(act, [])
+            history.append(self.iteration)
+            cutoff = self.iteration - ACTION_STRUCTURAL_FAILURE_WINDOW_ITERS
+            self.action_structural_failure_iters[act] = [i for i in history if i >= cutoff]
+            recent_count = len(self.action_structural_failure_iters[act])
+            if recent_count >= ACTION_STRUCTURAL_FAILURE_THRESHOLD:
+                cooldown_until = self.iteration + ACTION_STRUCTURAL_FAILURE_COOLDOWN_ITERS
+                if cooldown_until > self.action_structural_cooldown_until_iter.get(act, -1):
+                    self.action_structural_cooldown_until_iter[act] = cooldown_until
+                    logger.warning(
+                        "Structural failure guard: %s failed/regressed %d time(s) within the "
+                        "last %d iterations (tracked independent of target_fingerprint drift); "
+                        "withholding it until iteration %d regardless of fingerprint changes.",
+                        act, recent_count, ACTION_STRUCTURAL_FAILURE_WINDOW_ITERS, cooldown_until,
+                    )
 
     def _reset_action_failure_memory(self, action: str) -> None:
         self.action_failure_counts[action] = 0
         if action in self.action_failure_memory:
             self.action_failure_memory[action]["consecutive_no_action_failures"] = 0
             self.action_failure_memory[action]["cooldown_until_iter"] = -1
+        self.action_structural_failure_iters[action] = []
+        self.action_structural_cooldown_until_iter[action] = -1
 
     def _blacklist_failure_targets(self, action: str, targets: list[str]) -> None:
         if self.checkpoint_manager is None or not targets:
@@ -2206,6 +2235,38 @@ class DCPOptimizer(DCPOptimizerBase):
                     candidates.append(cell)
 
         return self._filter_blacklisted_cells(candidates)[:limit]
+
+    def _high_fanout_cell_names(self) -> set[str]:
+        """Best-effort mapping from self.high_fanout_nets (net names) to the
+        driving cell name, using the same rsplit('/', 1)[0] convention used
+        everywhere else in this file for pin -> cell. Used to keep
+        rapidwright_optimize_cell_placement's centroid-of-all-connections
+        heuristic away from cells whose move would unroute a high-fanout net
+        and hit every other sink on it as collateral damage (see the tool's
+        own docstring: "this will also unroute any routing going to other
+        unrelated cells")."""
+        cells: set[str] = set()
+        for net_name, _fanout, _path_count in self.high_fanout_nets:
+            cleaned = str(net_name).strip("{} ")
+            cell = cleaned.rsplit("/", 1)[0] if "/" in cleaned else cleaned
+            if cell:
+                cells.add(cell)
+        return cells
+
+    def _filter_high_fanout_cells(self, cells: list[str]) -> list[str]:
+        if not CELL_PLACEMENT_FANOUT_GUARD_ENABLED or not self.high_fanout_nets:
+            return cells
+        fanout_cells = self._high_fanout_cell_names()
+        filtered = [c for c in cells if c not in fanout_cells]
+        dropped = [c for c in cells if c in fanout_cells]
+        if dropped:
+            logger.info(
+                "Fanout guard: excluding %d cell(s) from rapidwright_optimize_cell_placement "
+                "because they sit on a high-fanout net (moving them would unroute sinks "
+                "unrelated to the targeted critical path): %s",
+                len(dropped), dropped,
+            )
+        return filtered
 
     def _path_identifier_targets(self, timing_context: dict) -> list[str]:
         worst_path = timing_context.get("worst_path", {})
@@ -2305,7 +2366,11 @@ class DCPOptimizer(DCPOptimizerBase):
         # on the first miss -- self-corrects instead of depending on the
         # estimate being exactly right.
         last_error: Optional[str] = None
-        for attempt in range(PBLOCK_SIZE_SHRINK_MAX_RETRIES + 1):
+        overlap_attempt = 0
+        size_attempt = 0
+        rejected_regions: list[dict] = []
+
+        while True:
             analysis_args = {
                 "target_lut_count": target_lut_count,
                 "target_ff_count": target_ff_count,
@@ -2327,23 +2392,42 @@ class DCPOptimizer(DCPOptimizerBase):
             # complex, hard-to-solve placement scenarios. ---
             overlap = self._find_pblock_overlap(region)
             if overlap is not None:
-                # Fix #7: this is a deterministic geometric fact (the recommended
-                # region collides with a pblock we already applied), not a flaky
-                # failure -- set a long, fingerprint-independent cooldown right
-                # away instead of waiting for the generic 3-strike counter, which
-                # keeps resetting as candidate fingerprints drift and lets pblock
-                # get re-offered (and re-fail) every few iterations for the rest
-                # of the run.
+                rejected_regions.append(dict(region))
+                if overlap_attempt < PBLOCK_OVERLAP_MAX_RETRIES:
+                    # The tool is deterministic for a given sizing, so asking again
+                    # with the *same* target counts just reproduces the same region
+                    # and the same collision. Perturb the sizing (grow it) so the
+                    # fabric analysis is steered toward a different part of the
+                    # device instead of re-discovering the region we already used.
+                    overlap_attempt += 1
+                    target_lut_count = int(target_lut_count * PBLOCK_OVERLAP_GROW_FACTOR)
+                    target_ff_count = int(target_ff_count * PBLOCK_OVERLAP_GROW_FACTOR)
+                    logger.warning(
+                        "pblock region overlap (attempt %d/%d): recommended region %s collides "
+                        "with already-applied pblock %s; growing target lut/ff counts to "
+                        "%d/%d and retrying with a different sizing instead of repeating "
+                        "the identical request.",
+                        overlap_attempt, PBLOCK_OVERLAP_MAX_RETRIES, region,
+                        overlap.get("pblock_name"), target_lut_count, target_ff_count,
+                    )
+                    continue
+
+                # Exhausted overlap retries with genuinely different sizings -- now
+                # it's reasonable to conclude pblock has nothing left to offer this
+                # run and cool it down for real, rather than retrying an unchanged
+                # request every 20 iterations forever.
                 self.pblock_region_cooldown_until_iter = self.iteration + PBLOCK_OVERLAP_COOLDOWN_ITERS
                 logger.warning(
-                    "pblock region overlap: recommended region collides with already-applied "
-                    "pblock %s; withholding pblock from allowed_actions until iteration %d.",
-                    overlap.get("pblock_name"), self.pblock_region_cooldown_until_iter,
+                    "pblock region overlap: %d distinct sizing(s) all recommended regions "
+                    "overlapping already-applied pblocks (last: %s vs %s); withholding pblock "
+                    "from allowed_actions until iteration %d.",
+                    len(rejected_regions), region, overlap.get("pblock_name"),
+                    self.pblock_region_cooldown_until_iter,
                 )
                 return None, (
-                    f"RapidWright fabric analysis recommended region {region} which overlaps "
-                    f"an already-applied pblock {overlap.get('pblock_name')} at "
-                    f"{overlap.get('region')}; skipping to avoid overlapping pblocks."
+                    f"RapidWright fabric analysis recommended overlapping regions on all "
+                    f"{len(rejected_regions)} sizing attempt(s) tried "
+                    f"({rejected_regions}); skipping to avoid overlapping pblocks."
                 )
 
             convert_args = {
@@ -2362,10 +2446,7 @@ class DCPOptimizer(DCPOptimizerBase):
             if not ranges:
                 return None, f"RapidWright pblock range conversion returned no pblock_ranges: {range_text[:300]}"
 
-            # --- Fix #2b: reject regions that would be packed too densely.
-            # High-utilization pblocks are a known congestion risk; better to ask
-            # for a larger/different region than to hand Vivado a region that is
-            # very likely to fail to place-and-route cleanly. ---
+            # --- Fix #2b: reject regions that would be packed too densely. ---
             site_counts = range_payload.get("site_counts") or {}
             utilization_error = self._check_pblock_utilization(
                 site_counts, target_lut_count, target_ff_count,
@@ -2376,19 +2457,24 @@ class DCPOptimizer(DCPOptimizerBase):
                 break
 
             last_error = utilization_error
-            if attempt < PBLOCK_SIZE_SHRINK_MAX_RETRIES:
+            if size_attempt < PBLOCK_SIZE_SHRINK_MAX_RETRIES:
+                size_attempt += 1
                 logger.warning(
                     "pblock sizing attempt %d over-utilized (%s); shrinking target "
                     "lut/ff counts by %.0f%% and retrying.",
-                    attempt + 1, utilization_error, 100 * (1 - PBLOCK_SIZE_SHRINK_FACTOR),
+                    size_attempt, utilization_error, 100 * (1 - PBLOCK_SIZE_SHRINK_FACTOR),
                 )
                 target_lut_count = max(int(target_lut_count * PBLOCK_SIZE_SHRINK_FACTOR), PBLOCK_MIN_TARGET_LUT_COUNT // 4)
                 target_ff_count = max(int(target_ff_count * PBLOCK_SIZE_SHRINK_FACTOR), PBLOCK_MIN_TARGET_FF_COUNT // 4)
+                continue
+
+            break
 
         if last_error:
             return None, (
-                f"{last_error} (gave up after {PBLOCK_SIZE_SHRINK_MAX_RETRIES + 1} "
-                f"sizing attempts, starting from an estimate of {num_candidates} candidate paths)"
+                f"{last_error} (gave up after {size_attempt + 1} sizing attempts and "
+                f"{overlap_attempt} overlap-avoidance attempts, starting from an estimate "
+                f"of {num_candidates} candidate paths)"
             )
 
         computed = dict(params)
@@ -2834,6 +2920,28 @@ class DCPOptimizer(DCPOptimizerBase):
             )
             if self.checkpoint_manager.best_checkpoint == best_checkpoint:
                 self.active_checkpoint = best_checkpoint
+            # CRITICAL: rapidwright_read_checkpoint is only ever called once, during
+            # perform_initial_analysis. Without reloading here, RapidWright's
+            # in-memory _current_design keeps every previously-attempted (including
+            # just-rejected) cell move baked in, completely diverged from the
+            # checkpoint Vivado just reopened. Every subsequent RapidWright-side
+            # action (cell placement, spread measurement) would then be computed
+            # against a design that has nothing to do with "best" -- compounding
+            # damage from a rolled-back state instead of ever actually resetting.
+            reload_result = await self.call_tool(
+                "rapidwright_read_checkpoint",
+                {"dcp_path": best_checkpoint},
+                internal=True,
+            )
+            if "error" in reload_result.lower() and "success" not in reload_result.lower():
+                logger.error(
+                    "Failed to re-sync RapidWright's design state to the rolled-back "
+                    "checkpoint %s: %s. Subsequent RapidWright-side actions this run "
+                    "may be operating on stale/diverged design state.",
+                    best_checkpoint, reload_result[:300],
+                )
+            else:
+                logger.info("Re-synced RapidWright design state to rolled-back checkpoint %s", best_checkpoint)
 
         if self.checkpoint_manager.should_escalate():
             message = (
@@ -3406,6 +3514,7 @@ class DCPOptimizer(DCPOptimizerBase):
                     "Vivado Implementation license is unavailable; pblock flow requiring implementation is disabled.",
                     command="create_and_apply_pblock",
                 )
+            self.last_recipe = action
             params, error = await self._compute_pblock_ranges(dict(params), timing_context)
             if error:
                 logger.error("pblock action aborted: %s", error)
@@ -3463,13 +3572,13 @@ class DCPOptimizer(DCPOptimizerBase):
             self._register_applied_pblock(fabric_region, params.get("pblock_name"))
             return result + "\n\n" + place_result + "\n\n" + route_result
         if action == "rapidwright_analyze_fabric_for_pblock":
+            self.last_recipe = action 
             params, error = await self._compute_pblock_ranges(dict(params), timing_context)
             if error:
                 logger.error("RapidWright fabric/pblock analysis aborted: %s", error)
                 return self._failure_json("pblock_range_computation_failed", error, command=action)
             assert params is not None
             params.pop("_fabric_region", None)
-            self.last_recipe = action
             self.last_targets = [str(params.get("ranges"))]
             self.last_batch_size = 1
             self.last_rapidwright_edit_summary = {
@@ -3482,13 +3591,13 @@ class DCPOptimizer(DCPOptimizerBase):
             }
             return json.dumps({"success": True, "pblock_parameters": params}, indent=2)
         if action == "rapidwright_convert_fabric_region_to_pblock":
+            self.last_recipe = action
             params, error = await self._compute_pblock_ranges(dict(params), timing_context)
             if error:
                 logger.error("RapidWright pblock range conversion aborted: %s", error)
                 return self._failure_json("pblock_range_computation_failed", error, command=action)
             assert params is not None
             params.pop("_fabric_region", None)
-            self.last_recipe = action
             self.last_targets = [str(params.get("ranges"))]
             self.last_batch_size = 1
             self.last_rapidwright_edit_summary = {
@@ -3533,7 +3642,7 @@ class DCPOptimizer(DCPOptimizerBase):
             return detour_result
         if action == "rapidwright_optimize_cell_placement":
             attempted_cells = [str(cell) for cell in params.get("cell_names", []) if str(cell).strip()]
-            cell_names = self._filter_blacklisted_cells(attempted_cells)
+            cell_names = self._filter_high_fanout_cells(self._filter_blacklisted_cells(attempted_cells))
             if not cell_names:
                 try:
                     pins_file = await self._extract_critical_path_pins_file(num_paths=int(params.get("num_paths") or 20))
@@ -3547,8 +3656,8 @@ class DCPOptimizer(DCPOptimizerBase):
                     )
                     detour_payload = self._parse_json_result(detour_result)
                     candidates = detour_payload.get("candidates") if isinstance(detour_payload.get("candidates"), list) else []
-                    attempted_cells = [str(item.get("cell")) for item in candidates if item.get("cell")]
-                    cell_names = self._filter_blacklisted_cells(attempted_cells)
+                    cell_names = self._filter_high_fanout_cells(self._critical_path_cell_candidates(timing_context))
+                    attempted_cells = cell_names or attempted_cells
                 except Exception as exc:
                     logger.warning("Could not derive placement cells from detour analysis: %s", exc)
             if not cell_names:
@@ -3560,8 +3669,8 @@ class DCPOptimizer(DCPOptimizerBase):
                     limit=int(params.get("max_candidates") or 20),
                 )
                 if live_cells:
-                    cell_names = live_cells
-                    attempted_cells = live_cells
+                    cell_names = self._filter_high_fanout_cells(live_cells)
+                    attempted_cells = cell_names
             if not cell_names:
                 fallback_targets = attempted_cells or self._path_identifier_targets(timing_context)
                 self.last_recipe = action
@@ -3823,6 +3932,7 @@ Proceed by selecting exactly one validated action per timing-context turn."""
                 if best_ckpt:
                     try:
                         await self.call_tool("vivado_open_checkpoint", {"dcp_path": best_ckpt}, internal=True)
+                        await self.call_tool("rapidwright_read_checkpoint", {"dcp_path": best_ckpt}, internal=True)
                     except Exception as reopen_exc:
                         logger.exception(f"Failed to reopen checkpoint after desync recovery: {reopen_exc}")
                         self.end_time = time.time()
