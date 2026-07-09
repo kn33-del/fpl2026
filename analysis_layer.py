@@ -448,13 +448,34 @@ class AnalysisEngine:
     def _find_primary_cluster(
         self, clusters: list[FailureCluster], worst_endpoint: str
     ) -> Optional[FailureCluster]:
-        """The primary cluster is the one containing the current single
-        worst path -- this guarantees the new pipeline never loses track of
-        what today's code already prioritizes (design doc section 5)."""
+        """Prefer the cluster containing the current single worst path -- that
+        preserves the original design intent of never losing track of what
+        today's code already prioritizes (design doc section 5). But if that
+        cluster is a singleton, don't give up on clustering entirely: fall back
+        to the largest real cluster in the candidate pool instead. Otherwise a
+        design where the single worst path happens to be relatively isolated
+        (common) permanently starves excessive_fanout/localized_congestion/
+        long_interconnect of ever running, even when the rest of the candidate
+        pool is dominated by a real shared-cell structure (e.g. a high-fanout
+        driver recurring across a dozen other candidates)."""
+        worst_cluster = None
         for cluster in clusters:
             if any(m.endpoint == worst_endpoint for m in cluster.members):
-                return cluster
-        return clusters[0] if clusters else None
+                worst_cluster = cluster
+                break
+
+        if worst_cluster is not None and len(worst_cluster.members) >= 2:
+            return worst_cluster
+
+        non_trivial = [c for c in clusters if len(c.members) >= 2]
+        if non_trivial:
+            largest = max(non_trivial, key=lambda c: len(c.members))
+            return largest
+
+        # Nothing in the pool has real structure -- keep the original
+        # worst-path cluster (even if singleton) so independent_failures still
+        # fires correctly when the candidates genuinely are all isolated.
+        return worst_cluster if worst_cluster is not None else (clusters[0] if clusters else None)
 
     # ------------------------------------------------------------------
     # gather_evidence
@@ -555,8 +576,15 @@ class AnalysisEngine:
                 avg_spread=global_avg_spread,
             )
 
+        worst_path_in_primary = any(m.endpoint == worst_endpoint for m in primary_cluster.members)
+        selection_note = (
+            "contains the current worst path"
+            if worst_path_in_primary
+            else "does NOT contain the current worst path -- reassigned to the largest "
+                "non-trivial cluster in the pool since the worst path's own cluster was a singleton"
+        )
         reasoning_trace.append(
-            f"primary cluster '{primary_cluster.id}' contains the current worst path "
+            f"primary cluster '{primary_cluster.id}' {selection_note} "
             f"({len(primary_cluster.members)} member(s), "
             f"{len(primary_cluster.shared_cells)} cell(s) shared across all members)"
         )

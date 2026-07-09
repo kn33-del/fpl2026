@@ -1,0 +1,16 @@
+{
+  "input_dcp": "/home/kn33/fpl26/fpl2026/fpl26_contest_benchmarks/logicnets_jscl_2025.1.dcp",
+  "clock_name": "clk_fpl26contest",
+  "clock_period_ns": 1.5,
+  "baseline_wns": -0.978,
+  "baseline_fmax_mhz": 403.5512510088782,
+  "best_wns": -0.978,
+  "best_fmax_mhz": 403.5512510088782,
+  "best_checkpoint": "/home/kn33/fpl26/fpl2026/fpl26_contest_benchmarks/logicnets_jscl_2025.1.dcp",
+  "current_iter": 0,
+  "stall_count": 0,
+  "cells_blacklisted": [],
+  "nets_blacklisted": [],
+  "iterations": [],
+  "started_at_epoch_s": 1783622214.242505
+}
