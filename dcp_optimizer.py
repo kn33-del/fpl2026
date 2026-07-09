@@ -205,6 +205,21 @@ RULE 3 - SPREAD BINDING:
     First action must address placement. Prefer rapidwright_optimize_cell_placement
     or a pblock flow with computed ranges before any routing-only fix.
 
+RULE 4 - OUTCOME MEMORY OVERRIDES CHEAP EVIDENCE:
+  If hypothesis_falsified is true, or the SAME primary_diagnosis name has appeared
+  with the SAME recommended action across several consecutive iterations without a
+  single "improved"/"marginal" result (visible in action_failure_counts and
+  consecutive_no_improvement), do NOT simply re-select that action because RULE 1/2/3
+  still nominally point at it. That combination means the diagnosis has already been
+  empirically tested here and failed, not just theoretically supported. In that case:
+    - Prefer recommended_experiment.action if present -- it exists specifically to
+      collect information a repeated failure does not.
+    - Explicitly say so in why_not_top_forbidden_action: name the hypothesis, how many
+      times it failed, and why repeating it again would not be a new experiment.
+  RULE 1/2/3 bound which *class* of action is structurally sound for the delay class;
+  they are not a license to re-run an action that has already demonstrably failed on
+  the current target set.
+
 You must not propose actions that contradict these rules. If you find yourself wanting to
 choose a forbidden action, that is a signal your reasoning has drifted from the timing data -
 re-read delay_class and endpoint_type and correct course.
@@ -922,6 +937,17 @@ class DCPOptimizer(DCPOptimizerBase):
         # logging/inspection.
         self.analysis_engine = AnalysisEngine(self)
         self.last_diagnosis: Optional[Diagnosis] = None
+        # Diagnosis outcome memory (closes the design doc section 8 gap):
+        # one entry per completed iteration recording which (cluster_id,
+        # hypothesis_name) pair was diagnosed and which action was actually
+        # attempted as a result, so diagnose() can tell "we already tried
+        # this exact explanation N times and it kept failing" instead of
+        # re-deriving the same confidence score from the same cheap evidence
+        # every iteration. Without this, a hypothesis that is empirically
+        # wrong (its recommended action regresses WNS repeatedly) can never
+        # lose confidence, because nothing about the *evidence inputs*
+        # changes when the design gets rolled back to the same checkpoint.
+        self.diagnosis_outcome_log: list[dict] = []
     
     async def start_servers(self):
         """Start and connect to both MCP servers."""
@@ -1866,8 +1892,29 @@ class DCPOptimizer(DCPOptimizerBase):
             # didn't clear CONFIDENCE_FLOOR or had nothing to veto/reorder.
             "cluster_count": len(diagnosis.clusters),
             "primary_diagnosis": diagnosis.primary_hypothesis.name,
+            "primary_diagnosis_confidence": diagnosis.primary_hypothesis.confidence,
             "diagnosis_reasoning_trace": diagnosis.reasoning_trace,
             "diagnosis_action_adjustment": diagnosis.action_adjustment,
+            # These three close the "evidence vs. conclusions" gap: previously
+            # only the winning hypothesis's name and a confidence-scored list
+            # reached the LLM/history.json, with no explicit record of which
+            # alternatives were considered-and-rejected-by-outcome (as
+            # opposed to just scored lower this round), and no explicit
+            # next-experiment field distinguishing "first trial of this
+            # hypothesis" from "this exact hypothesis+action has already
+            # failed here repeatedly, try something that produces new
+            # information instead."
+            "alternative_explanations_rejected": diagnosis.alternative_explanations_rejected,
+            "hypothesis_falsified": diagnosis.hypothesis_falsified,
+            "recommended_experiment": (
+                {
+                    "action": diagnosis.recommended_experiment.action,
+                    "expected_effect": diagnosis.recommended_experiment.expected_effect,
+                    "rationale": diagnosis.recommended_experiment.rationale,
+                }
+                if diagnosis.recommended_experiment is not None
+                else None
+            ),
         }
 
     def _classify_endpoint_type(self, endpoint: str) -> str:
@@ -2140,13 +2187,28 @@ class DCPOptimizer(DCPOptimizerBase):
                         act, recent_count, ACTION_STRUCTURAL_FAILURE_WINDOW_ITERS, cooldown_until,
                     )
 
-    def _reset_action_failure_memory(self, action: str) -> None:
+    def _reset_action_failure_memory(self, action: str, clear_structural: bool = False) -> None:
+        """Only called from _record_iteration_timing's WNS-confirmed
+        improved/marginal branch now (see the removed call sites at the
+        rapidwright_optimize_cell_placement / rapidwright_analyze_net_detour
+        tool handlers). `clear_structural` defaults to False: the
+        fingerprint-independent structural-failure window
+        (action_structural_failure_iters / action_structural_cooldown_until_iter)
+        exists specifically to survive fingerprint churn and premature
+        resets, so an ordinary success should let it decay on its own via
+        the rolling time window rather than being wiped instantly -- one
+        good iteration after eleven regressions should not erase the
+        evidence that this action has an 11/12 regression rate. Pass
+        clear_structural=True only for an explicit, deliberate memory clear
+        (e.g. operator/CLI reset), not for routine bookkeeping.
+        """
         self.action_failure_counts[action] = 0
         if action in self.action_failure_memory:
             self.action_failure_memory[action]["consecutive_no_action_failures"] = 0
             self.action_failure_memory[action]["cooldown_until_iter"] = -1
-        self.action_structural_failure_iters[action] = []
-        self.action_structural_cooldown_until_iter[action] = -1
+        if clear_structural:
+            self.action_structural_failure_iters[action] = []
+            self.action_structural_cooldown_until_iter[action] = -1
 
     def _blacklist_failure_targets(self, action: str, targets: list[str]) -> None:
         if self.checkpoint_manager is None or not targets:
@@ -2900,7 +2962,11 @@ class DCPOptimizer(DCPOptimizerBase):
         if is_analysis_only:
             pass
         elif iteration.get("status") in {"improved", "marginal"}:
-            self._reset_action_failure_memory(action_key)
+            # Confirmed by an actual WNS-improving iteration (not just "the
+            # tool call didn't error") -- safe to clear the structural
+            # window too, since the action just demonstrated it works on
+            # the current design state.
+            self._reset_action_failure_memory(action_key, clear_structural=True)
         else:
             # The action executed successfully but made WNS worse (or did
             # nothing useful) and got rolled back. This used to only bump the
@@ -2911,6 +2977,24 @@ class DCPOptimizer(DCPOptimizerBase):
             # used for hard tool failures so it actually gets suppressed
             # after repeated regressions on the same targets.
             self._remember_no_action_failure(action_key, self.last_targets)
+
+        # Diagnosis outcome memory: record what diagnose() believed *before*
+        # this iteration ran against what actually happened, keyed by
+        # (cluster_id, hypothesis_name) so a repeated wrong diagnosis is
+        # visible to the next diagnose() call regardless of target
+        # fingerprint drift or checkpoint rollback resetting the physical
+        # evidence back to a state that looks identical to last time.
+        if self.last_diagnosis is not None and not is_analysis_only:
+            self.diagnosis_outcome_log.append({
+                "iteration": self.iteration,
+                "cluster_id": self.last_diagnosis.primary_cluster_id,
+                "hypothesis": self.last_diagnosis.primary_hypothesis.name,
+                "hypothesis_confidence": self.last_diagnosis.primary_hypothesis.confidence,
+                "action": action_key,
+                "status": iteration.get("status"),
+                "wns_before": iteration.get("wns_before"),
+                "wns_after": wns,
+            })
 
         history_fields = {
             "target_tier": self.target_tier,
@@ -3658,7 +3742,18 @@ class DCPOptimizer(DCPOptimizerBase):
                 "candidates_found": payload.get("candidates_found", len(candidates)),
                 "top_candidates": candidates[:10],
             }
-            self._reset_action_failure_memory(action)
+            # BUG FIX: rapidwright_analyze_net_detour is analysis-only
+            # (changed_design=False; _record_iteration_timing's
+            # is_analysis_only branch deliberately never judges it as
+            # success/failure, since an analysis step never moves WNS).
+            # Resetting its own failure memory here right after every call
+            # was exactly the inconsistency flagged in that function's
+            # comment: it let this one action dodge the "no offsetting
+            # self-reset" trap that used to exhaust the pblock family, but
+            # for the wrong reason (an unconditional self-reset, not a
+            # judged outcome). Analysis-only actions must not touch failure
+            # memory at all -- that's the job of the WNS-outcome-based
+            # bookkeeping in _record_iteration_timing exclusively.
             return detour_result
         if action == "rapidwright_optimize_cell_placement":
             attempted_cells = [str(cell) for cell in params.get("cell_names", []) if str(cell).strip()]
@@ -3745,9 +3840,24 @@ class DCPOptimizer(DCPOptimizerBase):
                     command=action,
                 )
             self.last_rapidwright_edit_summary = self._summarize_cell_placement(payload, cell_names)
-            if int(self.last_rapidwright_edit_summary.get("cells_moved") or 0) > 0:
-                self._reset_action_failure_memory(action)
-            else:
+            # BUG FIX (root cause of the "same failing action retried
+            # forever" loop): this used to call
+            # self._reset_action_failure_memory(action) as soon as the tool
+            # call reported cells_moved > 0. That treats "the RapidWright
+            # call didn't error" as evidence the action *worked*, wiping
+            # both the fingerprint-keyed failure count AND the
+            # fingerprint-independent structural-failure window right here --
+            # before routing, before the WNS delta is even known. Every
+            # subsequent regression then only had a freshly-zeroed counter to
+            # increment, so it could climb to at most 1 before being wiped
+            # again next iteration, and ACTION_FAILURE_EXHAUSTION_THRESHOLD /
+            # ACTION_STRUCTURAL_FAILURE_THRESHOLD (both 3) were never
+            # reachable no matter how many times this action regressed WNS.
+            # "Moved cells without a tool error" is not a success signal;
+            # only _record_iteration_timing's WNS-outcome-based branch
+            # (status in {"improved", "marginal"}) is allowed to reset
+            # failure memory now. Nothing is reset here.
+            if int(self.last_rapidwright_edit_summary.get("cells_moved") or 0) <= 0:
                 self._blacklist_failure_targets(action, cell_names)
                 self._remember_no_action_failure(action, cell_names)
                 self.last_no_action_failure_key = (action, tuple(cell_names), self.iteration)
