@@ -3583,9 +3583,10 @@ class DCPOptimizer(DCPOptimizerBase):
             result = await self.call_tool("vivado_create_and_apply_pblock", params)
             payload = self._parse_json_result(result)
             if self._result_has_error(payload):
+                logger.error(f"pblock_assignment_failed - full result:\n{result}")
                 return self._failure_json(
                     payload.get("error_type", "pblock_assignment_failed"),
-                    payload.get("message", result[:300]),
+                    payload.get("message", result[:4000]),
                     command="pblock",
                 )
             self.last_rapidwright_edit_summary = self._summarize_pblock_assignment(payload, params)
@@ -3604,18 +3605,29 @@ class DCPOptimizer(DCPOptimizerBase):
                 "vivado_place_design", {"directive": "Explore", "timeout": 3600}, internal=True
             )
             if self._action_failure(place_result, default_command="vivado_place_design"):
+                # BUG FIX: this used to cap the stored message at 300 chars,
+                # which for a real Vivado placer error just captures the
+                # license-acquisition boilerplate and cuts off before the
+                # actual ERROR/CRITICAL WARNING line further down in the
+                # report -- exactly the info needed to diagnose *why*
+                # placement failed after a pblock was applied. Log the full,
+                # untruncated text (recoverable from the run log even if the
+                # JSON history record trims it) and widen the stored message
+                # itself well past where a real placer error would appear.
+                logger.error(f"pblock_place_failed - full place_design output:\n{place_result}")
                 return self._failure_json(
                     "pblock_place_failed",
-                    f"Pblock applied but re-placement failed: {place_result[:300]}",
+                    f"Pblock applied but re-placement failed: {place_result[:4000]}",
                     command="pblock",
                 )
             route_result = await self.call_tool(
                 "vivado_route_design", {"directive": "Explore", "timeout": 3600}, internal=True
             )
             if self._action_failure(route_result, default_command="vivado_route_design"):
+                logger.error(f"pblock_route_failed - full route_design output:\n{route_result}")
                 return self._failure_json(
                     "pblock_route_failed",
-                    f"Pblock applied and re-placed but routing failed: {route_result[:300]}",
+                    f"Pblock applied and re-placed but routing failed: {route_result[:4000]}",
                     command="pblock",
                 )
             # Fix #2: only now, after placement + routing succeeded, register

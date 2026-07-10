@@ -698,6 +698,21 @@ class AnalysisEngine:
                         for action in vetoed:
                             if action not in forbidden:
                                 forbidden.append(action)
+                        # BUG FIX: a fallback action can be something the base
+                        # delay-class gate globally forbids -- e.g.
+                        # fanout_split is unconditionally forbidden for
+                        # net_delay_bound in _allowed_forbidden_actions, even
+                        # though a confident excessive_fanout diagnosis on a
+                        # net_delay_bound path is exactly the case that needs
+                        # it. validate_llm_action() checks `chosen in
+                        # forbidden` *before* it checks `chosen in allowed`
+                        # (forbidden wins), so substituting fanout_split into
+                        # `allowed` while it's still sitting in `forbidden`
+                        # meant the LLM's pick would get bounced as
+                        # "chosen_action_is_forbidden" every single time,
+                        # despite being the thing we just offered it. Keep
+                        # the two lists mutually exclusive.
+                        forbidden = [a for a in forbidden if a not in fallback]
                         allowed = fallback
                         adjustment_notes.append(
                             f"{hyp.name} (confidence {hyp.confidence:.2f}) vetoed every "
@@ -720,4 +735,11 @@ class AnalysisEngine:
 
         diagnosis.action_adjustment = "; ".join(adjustment_notes) if adjustment_notes else None
         hyp.recommended_actions = hyp.recommended_actions or list(allowed)
+        # Defensive invariant: validate_llm_action() checks `chosen in
+        # forbidden` before `chosen in allowed`, so any overlap between the
+        # two lists silently makes an offered action unusable. Enforce
+        # allowed/forbidden are mutually exclusive here regardless of which
+        # branch above produced them, rather than relying on every future
+        # edit to this function to remember to keep them in sync by hand.
+        forbidden = [a for a in forbidden if a not in allowed]
         return allowed, forbidden
