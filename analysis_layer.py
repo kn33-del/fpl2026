@@ -70,20 +70,6 @@ DETOUR_RATIO_FLAG_THRESHOLD = 2.0
 # but not dominant enough to override the base delay-class thresholds.
 FANOUT_DOMINANCE_FRACTION = 0.30
 
-# Outcome-memory thresholds (design doc section 8, previously unwired --
-# see _apply_outcome_memory). Cheap-evidence confidence can legitimately
-# stay identical for many iterations in a row whenever the design gets
-# rolled back to the same checkpoint after a regression -- the physical
-# evidence (spread, net_pct) really is unchanged, so re-scoring it produces
-# the same number every time. That's correct as far as it goes, but it
-# means cheap evidence alone can never detect "we already tried exactly
-# this and it failed." These thresholds let outcome memory demote a
-# hypothesis once its own recommended action has been tried on the same
-# cluster and failed repeatedly, independent of what the cheap evidence
-# says this round.
-REPEATED_FAILURE_DEMOTION_THRESHOLD = 2
-FALSIFICATION_CONFIDENCE_PENALTY = 0.5
-
 
 @dataclass
 class TimingFailure:
@@ -135,30 +121,23 @@ class RootCauseHypothesis:
 
 
 @dataclass
-class Experiment:
-    """The next concrete thing to try, and why it actually tests the
-    hypothesis rather than just re-applying the same action again."""
-
-    action: str
-    expected_effect: str
-    rationale: str
-
-
-@dataclass
 class Diagnosis:
     clusters: list[FailureCluster]
     hypotheses: list[RootCauseHypothesis]
     primary_cluster_id: str
     primary_hypothesis: RootCauseHypothesis
     reasoning_trace: list[str]
+    # Carried alongside the hypothesis so actions_for() can call the
+    # optimizer's existing _allowed_forbidden_actions with the same base
+    # inputs _build_timing_context always computed.
     delay_class: str
     endpoint_type: str
     net_pct: Optional[float]
     avg_spread: Optional[float]
+    # Set by actions_for() after it runs; a one-line human-readable
+    # explanation of what, if anything, the primary hypothesis changed
+    # versus the base _allowed_forbidden_actions output.
     action_adjustment: Optional[str] = None
-    alternative_explanations_rejected: list[str] = field(default_factory=list)
-    recommended_experiment: Optional[Experiment] = None
-    hypothesis_falsified: bool = False
 
 
 class _UnionFind:
@@ -359,7 +338,16 @@ def _rule_placement_already_compact(cluster: FailureCluster, evidence: dict) -> 
         confidence=max(0.0, min(1.0, confidence)),
         supporting_evidence=supporting,
         contradicting_evidence=contradicting,
-        recommended_actions=[],
+        # BUG FIX: this used to be []. The hypothesis's whole point is
+        # "placement fixes won't help, delay is logic-dominated -- look at
+        # logic restructuring instead," but with no recommended_actions
+        # named, actions_for() had nothing to substitute once it vetoed
+        # pblock/rapidwright_optimize_cell_placement -- so the veto was
+        # either skipped outright (old behavior, would-empty-allowed guard)
+        # or, even fixed to substitute, had an empty list to substitute
+        # with. Name the logic-level actions this hypothesis actually
+        # implies so a confident veto can hand the LLM something real.
+        recommended_actions=["phys_opt_design", "phys_opt_design_retime", "lut_opt", "logic_restructure"],
         evidence_requests=["cluster_avg_spread", "logic_pct"],
         veto_actions=["pblock", "rapidwright_optimize_cell_placement"],
     )
@@ -633,17 +621,11 @@ class AnalysisEngine:
             else:
                 reasoning_trace.append("net-detour evidence unavailable; keeping cheap-evidence ranking.")
 
+        primary_hypothesis = hypotheses[0]
         reasoning_trace.append(
-            "scored hypotheses (cheap/detour evidence only): "
+            "scored hypotheses: "
             + ", ".join(f"{h.name}={h.confidence:.2f}" for h in hypotheses)
         )
-
-        hypotheses, rejected_alternatives, falsified_name = self._apply_outcome_memory(
-            primary_cluster, hypotheses, reasoning_trace
-        )
-        primary_hypothesis = hypotheses[0]
-        hypothesis_falsified = falsified_name == primary_hypothesis.name
-
         reasoning_trace.append(
             f"primary hypothesis: {primary_hypothesis.name} (confidence {primary_hypothesis.confidence:.2f})"
         )
@@ -651,13 +633,6 @@ class AnalysisEngine:
             reasoning_trace.append(f"  + {line}")
         for line in primary_hypothesis.contradicting_evidence:
             reasoning_trace.append(f"  - {line}")
-
-        experiment = self._build_experiment(
-            primary_cluster, primary_hypothesis, hypothesis_falsified, cheap_evidence
-        )
-        reasoning_trace.append(
-            f"recommended experiment: {experiment.action} -- {experiment.rationale}"
-        )
 
         return Diagnosis(
             clusters=clusters,
@@ -669,106 +644,6 @@ class AnalysisEngine:
             endpoint_type=endpoint_type,
             net_pct=global_net_pct,
             avg_spread=global_avg_spread,
-            alternative_explanations_rejected=rejected_alternatives,
-            recommended_experiment=experiment,
-            hypothesis_falsified=hypothesis_falsified,
-        )
-
-    # ------------------------------------------------------------------
-    # outcome memory (design doc section 8)
-    # ------------------------------------------------------------------
-    def _apply_outcome_memory(
-        self,
-        cluster: FailureCluster,
-        hypotheses: list[RootCauseHypothesis],
-        reasoning_trace: list[str],
-    ) -> tuple[list[RootCauseHypothesis], list[str], Optional[str]]:
-        """Demote any hypothesis whose recommended action has already been
-        tried on this exact cluster REPEATED_FAILURE_DEMOTION_THRESHOLD+
-        times with zero improving/marginal outcomes."""
-        log = [e for e in self.opt.diagnosis_outcome_log if e.get("cluster_id") == cluster.id]
-        if not log:
-            return hypotheses, [], None
-
-        ranked = list(hypotheses)
-        rejected: list[str] = []
-        last_falsified: Optional[str] = None
-        for _ in range(len(ranked)):
-            top = ranked[0]
-            trials = [
-                e for e in log
-                if e.get("hypothesis") == top.name and e.get("action") in (top.recommended_actions or [])
-            ]
-            if not trials:
-                break
-            successes = sum(1 for e in trials if e.get("status") in {"improved", "marginal"})
-            failures = len(trials) - successes
-            if successes > 0 or failures < REPEATED_FAILURE_DEMOTION_THRESHOLD:
-                break
-            penalized = max(0.0, top.confidence - FALSIFICATION_CONFIDENCE_PENALTY)
-            reasoning_trace.append(
-                f"outcome memory: '{top.name}' -> {top.recommended_actions} was already tried "
-                f"{len(trials)} time(s) on cluster '{cluster.id}' with {failures} failure(s)/"
-                f"regression(s) and 0 improvements -- demoting confidence "
-                f"{top.confidence:.2f} -> {penalized:.2f} (falsified by trial, not re-derived "
-                f"from unchanged cheap evidence)."
-            )
-            rejected.append(
-                f"{top.name} (evidence confidence {top.confidence:.2f}): rejected after "
-                f"{failures} failed trial(s) of {top.recommended_actions} on this cluster "
-                f"produced zero improvements."
-            )
-            top.contradicting_evidence.append(
-                f"empirically falsified: {failures}/{len(trials)} trials of the recommended "
-                f"action regressed or failed to improve WNS on this exact cluster."
-            )
-            top.confidence = penalized
-            last_falsified = top.name
-            ranked.sort(key=lambda h: h.confidence, reverse=True)
-            if ranked[0].name == top.name:
-                break
-        return ranked, rejected, last_falsified
-
-    # ------------------------------------------------------------------
-    # experiment design: measure -> characterize -> explain -> hypothesize
-    # -> experiment -> update belief, made explicit instead of implicit
-    # ------------------------------------------------------------------
-    def _build_experiment(
-        self,
-        cluster: FailureCluster,
-        hypothesis: RootCauseHypothesis,
-        hypothesis_falsified: bool,
-        evidence: dict,
-    ) -> Experiment:
-        if hypothesis_falsified:
-            return Experiment(
-                action="rapidwright_analyze_net_detour",
-                expected_effect=(
-                    "no direct WNS change (this is an analysis step); it should either "
-                    "confirm a high routing-detour ratio, supporting long_interconnect via a "
-                    "different mechanism than raw spread, or rule it out and unblock a "
-                    "hypothesis this cluster hasn't tried yet."
-                ),
-                rationale=(
-                    f"{hypothesis.name}'s recommended action(s) {hypothesis.recommended_actions} "
-                    f"have already been tried and failed repeatedly on cluster '{cluster.id}' -- "
-                    f"re-issuing them again would not test anything new. Pull the one evidence "
-                    f"tier this cluster hasn't been scored against yet before choosing another "
-                    f"physical action."
-                ),
-            )
-        action = hypothesis.recommended_actions[0] if hypothesis.recommended_actions else "phys_opt_design"
-        return Experiment(
-            action=action,
-            expected_effect=(
-                f"if {hypothesis.name} is correct, {action} should reduce avg cluster spread "
-                f"and/or net delay share on cluster '{cluster.id}', improving WNS on this "
-                f"iteration's worst path without regressing other endpoints."
-            ),
-            rationale=(
-                f"first trial of {hypothesis.name} -> {action} on this cluster; the evidence "
-                f"above supports it and outcome memory shows no prior contradicting trials here."
-            ),
         )
 
     # ------------------------------------------------------------------
@@ -794,26 +669,6 @@ class AnalysisEngine:
         hyp = diagnosis.primary_hypothesis
         adjustment_notes: list[str] = []
 
-        if diagnosis.hypothesis_falsified:
-            # Outcome memory already tried to demote this hypothesis below
-            # CONFIDENCE_FLOOR in diagnose(); this is a defensive backstop
-            # for the case where every hypothesis ends up falsified (a
-            # genuine structural stalemate) and the "top" one still nominally
-            # clears the floor by default. Don't let a hypothesis that has
-            # already been tried and failed repeatedly on this cluster keep
-            # steering action selection -- prefer the experiment diagnose()
-            # already picked (recommended_experiment), which was chosen
-            # specifically because it collects new information instead of
-            # repeating a known-failed trial.
-            adjustment_notes.append(
-                f"{hyp.name} (confidence {hyp.confidence:.2f}) is empirically falsified for this "
-                f"cluster; skipping its veto/reorder and deferring to recommended_experiment "
-                f"({diagnosis.recommended_experiment.action if diagnosis.recommended_experiment else 'n/a'}) instead."
-            )
-            diagnosis.action_adjustment = "; ".join(adjustment_notes)
-            hyp.recommended_actions = hyp.recommended_actions or list(allowed)
-            return allowed, forbidden
-
         if hyp.confidence >= CONFIDENCE_FLOOR:
             if hyp.veto_actions:
                 vetoed = [a for a in hyp.veto_actions if a in allowed]
@@ -826,10 +681,35 @@ class AnalysisEngine:
                         f"{hyp.name} (confidence {hyp.confidence:.2f}) vetoed {vetoed}"
                     )
                 elif vetoed:
-                    adjustment_notes.append(
-                        f"{hyp.name} would veto every allowed action ({vetoed}); "
-                        f"skipping the veto rather than stranding the optimizer."
-                    )
+                    # BUG FIX: this used to skip the veto entirely whenever it
+                    # would have emptied `allowed`, on the theory that leaving
+                    # the optimizer with *something* beats zero options. In
+                    # practice that meant a maximally-confident hypothesis
+                    # correctly concluding "none of these base actions will
+                    # work" was powerless -- the LLM kept being handed back
+                    # exactly the actions the diagnosis just disqualified,
+                    # forever (this is what produced 30+ stalled iterations
+                    # cycling pblock <-> rapidwright_optimize_cell_placement
+                    # in run 13 after placement_already_compact took over).
+                    # If the hypothesis names recommended_actions outside the
+                    # vetoed set, substitute those in instead of giving up.
+                    fallback = [a for a in hyp.recommended_actions if a not in hyp.veto_actions]
+                    if fallback:
+                        for action in vetoed:
+                            if action not in forbidden:
+                                forbidden.append(action)
+                        allowed = fallback
+                        adjustment_notes.append(
+                            f"{hyp.name} (confidence {hyp.confidence:.2f}) vetoed every "
+                            f"base action ({vetoed}) and substituted its own recommended "
+                            f"actions {fallback} instead of leaving the optimizer stuck."
+                        )
+                    else:
+                        adjustment_notes.append(
+                            f"{hyp.name} would veto every allowed action ({vetoed}) and "
+                            f"has no recommended_actions to substitute; skipping the veto "
+                            f"rather than stranding the optimizer with zero options."
+                        )
             if hyp.recommended_actions:
                 preferred = [a for a in hyp.recommended_actions if a in allowed]
                 if preferred:
