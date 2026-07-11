@@ -1,0 +1,10 @@
+-------------------------------------
+| Tool Version : Vivado v.2025.1
+| Date         : Sat Jul 11 21:46:16 2026
+| Host         : 35ns7cfvpwajp9e9nht0kyrsvp
+| Design       : checkpoint_iter_005
+| Device       : xcvu3p-ffvc1517-2-E-
+-------------------------------------
+
+For more information on clockInfo.txt clock routing debug file see https://support.xilinx.com/s/article/000035660?language=en_US
+
