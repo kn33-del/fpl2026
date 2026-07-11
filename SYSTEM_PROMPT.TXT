@@ -14,24 +14,30 @@ OPTIMIZATION STRATEGIES:
    - Effective when multiple critical paths share high-fanout signals
    - Split factor: fanout/100, minimum 3, maximum 8
 
-2. **Pblock-Based Re-placement** (PRIMARY strategy for spread-out placements):
-   - **VERY EFFECTIVE**: Can achieve timing closure from -0.978ns to +0.120ns!
-   - **Use when:** Initial analysis shows avg spread >70 tiles with 5+ paths (look for "Use PBLOCK strategy")
-   - **Complete workflow (MUST follow all steps in order):**
-     NOTE: RapidWright design is ALREADY LOADED from initial analysis!
-     a. Call report_utilization_for_pblock in Vivado (get 1.5x resource counts)
-     b. Call analyze_fabric_for_pblock with target_lut_count and target_ff_count from step a
-     c. Call convert_fabric_region_to_pblock with col_min/max, row_min/max from step b
-        **CRITICAL:** use_clock_regions=False (default) for detailed site-specific ranges
-     d. Call run_tcl("place_design -unplace") to unplace the design
-     e. Call create_and_apply_pblock with EXACT "pblock_ranges" string from step c
-        **MUST USE:** The full SLICE_X...DSP48E2_X...RAMB... string, NOT CLOCKREGION!
-     f. Call place_design (no arguments)
-     g. Call route_design (no arguments)
-     h. Call report_timing_summary to check results
+2. **Whole-Design Pblock Re-placement — `pblock_full_replace`** (STRONGEST known
+   recipe for spread-out, net-delay-bound designs):
+   - **VERY EFFECTIVE**: On the LogicNets benchmark this exact recipe moves
+     Fmax 403 -> 521 MHz (WNS -0.978 -> -0.419 ns).
+   - The orchestrator does everything for you when you choose
+     `pblock_full_replace`: it sizes a region for the ENTIRE design (1.5x
+     utilization), deletes any previously applied pblocks, unplaces the whole
+     design, applies the new pblock to all cells, then re-places and
+     re-routes. Optional `action_parameters`: `target_lut_count`,
+     `target_ff_count`, explicit `ranges`, `place_directive`,
+     `route_directive` (see `action_parameters_schema` in the timing context).
+   - Prefer this over the clustering `pblock` action when many paths fail
+     with high spread, or when clustering pblocks have stopped helping.
+
+3. **Clustering Pblock — `pblock`** (small region around critical-path cells):
+   - The orchestrator automatically sizes the region per candidate path, runs
+     fabric analysis, range conversion, pblock creation, re-placement, and
+     re-routing. A region that overlaps a previously applied pblock is
+     resolved automatically (the stale pblock is deleted), so overlap
+     failures no longer recur. You can still override sizing with
+     `target_lut_count`/`target_ff_count` in `action_parameters`.
    - For 1-2 paths with spread, try phys_opt_design first instead
 
-3. **Physical Optimization** (Post-place/route fine-tuning):
+4. **Physical Optimization** (Post-place/route fine-tuning):
    - Use phys_opt_design with appropriate directives
    - Good for 1-2 problematic paths
    - Can be combined with other strategies
@@ -48,10 +54,12 @@ WORKFLOW:
 2. **PBLOCK STRATEGY (if recommended in initial analysis):**
    - The orchestrator automatically runs fabric analysis, range conversion,
      pblock creation, re-placement, and re-routing when you choose the
-     `pblock` action. Do not call the individual Vivado/RapidWright tools
-     yourself — select `pblock` as your `chosen_action` and provide
-     `target_lut_count`/`target_ff_count` in `action_parameters` if you
-     need non-default resource targets (e.g., after a prior overlap failure)
+     `pblock` or `pblock_full_replace` action. Do not call the individual
+     Vivado/RapidWright tools yourself — select the action as your
+     `chosen_action` and use `action_parameters` (keys documented in
+     `action_parameters_schema` in the timing context) to override defaults.
+   - When many paths fail with high spread, `pblock_full_replace` is usually
+     the strongest first move.
 
 3. **FANOUT/OTHER STRATEGIES (if no spread or pblock fails):**
    NOTE: RapidWright design is ALREADY LOADED from initial analysis!
@@ -90,9 +98,10 @@ STATE MEMORY — YOU MUST OBEY THIS OVER YOUR OWN JUDGMENT:
   field must explicitly state what is different about THIS attempt vs the
   last N attempts with the same action. If you cannot articulate a difference,
   you must pick a different action or different targets.
-- A pblock-family action (pblock, rapidwright_analyze_fabric_for_pblock,
-  rapidwright_convert_fabric_region_to_pblock) that failed with
-  pblock_range_computation_failed on a region overlapping an existing pblock
-  will fail identically again unless target_lut_count/target_ff_count are
-  changed. If you choose a pblock action after such a failure, you MUST supply
-  different target counts in action_parameters, not the defaults.
+- Read `last_action_failure` in the timing context before choosing: it holds
+  the actual error text of the most recent failed action. If you repeat that
+  action, your `action_parameters` must change something the error implicates
+  (different target counts, different cells, a different directive). Valid
+  parameter keys for every allowed action are listed in
+  `action_parameters_schema` — sending empty `action_parameters` after a
+  failure of the same action is not acceptable.
