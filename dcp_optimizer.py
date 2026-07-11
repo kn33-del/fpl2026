@@ -80,7 +80,21 @@ BLACKLIST_TTL_ITERS = 15
 # that's likely to succeed on the next retry.
 PBLOCK_OVERLAP_COOLDOWN_ITERS = 20
 ACTION_FAILURE_COOLDOWN_ITERS = 5
-ABSOLUTE_STALL_HARD_LIMIT = 15
+# Fix #10 (score-aware stall stop): the contest score is
+# alpha - 0.1*alpha*cost - 0.1*alpha*(runtime/3600), so every iteration past
+# the last improvement is pure negative value. Run history showed runs
+# burning 30+ consecutive stalled iterations (~$0.5 and ~15 min of runtime)
+# after the final improvement at iteration 2. Five consecutive stalls is
+# enough to have tried every strategy family at least once given the
+# deadlock fixes (#11/#12) that keep the action menu from collapsing.
+ABSOLUTE_STALL_HARD_LIMIT = 5
+# Fix #13 (context cap): how many of the most recent conversation messages
+# (after the pinned system prompt + initial-analysis message) are kept
+# verbatim when pruning the LLM conversation each iteration. Older turns are
+# collapsed into a compact per-iteration summary derived from
+# checkpoint_manager history. Without this, runs were sending 2.4M-7M prompt
+# tokens (65k+/call, zero cache hits) of stale per-iteration JSON.
+CONTEXT_KEEP_RECENT_MESSAGES = 6
 # --- Cluster-aware cell placement guard (fix #4) ---
 # rapidwright_optimize_cell_placement moves each requested cell independently.
 # If cells on the same critical path are tightly coupled, moving one without
@@ -108,6 +122,14 @@ RAPIDWRIGHT_STRUCTURAL_ACTIONS = [
     # "rapidwright_analyze_fabric_for_pblock",
     # "rapidwright_convert_fabric_region_to_pblock",
     "pblock",
+    # Fix #9: whole-design pblock re-place. This is the recipe that test mode
+    # uses on LogicNets (403 -> 521 MHz) and it was previously unreachable in
+    # agent mode: the "pblock" action only ever builds a tiny clustering
+    # pblock sized per candidate path (~40 LUTs each). pblock_full_replace
+    # sizes a region for the ENTIRE design (1.5x utilization), unplaces
+    # everything, applies the pblock to the whole design, and re-places +
+    # re-routes inside it.
+    "pblock_full_replace",
 ]
 PBLOCK_ACTION_FAMILY = {
     "pblock",
@@ -122,6 +144,9 @@ PBLOCK_ACTION_FAMILY = {
 # addresses the actual dispersion. Put the pblock track first so it's genuinely
 # prioritized instead of just re-deriving the same default order.
 RAPIDWRIGHT_PLACEMENT_ACTIONS = [
+    # Fix #9: for widely-spread net-delay-bound designs, the whole-design
+    # re-place is the empirically strongest known recipe, so it goes first.
+    "pblock_full_replace",
     # "rapidwright_analyze_fabric_for_pblock",
     # "rapidwright_convert_fabric_region_to_pblock",
     "pblock",
@@ -137,6 +162,45 @@ VIVADO_INCREMENTAL_IMPLEMENTATION_ACTIONS = {
 DEFAULT_PBLOCK_TARGET_LUT_COUNT = 20000
 DEFAULT_PBLOCK_TARGET_FF_COUNT = 40000
 DEFAULT_PBLOCK_NAME_PREFIX = "pblock_net_delay"
+# Fix #14: documents the valid `action_parameters` keys per action, shipped
+# to the LLM inside every timing context. Previously the decision prompt
+# showed `"action_parameters": { ... }` with no key documentation anywhere,
+# and run history confirmed the model sent `{}` on every single call -- it
+# had no way to know what it could control.
+ACTION_PARAMETERS_SCHEMA = {
+    "pblock": {
+        "target_lut_count": "int, LUTs the clustering pblock region must fit (default: sized per candidate path)",
+        "target_ff_count": "int, FFs the region must fit",
+        "use_clock_regions": "bool, emit CLOCKREGION ranges instead of site ranges (default false)",
+    },
+    "pblock_full_replace": {
+        "target_lut_count": "int, override whole-design LUT budget (default: 1.5x design utilization)",
+        "target_ff_count": "int, override whole-design FF budget",
+        "ranges": "str, explicit pblock range (e.g. 'SLICE_X55Y60:SLICE_X111Y254') skipping fabric analysis",
+        "place_directive": "str, place_design directive (default 'Default')",
+        "route_directive": "str, route_design directive (default 'Default')",
+    },
+    "rapidwright_optimize_cell_placement": {
+        "cell_names": "list[str], explicit cells to move (default: derived from critical paths)",
+        "max_candidates": "int, cap on cells moved this iteration",
+        "num_paths": "int, critical paths to extract when deriving cells",
+        "detour_threshold": "float, min routed/manhattan detour ratio to flag a cell",
+    },
+    "fanout_split": {
+        "split_factor": "int, driver replication factor (default fanout/100, clamped 2-8)",
+    },
+    "lut_opt": {
+        "hierarchical_input_pins": "list[str], REQUIRED input pins of the LUT cone to collapse",
+    },
+    "phys_opt_design": {
+        "directive": "str, e.g. 'Explore', 'AggressiveExplore', 'RuntimeOptimized'",
+    },
+    "phys_opt_design_retime": {
+        "directive": "str, phys_opt directive used with retiming enabled",
+    },
+    "place_design_explore": {},
+    "replicate_register": {},
+}
 # Fix #5 (pblock sizing): the old fallback chain used the WHOLE design's
 # lut_count/ff_count (from rapidwright_read_checkpoint) or a hardcoded 20000
 # whenever the LLM didn't pass an explicit target_lut_count. pblock is meant
@@ -922,6 +986,15 @@ class DCPOptimizer(DCPOptimizerBase):
         # logging/inspection.
         self.analysis_engine = AnalysisEngine(self)
         self.last_diagnosis: Optional[Diagnosis] = None
+        # Fix #10: the contest scores whatever design sits at the output DCP
+        # path when the 1-hour budget expires ("Teams should update the best
+        # solution ... as they go"). Keep the path around so every improvement
+        # and every stop path can publish the current best checkpoint there.
+        self.output_dcp_path: Optional[Path] = None
+        # Fix #14: the full error text of the most recent failed action, fed
+        # back to the LLM in the next timing context so it can actually react
+        # (e.g. change pblock target counts) instead of guessing blind.
+        self.last_action_failure: Optional[dict] = None
     
     async def start_servers(self):
         """Start and connect to both MCP servers."""
@@ -1645,6 +1718,15 @@ class DCPOptimizer(DCPOptimizerBase):
             or ""
         )
         failed_targets = list(self.last_targets)
+        # Fix #14: keep the actual failure text around so the next timing
+        # context can show the LLM WHY the action failed, not just that it did.
+        self.last_action_failure = {
+            "iteration": self.iteration,
+            "action": failed_action,
+            "error_type": failure.get("error_type"),
+            "message": str(failure.get("message") or "")[:1500],
+            "targets": failed_targets[:5],
+        }
         if self._is_no_action_failure(failure):
             failure_key = (failed_action, tuple(failed_targets), self.iteration)
             if self.last_no_action_failure_key != failure_key:
@@ -1724,7 +1806,62 @@ class DCPOptimizer(DCPOptimizerBase):
             persist()
         logger.error("Recorded WNS parse error for iteration %s from %s: %s", self.iteration, source, reason)
 
+    def _history_digest(self, max_iterations: int = 40) -> str:
+        """One line per past iteration, derived from checkpoint history.
+
+        Used as the replacement text when older conversation turns are pruned
+        (Fix #13) -- it preserves the decision-relevant signal (what was tried,
+        on what, and what happened) at a tiny fraction of the tokens.
+        """
+        if self.checkpoint_manager is None or not self.checkpoint_manager.iterations:
+            return "(no completed iterations yet)"
+        lines: list[str] = []
+        for record in self.checkpoint_manager.iterations[-max_iterations:]:
+            targets = ", ".join(str(t) for t in (record.get("targets") or [])[:2])
+            wns_after = record.get("wns_after")
+            wns_text = f"{wns_after:.3f}" if isinstance(wns_after, (int, float)) else "n/a"
+            line = (
+                f"iter {record.get('iter')}: {record.get('recipe')} -> "
+                f"{record.get('status')} (wns_after={wns_text} ns) targets=[{targets}]"
+            )
+            reason = str(record.get("reason") or "").strip()
+            if reason:
+                line += f" reason={reason[:160]}"
+            lines.append(line)
+        lines.append(f"Current state: {self.checkpoint_manager.summary()}")
+        return "\n".join(lines)
+
+    def _prune_conversation(self) -> None:
+        """Cap LLM conversation growth (Fix #13).
+
+        The conversation used to grow without bound: every iteration appended
+        a full timing-context JSON plus the model reply, producing 2.4M-7M
+        prompt tokens per run with zero cache hits. Keep the pinned prefix
+        (system prompt + initial analysis) and the most recent turns verbatim,
+        and collapse everything in between into a compact per-iteration digest
+        built from checkpoint history. The stable prefix also makes provider-
+        side prompt caching possible again.
+        """
+        pinned = 2  # system prompt + initial task/analysis message
+        if len(self.messages) <= pinned + CONTEXT_KEEP_RECENT_MESSAGES + 1:
+            return
+        recent = self.messages[-CONTEXT_KEEP_RECENT_MESSAGES:]
+        digest_message = {
+            "role": "user",
+            "content": (
+                "PRIOR ITERATION DIGEST (older turns pruned to keep context "
+                "small; one line per iteration):\n" + self._history_digest()
+            ),
+        }
+        pruned_count = len(self.messages) - pinned - len(recent)
+        self.messages = [*self.messages[:pinned], digest_message, *recent]
+        logger.info(
+            "Pruned %d old conversation messages into a %d-line history digest.",
+            pruned_count, len(digest_message["content"].splitlines()),
+        )
+
     async def _append_iteration_context(self) -> None:
+        self._prune_conversation()
         current_wns = await self._get_current_wns()
         if current_wns is not None:
             await self._refresh_target_candidates(current_wns)
@@ -1740,7 +1877,7 @@ class DCPOptimizer(DCPOptimizerBase):
             "  \"delay_class_acknowledged\": <copy delay_class from input>,\n"
             "  \"endpoint_type_acknowledged\": <copy endpoint_type from input>,\n"
             "  \"chosen_action\": <must be from allowed_actions>,\n"
-            "  \"action_parameters\": { ... },\n"
+            "  \"action_parameters\": <object; valid keys per action are documented in action_parameters_schema below -- use them, especially after a failure reported in last_action_failure>,\n"
             "  \"why_this_fits_delay_class\": <one sentence, must reference net_pct or logic_pct>,\n"
             "  \"why_not_top_forbidden_action\": <one sentence explaining why the most tempting forbidden action does not apply here>,\n"
             "  \"confidence\": <1-5>\n"
@@ -1816,6 +1953,31 @@ class DCPOptimizer(DCPOptimizerBase):
             )
         allowed = self._filter_exhausted_actions(allowed)
         exhausted_actions = self._active_exhausted_actions()
+        # Fix #12 (deadlock breaker): run history showed iterations where
+        # EVERY action in allowed_actions was simultaneously in
+        # exhausted_actions -- the system prompt forbids exhausted actions
+        # even when listed as allowed, so the LLM had literally no legal
+        # move and cycled between two cooling-down actions for 30+
+        # iterations. When that happens, re-open the forbidden list: any
+        # implemented action that is not hard-blocked (license) becomes
+        # selectable again. A logic-level or phys_opt attempt the rule
+        # engine deprioritized is strictly better than a guaranteed no-op.
+        if allowed and all(action in exhausted_actions for action in allowed):
+            hard_blocked: set[str] = {"logic_restructure"}  # not implemented by the dispatcher
+            if self.implementation_license_available is False:
+                hard_blocked |= set(VIVADO_INCREMENTAL_IMPLEMENTATION_ACTIONS) | {"fanout_split"}
+            reopened = [
+                action for action in forbidden
+                if action not in hard_blocked and action not in exhausted_actions
+            ]
+            if reopened:
+                logger.warning(
+                    "All allowed actions %s are exhausted; re-opening previously "
+                    "forbidden actions %s to break the deadlock.",
+                    allowed, reopened,
+                )
+                allowed = [*allowed, *reopened]
+                forbidden = [action for action in forbidden if action not in reopened]
         recommendation = None
         if high_spread:
             recommendation = (
@@ -1859,6 +2021,15 @@ class DCPOptimizer(DCPOptimizerBase):
             "allowed_actions": allowed,
             "forbidden_actions": forbidden,
             "recommendation": recommendation,
+            # Fix #14: give the LLM the information it needs to pick
+            # parameters instead of sending {} every turn: the actual error
+            # text of the most recent failure, and the valid parameter keys
+            # for each action currently on the menu.
+            "last_action_failure": self.last_action_failure,
+            "action_parameters_schema": {
+                action: ACTION_PARAMETERS_SCHEMA.get(action, {})
+                for action in allowed
+            },
             # Analysis Layer (Stage 2): cluster_count/primary_diagnosis/
             # reasoning_trace are always descriptive/logging. action_adjustment
             # is the one field that reflects an actual change to allowed/
@@ -2382,16 +2553,12 @@ class DCPOptimizer(DCPOptimizerBase):
         if params.get("ranges"):
             return params, None
 
-        # Fix #7 continued: if we already know pblock is in its overlap
-        # cooldown, don't spend two RapidWright round trips (analyze_fabric +
-        # convert_region) just to rediscover the same collision -- this is
-        # the "smarter selection" half of the fix, not just a longer wait.
-        if self.iteration <= self.pblock_region_cooldown_until_iter:
-            return None, (
-                f"pblock is in overlap cooldown until iteration {self.pblock_region_cooldown_until_iter} "
-                f"(a previous attempt this run collided with an already-applied pblock region); "
-                f"skipping fabric analysis and letting other actions run instead."
-            )
+        # Fix #11: the old "overlap cooldown" early-return that lived here is
+        # gone -- overlapping regions are now resolved by deleting the stale
+        # pblock (see the overlap branch below) instead of withholding the
+        # pblock action for 20 iterations, which run history showed turned
+        # into a permanent deadlock once the first pblock landed on the
+        # timing-critical region.
 
         # Fix #5: size the pblock request off the actual number of critical-path
         # candidates we're clustering, not the whole design. last_design_info
@@ -2420,7 +2587,6 @@ class DCPOptimizer(DCPOptimizerBase):
         last_error: Optional[str] = None
         overlap_attempt = 0
         size_attempt = 0
-        rejected_regions: list[dict] = []
 
         while True:
             analysis_args = {
@@ -2439,48 +2605,45 @@ class DCPOptimizer(DCPOptimizerBase):
             if not all(key in region for key in required_region_keys):
                 return None, f"RapidWright fabric analysis did not return recommended_region: {fabric_text[:300]}"
 
-            # --- Fix #2a: reject regions that overlap a pblock already applied
-            # this run. Vivado handles overlapping pblocks poorly, and it creates
-            # complex, hard-to-solve placement scenarios. ---
+            # --- Fix #2a, reworked (Fix #11): a region overlapping a pblock
+            # applied EARLIER this run used to put pblock on a 20-iteration
+            # cooldown ("withholding pblock"). Run history showed that once the
+            # first pblock landed on the timing-critical region, every future
+            # recommendation overlapped it, so the pblock family was
+            # effectively dead for the rest of the run -- 25+ consecutive
+            # withheld attempts while the design never changed. The critical
+            # region is critical precisely because that's where the failing
+            # paths live; refusing to ever touch it again is a deadlock, not a
+            # safety feature. Instead, delete the stale overlapping pblock
+            # from the live design (its cells keep their current placement)
+            # and proceed with the newly recommended region. ---
             overlap = self._find_pblock_overlap(region)
-            if overlap is not None:
-                rejected_regions.append(dict(region))
-                if overlap_attempt < PBLOCK_OVERLAP_MAX_RETRIES:
-                    # The tool is deterministic for a given sizing, so asking again
-                    # with the *same* target counts just reproduces the same region
-                    # and the same collision. Perturb the sizing (grow it) so the
-                    # fabric analysis is steered toward a different part of the
-                    # device instead of re-discovering the region we already used.
-                    overlap_attempt += 1
-                    target_lut_count = int(target_lut_count * PBLOCK_OVERLAP_GROW_FACTOR)
-                    target_ff_count = int(target_ff_count * PBLOCK_OVERLAP_GROW_FACTOR)
+            while overlap is not None:
+                overlap_attempt += 1
+                stale_name = str(overlap.get("pblock_name") or "")
+                if stale_name:
                     logger.warning(
-                        "pblock region overlap (attempt %d/%d): recommended region %s collides "
-                        "with already-applied pblock %s; growing target lut/ff counts to "
-                        "%d/%d and retrying with a different sizing instead of repeating "
-                        "the identical request.",
-                        overlap_attempt, PBLOCK_OVERLAP_MAX_RETRIES, region,
-                        overlap.get("pblock_name"), target_lut_count, target_ff_count,
+                        "pblock region overlap: recommended region %s collides with "
+                        "already-applied pblock %s (iteration %s); deleting the stale "
+                        "pblock and proceeding with the new region instead of "
+                        "withholding the pblock action.",
+                        region, stale_name, overlap.get("iteration"),
                     )
-                    continue
-
-                # Exhausted overlap retries with genuinely different sizings -- now
-                # it's reasonable to conclude pblock has nothing left to offer this
-                # run and cool it down for real, rather than retrying an unchanged
-                # request every 20 iterations forever.
-                self.pblock_region_cooldown_until_iter = self.iteration + PBLOCK_OVERLAP_COOLDOWN_ITERS
-                logger.warning(
-                    "pblock region overlap: %d distinct sizing(s) all recommended regions "
-                    "overlapping already-applied pblocks (last: %s vs %s); withholding pblock "
-                    "from allowed_actions until iteration %d.",
-                    len(rejected_regions), region, overlap.get("pblock_name"),
-                    self.pblock_region_cooldown_until_iter,
-                )
-                return None, (
-                    f"RapidWright fabric analysis recommended overlapping regions on all "
-                    f"{len(rejected_regions)} sizing attempt(s) tried "
-                    f"({rejected_regions}); skipping to avoid overlapping pblocks."
-                )
+                    await self.call_tool(
+                        "vivado_run_tcl",
+                        {
+                            "command": (
+                                f"if {{[llength [get_pblocks -quiet {stale_name}]] > 0}} "
+                                f"{{delete_pblocks [get_pblocks {stale_name}]}}"
+                            )
+                        },
+                        internal=True,
+                    )
+                self.applied_pblock_regions = [
+                    applied for applied in self.applied_pblock_regions if applied is not overlap
+                ]
+                self.pblock_region_cooldown_until_iter = -1
+                overlap = self._find_pblock_overlap(region)
 
             convert_args = {
                 "col_min": int(region["col_min"]),
@@ -2655,6 +2818,192 @@ class DCPOptimizer(DCPOptimizerBase):
             "pblock_name": pblock_name,
             "iteration": self.iteration,
         })
+
+    def _parse_pblock_utilization_counts(self, util_text: str) -> dict[str, int]:
+        """Parse the '1.5x Multiplier' section of report_utilization_for_pblock."""
+        counts: dict[str, int] = {}
+        section = util_text
+        marker = "1.5x Multiplier"
+        idx = util_text.find(marker)
+        if idx >= 0:
+            section = util_text[idx:]
+        for label, key in (("LUTs", "LUT"), ("FFs", "FF"), ("DSPs", "DSP"), ("BRAMs", "BRAM"), ("URAMs", "URAM")):
+            match = re.search(rf"{label}:\s*([\d,]+)", section)
+            if match:
+                counts[key] = int(match.group(1).replace(",", ""))
+        return counts
+
+    async def _execute_pblock_full_replace(self, params: dict) -> str:
+        """Whole-design pblock re-place: size a region for the entire design,
+        drop all existing pblocks, unplace, constrain everything into the new
+        region, then re-place and re-route. Mirrors the test-mode LogicNets
+        recipe that agent mode previously could not express."""
+        if not await self._check_implementation_license():
+            return self._failure_json(
+                "vivado_license_failure",
+                "Vivado Implementation license is unavailable; pblock_full_replace requires place/route.",
+                command="pblock_full_replace",
+            )
+        self.last_recipe = "pblock_full_replace"
+        self.last_batch_size = 1
+        ranges = params.get("ranges")
+        region: Optional[dict] = None
+
+        if not ranges:
+            util_text = await self.call_tool("vivado_report_utilization_for_pblock", {}, internal=True)
+            counts = self._parse_pblock_utilization_counts(util_text)
+            target_lut_count = int(params.get("target_lut_count") or counts.get("LUT") or 0)
+            target_ff_count = int(params.get("target_ff_count") or counts.get("FF") or 0)
+            target_dsp_count = int(params.get("target_dsp_count") or counts.get("DSP") or 0)
+            target_bram_count = int(params.get("target_bram_count") or counts.get("BRAM") or 0)
+            if target_lut_count <= 0 or target_ff_count <= 0:
+                return self._failure_json(
+                    "full_replace_utilization_unavailable",
+                    f"Could not derive whole-design LUT/FF counts from utilization report: {util_text[:300]}",
+                    command="pblock_full_replace",
+                )
+            fabric_text = await self.call_tool(
+                "rapidwright_analyze_fabric_for_pblock",
+                {
+                    "target_lut_count": target_lut_count,
+                    "target_ff_count": target_ff_count,
+                    "target_dsp_count": target_dsp_count,
+                    "target_bram_count": target_bram_count,
+                },
+                internal=True,
+            )
+            fabric = self._parse_json_result(fabric_text)
+            if self._result_has_error(fabric):
+                return self._failure_json(
+                    "full_replace_fabric_analysis_failed",
+                    f"RapidWright fabric analysis failed: {fabric.get('error') or fabric_text[:300]}",
+                    command="pblock_full_replace",
+                )
+            region = fabric.get("recommended_region") or {}
+            if not all(key in region for key in ("col_min", "col_max", "row_min", "row_max")):
+                return self._failure_json(
+                    "full_replace_fabric_analysis_failed",
+                    f"RapidWright fabric analysis did not return recommended_region: {fabric_text[:300]}",
+                    command="pblock_full_replace",
+                )
+            range_text = await self.call_tool(
+                "rapidwright_convert_fabric_region_to_pblock",
+                {
+                    "col_min": int(region["col_min"]),
+                    "col_max": int(region["col_max"]),
+                    "row_min": int(region["row_min"]),
+                    "row_max": int(region["row_max"]),
+                    "use_clock_regions": bool(params.get("use_clock_regions", False)),
+                },
+                internal=True,
+            )
+            range_payload = self._parse_json_result(range_text)
+            if self._result_has_error(range_payload):
+                return self._failure_json(
+                    "full_replace_range_conversion_failed",
+                    f"RapidWright pblock range conversion failed: {range_payload.get('error') or range_text[:300]}",
+                    command="pblock_full_replace",
+                )
+            ranges = range_payload.get("pblock_ranges")
+            if not ranges:
+                return self._failure_json(
+                    "full_replace_range_conversion_failed",
+                    f"RapidWright pblock range conversion returned no pblock_ranges: {range_text[:300]}",
+                    command="pblock_full_replace",
+                )
+
+        pblock_name = str(params.get("pblock_name") or f"pblock_full_replace_{self.iteration:03d}")
+        self.last_targets = ["full_design", str(ranges)]
+        self.last_rapidwright_edit_summary = {
+            "action": "pblock_full_replace",
+            "cells_moved": 0,
+            "nets_affected": 0,
+            "pblock_ranges": ranges,
+            "fabric_region": region,
+        }
+
+        async def _restore_best_after_failure() -> None:
+            # The design is unplaced/half-implemented at this point; put the
+            # live Vivado session back on the best known checkpoint so the
+            # next iteration doesn't operate on a broken state.
+            if self.checkpoint_manager is not None:
+                best_ckpt = self.checkpoint_manager.get_best_checkpoint()
+                if best_ckpt:
+                    await self.call_tool(
+                        "vivado_open_checkpoint", {"dcp_path": best_ckpt, "timeout": 600}, internal=True
+                    )
+
+        # A whole-design re-place supersedes every pblock applied so far:
+        # delete them all and reset the overlap bookkeeping so the fresh
+        # region can never collide with stale state.
+        delete_result = await self.call_tool(
+            "vivado_run_tcl",
+            {"command": "if {[llength [get_pblocks -quiet]] > 0} {delete_pblocks [get_pblocks]}"},
+            internal=True,
+        )
+        self.applied_pblock_regions.clear()
+        self.pblock_region_cooldown_until_iter = -1
+
+        unplace_result = await self.call_tool(
+            "vivado_run_tcl", {"command": "place_design -unplace", "timeout": 600}, internal=True
+        )
+        if self._vivado_output_has_error(unplace_result):
+            await _restore_best_after_failure()
+            return self._failure_json(
+                "full_replace_unplace_failed",
+                f"place_design -unplace failed: {unplace_result[:4000]}",
+                command="pblock_full_replace",
+            )
+
+        apply_result = await self.call_tool(
+            "vivado_create_and_apply_pblock",
+            {
+                "pblock_name": pblock_name,
+                "ranges": ranges,
+                "apply_to": "current_design",
+                "is_soft": False,
+            },
+        )
+        apply_payload = self._parse_json_result(apply_result)
+        if self._result_has_error(apply_payload):
+            logger.error(f"pblock_full_replace apply failed - full result:\n{apply_result}")
+            await _restore_best_after_failure()
+            return self._failure_json(
+                apply_payload.get("error_type", "full_replace_pblock_failed"),
+                apply_payload.get("message", apply_result[:4000]),
+                command="pblock_full_replace",
+            )
+
+        place_result = await self.call_tool(
+            "vivado_place_design",
+            {"directive": str(params.get("place_directive") or "Default"), "timeout": 3600},
+            internal=True,
+        )
+        if self._action_failure(place_result, default_command="vivado_place_design"):
+            logger.error(f"pblock_full_replace place failed - full output:\n{place_result}")
+            await _restore_best_after_failure()
+            return self._failure_json(
+                "full_replace_place_failed",
+                f"Whole-design pblock applied but placement failed: {place_result[:4000]}",
+                command="pblock_full_replace",
+            )
+        route_result = await self.call_tool(
+            "vivado_route_design",
+            {"directive": str(params.get("route_directive") or "Default"), "timeout": 3600},
+            internal=True,
+        )
+        if self._action_failure(route_result, default_command="vivado_route_design"):
+            logger.error(f"pblock_full_replace route failed - full output:\n{route_result}")
+            await _restore_best_after_failure()
+            return self._failure_json(
+                "full_replace_route_failed",
+                f"Whole-design pblock placed but routing failed: {route_result[:4000]}",
+                command="pblock_full_replace",
+            )
+        self._register_applied_pblock(region, pblock_name)
+        return "\n\n".join(
+            part for part in (delete_result, apply_result, place_result, route_result) if part
+        )
 
     def _summarize_cell_placement(self, payload: dict, requested_cells: list[str]) -> dict:
         results = payload.get("results") if isinstance(payload.get("results"), list) else []
@@ -2858,6 +3207,32 @@ class DCPOptimizer(DCPOptimizerBase):
         if wns_measured is not None:
             await self._record_iteration_timing(wns_measured, elapsed_time)
 
+    def _publish_best_to_output(self) -> None:
+        """Copy the best checkpoint so far to the contest output DCP path.
+
+        Called after every improvement and on every stop path so the output
+        location always holds the best validated design -- the contest
+        evaluates whatever is at that path when the wall-clock budget runs
+        out, and a missing/stale output scores zero.
+        """
+        if self.output_dcp_path is None or self.checkpoint_manager is None:
+            return
+        best = self.checkpoint_manager.get_best_checkpoint()
+        if not best:
+            return
+        source = Path(best)
+        if not source.exists():
+            logger.warning("Best checkpoint %s does not exist; cannot publish to output.", source)
+            return
+        try:
+            destination = self.output_dcp_path.resolve()
+            if source.resolve(strict=False) == destination:
+                return
+            shutil.copy2(source, destination)
+            logger.info("Published best checkpoint %s to output DCP %s", source, destination)
+        except OSError as exc:
+            logger.error("Failed to publish best checkpoint to output DCP: %s", exc)
+
     async def _record_iteration_timing(self, wns: float, vivado_runtime_s: float) -> None:
         """Persist timing/checkpoint history for completed optimizer iterations."""
         if self.checkpoint_manager is None:
@@ -2902,6 +3277,8 @@ class DCPOptimizer(DCPOptimizerBase):
         self.no_improvement_count = self.checkpoint_manager.stall_count
         self.consecutive_no_improvement = self.checkpoint_manager.stall_count
         self.last_recorded_wns = wns
+        if iteration.get("status") in {"improved", "marginal"}:
+            self._publish_best_to_output()
         # Fix #1: gate the reset/remember-failure bookkeeping on
         # last_action_key (the never-renamed dispatch key), not last_recipe
         # (a display label _remember_recipe() may have rewritten). Before
@@ -3559,6 +3936,8 @@ class DCPOptimizer(DCPOptimizerBase):
             place = await self.call_tool("vivado_place_design", {"directive": "Explore", "timeout": 3600})
             route = await self.call_tool("vivado_route_design", {"directive": "Explore", "timeout": 3600})
             return place + "\n\n" + route
+        if action == "pblock_full_replace":
+            return await self._execute_pblock_full_replace(dict(params))
         if action == "pblock":
             if not await self._check_implementation_license():
                 return self._failure_json(
@@ -3914,7 +4293,12 @@ class DCPOptimizer(DCPOptimizerBase):
             return False
 
         self._initialize_run_helpers(input_dcp)
-        
+        # Fix #10: publish immediately (the input design itself at first) so
+        # the contest output path is never empty, then re-publish on every
+        # improvement and stop path.
+        self.output_dcp_path = output_dcp
+        self._publish_best_to_output()
+
         # If timing is already met, continue anyway: this contest flow pushes Fmax
         # by tightening the target clock instead of stopping at closure.
         if self.initial_wns is not None and self.initial_wns >= 0:
@@ -3984,6 +4368,7 @@ Proceed by selecting exactly one validated action per timing-context turn."""
                                 await self.call_tool(
                                     "vivado_open_checkpoint", {"dcp_path": best_ckpt}, internal=True
                                 )
+                        self._publish_best_to_output()
                         self.end_time = time.time()
                         self._print_optimization_summary()
                         return True
@@ -3997,6 +4382,7 @@ Proceed by selecting exactly one validated action per timing-context turn."""
 
                 if self.checkpoint_manager is not None and not self.checkpoint_manager.should_continue():
                     logger.info("Optimization workflow completed")
+                    self._publish_best_to_output()
                     self.end_time = time.time()
                     self._print_optimization_summary()
                     return True
@@ -4013,6 +4399,7 @@ Proceed by selecting exactly one validated action per timing-context turn."""
                             await self.call_tool(
                                 "vivado_open_checkpoint", {"dcp_path": best_ckpt}, internal=True
                             )
+                    self._publish_best_to_output()
                     self.end_time = time.time()
                     self._print_optimization_summary()
                     return True
@@ -4031,20 +4418,24 @@ Proceed by selecting exactly one validated action per timing-context turn."""
                         await self.call_tool("rapidwright_read_checkpoint", {"dcp_path": best_ckpt}, internal=True)
                     except Exception as reopen_exc:
                         logger.exception(f"Failed to reopen checkpoint after desync recovery: {reopen_exc}")
+                        self._publish_best_to_output()
                         self.end_time = time.time()
                         raise
                 else:
                     logger.error("No known-good checkpoint to reopen; aborting run.")
+                    self._publish_best_to_output()
                     self.end_time = time.time()
                     raise
                 continue
 
             except Exception as e:
                 logger.exception(f"Error during optimization: {e}")
+                self._publish_best_to_output()
                 self.end_time = time.time()
                 raise
         
         logger.warning("Reached maximum iterations")
+        self._publish_best_to_output()
         self.end_time = time.time()
         self._print_optimization_summary(max_iterations_reached=True)
         return False
