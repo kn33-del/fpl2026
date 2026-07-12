@@ -159,6 +159,37 @@ VIVADO_INCREMENTAL_IMPLEMENTATION_ACTIONS = {
     "replicate_register",
     "place_design_explore",
 }
+# Actions that only make small incremental improvements to an existing
+# placement, and therefore genuinely cannot fix a deeply negative WNS.
+# Deliberately EXCLUDES place_design_explore: a full re-place is not
+# incremental, and applying the phys_opt WNS floor to it was a category
+# error -- run 20260711's only improvement (-0.92 -> -0.493 ns) came from
+# place_design_explore at a WNS the old gate said was "too negative".
+PHYS_OPT_INCREMENTAL_ACTIONS = {
+    "phys_opt_design",
+    "phys_opt_design_retime",
+    "replicate_register",
+}
+# Directive sweep for place_design_explore (item 3a: search within a recipe).
+# Once one directive has been tried on this design, the next attempt should
+# try a different one instead of repeating -- this is the sweep order an
+# implementation engineer would run, timing-focused first, then the
+# spread-logic variants that help congestion-bound designs.
+PLACE_DIRECTIVE_SWEEP = [
+    "Explore",
+    "ExtraTimingOpt",
+    "AggressiveExplore",
+    "ExtraNetDelay_high",
+    "AltSpreadLogic_high",
+]
+# Item 3b: when the most recent pblock attempt executed cleanly but REGRESSED
+# timing (or changed nothing), the region was likely too tight; grow the next
+# auto-sized request instead of retrying the identical size.
+PBLOCK_REGRESSION_GROW_FACTOR = 1.5
+# Item 4: router congestion level at/above which packing cells tighter (any
+# pblock action) is more likely to hurt than help. Level N means a 2^N x 2^N
+# congested tile window; AMD guidance treats level 5 (32x32) as problematic.
+CONGESTION_LEVEL_HIGH = 5
 DEFAULT_PBLOCK_TARGET_LUT_COUNT = 20000
 DEFAULT_PBLOCK_TARGET_FF_COUNT = 40000
 DEFAULT_PBLOCK_NAME_PREFIX = "pblock_net_delay"
@@ -198,7 +229,13 @@ ACTION_PARAMETERS_SCHEMA = {
     "phys_opt_design_retime": {
         "directive": "str, phys_opt directive used with retiming enabled",
     },
-    "place_design_explore": {},
+    "place_design_explore": {
+        "directive": (
+            "str, place_design directive; if omitted, the next untried entry of "
+            f"{PLACE_DIRECTIVE_SWEEP} is chosen automatically (see place_directives_tried)"
+        ),
+        "route_directive": "str, route_design directive (default 'Explore')",
+    },
     "replicate_register": {},
 }
 # Fix #5 (pblock sizing): the old fallback chain used the WHOLE design's
@@ -239,39 +276,38 @@ TIMING_DECISION_SYSTEM_PROMPT = """
 You are an FPGA timing optimization agent operating on AMD UltraScale+ xcvu3p designs.
 You receive a structured timing state and must choose a physical optimization action.
 
-You follow these rules without exception. Violating them is a harder failure than choosing
-a suboptimal action.
+HOW THE ACTION MENU WORKS:
+- allowed_actions is a RANKED list: earlier actions carry a stronger prior for the
+  current timing evidence. It is a prior, not a law -- empirical results in this run
+  (action_failure_memory, last_action_failure, place_directives_tried,
+  pblock_attempt_history) outrank the static ranking.
+- action_guidance maps some allowed actions to a reason they are DISCOURAGED right now.
+  You MAY choose a discouraged action, but only if you explicitly rebut its guidance
+  reason with evidence from the timing state (e.g. every preferred action has already
+  failed or regressed on these targets this run). Put the rebuttal in
+  why_this_fits_delay_class.
+- forbidden_actions are hard blocks (unimplemented or license-blocked). Never choose them.
 
-RULE 1 - DELAY CLASS BINDING:
-  If delay_class == "net_delay_bound" (net_pct > 0.70):
-    PRIMARY actions must be from allowed_actions, especially RapidWright structural
-    placement actions such as rapidwright_optimize_cell_placement, pblock, and the
-    pblock range-analysis actions.
-    FORBIDDEN as primary: [lut_opt, logic_restructure, fanout_split]
-    Rationale: routing-bound paths need cell movement or placement constraints, not logic optimization.
+PRIORS (the reasoning behind the ranking -- use them, and notice when evidence contradicts them):
+- net_delay_bound (net_pct > 0.70): routing-bound paths usually need cell movement or
+  placement constraints (rapidwright_optimize_cell_placement, pblock, pblock_full_replace,
+  place_design_explore), not logic restructuring. lut_opt/fanout_split are discouraged.
+- logic_delay_bound (logic_pct > 0.70): placement changes do not reduce logic depth;
+  prefer lut_opt, phys_opt_design_retime, fanout_split. Pblock/placement actions are discouraged.
+- mixed: phys_opt_design with -retime is a sensible first probe.
+- BRAM_CONTROL/DSP_CONTROL endpoints: routing to a hard-block control pin needs physical
+  proximity (pblock, replicate_register, place_design_explore); net splitting rarely helps.
+- avg_tile_spread > 30 on a net-bound path: address placement before any routing-only fix.
+- High router congestion (see congestion in the timing state): packing cells tighter
+  (any pblock action) usually makes congestion worse; prefer spreading placements
+  (place_design_explore with AltSpreadLogic_high / ExtraNetDelay_high) or fanout reduction.
 
-  If delay_class == "logic_delay_bound" (logic_pct > 0.70):
-    PRIMARY actions must be from: [lut_opt, phys_opt_design_retime, fanout_split]
-    FORBIDDEN as primary: [pblock, place_design_explore]
-    Rationale: placement changes do not reduce logic depth.
-
-  If delay_class == "mixed":
-    No forbidden actions, but phys_opt_design with -retime is preferred first.
-
-RULE 2 - ENDPOINT BINDING:
-  If endpoint_type == "BRAM_CONTROL" or "DSP_CONTROL":
-    fanout_split is only valid as a SECONDARY action.
-    PRIMARY must address physical co-location: pblock, replicate_register, place_design_explore.
-    Append to rationale: "Routing to hard block control pin requires physical proximity, not net splitting."
-
-RULE 3 - SPREAD BINDING:
-  If avg_tile_spread > 30 AND net_pct > 0.60:
-    First action must address placement. Prefer rapidwright_optimize_cell_placement
-    or a pblock flow with computed ranges before any routing-only fix.
-
-You must not propose actions that contradict these rules. If you find yourself wanting to
-choose a forbidden action, that is a signal your reasoning has drifted from the timing data -
-re-read delay_class and endpoint_type and correct course.
+LEARN FROM THIS RUN'S RESULTS:
+- An action that regressed or failed on the same targets is worth less than its ranking.
+- A recipe family that produced this run's best result is worth re-trying with a stronger
+  or different directive (see place_directives_tried) before switching families.
+- Do not repeat an action+parameters combination that already failed; change what the
+  failure evidence says was wrong (region size, directive, targets), or change action.
 """
 
 
@@ -995,7 +1031,39 @@ class DCPOptimizer(DCPOptimizerBase):
         # back to the LLM in the next timing context so it can actually react
         # (e.g. change pblock target counts) instead of guessing blind.
         self.last_action_failure: Optional[dict] = None
-    
+        # Timing validity (design-state provenance): WNS is only meaningful on
+        # a fully placed AND routed design. Contest inputs are implemented
+        # DCPs, so the state starts "routed"; _update_design_state() tracks
+        # every place/route/unplace/open_checkpoint after that. Any WNS
+        # observed while state != "routed" (e.g. mid-pblock_full_replace,
+        # after `place_design -unplace`) is estimated/garbage and must never
+        # reach best_wns, iteration history, or the LLM.
+        self.design_state: str = "routed"
+        # Whether the currently executing action has issued any command that
+        # mutates the live design (place/route/phys_opt/pblock/unplace or a
+        # RapidWright edit). If such an action then FAILS, the live session is
+        # in an undefined state that no longer matches best_checkpoint, so the
+        # main loop must restore before the next iteration.
+        self.last_action_mutated_design: bool = False
+        # Priors model (item 1): reasons why currently-allowed actions are
+        # discouraged. Rebuilt by _allowed_forbidden_actions each iteration,
+        # shipped to the LLM as action_guidance.
+        self.last_action_guidance: dict[str, str] = {}
+        # Directive sweep memory (item 3a): directive -> outcome for every
+        # place_design_explore attempt this run, so the next attempt tries a
+        # different directive instead of repeating one that already ran.
+        self.place_directive_results: dict[str, dict] = {}
+        self.last_place_directive: Optional[str] = None
+        # Pblock search memory (item 3b): one entry per pblock/full_replace
+        # attempt (ranges, target sizes, outcome), so sizing can adapt --
+        # regression at size S => try a looser region, not the same one.
+        self.pblock_attempt_history: list[dict] = []
+        self.last_pblock_sizing: Optional[dict] = None
+        # Congestion evidence cache (item 4), refreshed at most once per
+        # iteration: {"iteration": int, "congestion_level": Optional[int],
+        # "detail": str}.
+        self.last_congestion_info: dict = {}
+
     async def start_servers(self):
         """Start and connect to both MCP servers."""
         await super().start_servers()
@@ -1061,9 +1129,24 @@ class DCPOptimizer(DCPOptimizerBase):
                 if getattr(result, "isError", False):
                     logger.error(f"{tool_name} returned an MCP error, not Vivado output: {result_text[:500]}")
                     raise VivadoToolCallError(tool_name, result_text)
-            
-            # Track WNS from timing reports and get_wns calls
-            if tool_name == "vivado_report_timing_summary":
+
+            self._update_design_state(tool_name, arguments, result_text)
+
+            # Track WNS from timing reports and get_wns calls -- but only when
+            # the design is in a state where timing is real. On an unplaced or
+            # partially implemented design get_timing_paths still returns
+            # estimated slacks (or 0.0 when no paths exist at all), and letting
+            # those ratchet best_wns / flow into iteration recording poisons
+            # the run summary and the bisection trigger.
+            if (
+                tool_name in ("vivado_report_timing_summary", "vivado_get_wns")
+                and self.design_state != "routed"
+            ):
+                logger.warning(
+                    "Ignoring WNS from %s: design state is '%s', timing is only valid on a fully placed+routed design.",
+                    tool_name, self.design_state,
+                )
+            elif tool_name == "vivado_report_timing_summary":
                 # If target clock is set, get clock-specific WNS instead of overall
                 if self.target_clock:
                     try:
@@ -1243,6 +1326,12 @@ class DCPOptimizer(DCPOptimizerBase):
             self.last_batch_size = len(self.last_targets) or 1
 
     async def _get_current_wns(self) -> Optional[float]:
+        if self.design_state != "routed":
+            logger.warning(
+                "Refusing WNS query: design state is '%s' (WNS is only valid on a fully placed+routed design).",
+                self.design_state,
+            )
+            return None
         args = {"timeout": 60}
         if self.target_clock:
             args["clock"] = self.target_clock
@@ -1411,6 +1500,17 @@ class DCPOptimizer(DCPOptimizerBase):
         return parts[0] if parts else cell
 
     async def _run_phys_opt_with_policy(self, arguments: dict) -> str:
+        if self.design_state != "routed":
+            # phys_opt_design on an unplaced/unrouted design either errors out
+            # or "optimizes" against estimated delays -- both useless. This
+            # guard is what stops the pblock_full_replace interception bug
+            # class (phys_opt after `place_design -unplace`) from ever
+            # recurring, whatever path leads here.
+            return self._failure_json(
+                "phys_opt_invalid_design_state",
+                f"phys_opt_design requires a fully placed and routed design; current state is '{self.design_state}'.",
+                command="phys_opt_design",
+            )
         before_guard_wns = await self._get_current_wns()
         if before_guard_wns is not None and before_guard_wns < PHYS_OPT_MIN_USEFUL_WNS_NS:
             message = (
@@ -1448,6 +1548,16 @@ class DCPOptimizer(DCPOptimizerBase):
         return "\n\n".join(output)
 
     async def _maybe_run_pblock_or_phys_opt(self, arguments: dict) -> str:
+        if self.design_state != "routed":
+            # Classifying the worst path (and possibly running phys_opt) only
+            # makes sense on real routed timing. Reaching here in any other
+            # state means an orchestration bug upstream -- fail loudly instead
+            # of running phys_opt/pblock math against estimated delays.
+            return self._failure_json(
+                "pblock_invalid_design_state",
+                f"pblock/phys_opt decision requires a fully placed and routed design; current state is '{self.design_state}'.",
+                command="vivado_create_and_apply_pblock",
+            )
         classification = await self._classify_worst_path_delay()
         if classification == "logic_delay_bound":
             logger.info("logic-delay-bound path, skipping pblock")
@@ -1551,6 +1661,218 @@ class DCPOptimizer(DCPOptimizerBase):
         # can mark a usable analysis session as broken. Let implementation
         # commands report structured failures when they are actually invoked.
         return self.implementation_license_available is not False
+
+    def _update_design_state(self, tool_name: str, arguments: dict, result_text: str) -> None:
+        """Track whether the live design is unplaced/placed/routed, and whether
+        the in-flight action has mutated it. Called for every tool result
+        (internal or not), so composite/intercepted flows are covered by their
+        leaf calls."""
+        if tool_name.startswith("rapidwright_optimize_"):
+            self.last_action_mutated_design = True
+            return
+        if not tool_name.startswith("vivado_"):
+            return
+        failed = self._vivado_output_has_error(result_text)
+        if tool_name == "vivado_open_checkpoint":
+            if not failed:
+                # Every checkpoint this flow opens (contest input, iter_NNN,
+                # best.dcp) is a fully implemented DCP.
+                self.design_state = "routed"
+            return
+        if tool_name == "vivado_place_design":
+            self.last_action_mutated_design = True
+            if not failed:
+                self.design_state = "placed"
+            return
+        if tool_name == "vivado_route_design":
+            self.last_action_mutated_design = True
+            if not failed:
+                self.design_state = "routed"
+            return
+        if tool_name in ("vivado_phys_opt_design", "vivado_create_and_apply_pblock"):
+            self.last_action_mutated_design = True
+            return
+        if tool_name == "vivado_run_tcl":
+            command = str(arguments.get("command") or "")
+            if "place_design -unplace" in command:
+                self.last_action_mutated_design = True
+                if not failed:
+                    self.design_state = "unplaced"
+            elif "route_design" in command:
+                self.last_action_mutated_design = True
+                if not failed:
+                    self.design_state = "routed"
+            elif "place_design" in command:
+                self.last_action_mutated_design = True
+                if not failed:
+                    self.design_state = "placed"
+            elif "phys_opt_design" in command or "create_pblock" in command or "delete_pblocks" in command:
+                self.last_action_mutated_design = True
+
+    async def _verify_routed_state(self) -> tuple[bool, str]:
+        """Ask Vivado (not just our client-side tracker) whether the design is
+        fully placed and routed. This is the provenance gate a WNS observation
+        must pass before it may become iteration history / best_checkpoint."""
+        raw = await self.call_tool(
+            "vivado_run_tcl",
+            {
+                "command": (
+                    "set _unplaced [llength [get_cells -quiet -hierarchical "
+                    "-filter {IS_PRIMITIVE && STATUS == UNPLACED}]]; "
+                    "puts \"STATE_UNPLACED:$_unplaced\""
+                ),
+                "timeout": 120,
+            },
+            internal=True,
+        )
+        match = re.search(r"STATE_UNPLACED:(\d+)", raw)
+        if not match:
+            return False, f"could not verify placement state: {raw[:200]}"
+        unplaced = int(match.group(1))
+        if unplaced > 0:
+            return False, f"{unplaced} primitive cell(s) are unplaced"
+        route_raw = await self.call_tool("vivado_report_route_status", {"timeout": 300}, internal=True)
+        unrouted_match = re.search(r"#\s*of\s+unrouted\s+nets[.\s]*:\s*(\d+)", route_raw, re.IGNORECASE)
+        errors_match = re.search(r"#\s*of\s+nets\s+with\s+routing\s+errors[.\s]*:\s*(\d+)", route_raw, re.IGNORECASE)
+        unrouted = int(unrouted_match.group(1)) if unrouted_match else None
+        errors = int(errors_match.group(1)) if errors_match else None
+        if unrouted is None and errors is None:
+            if re.search(r"fully routed", route_raw, re.IGNORECASE):
+                return True, "fully routed"
+            return False, f"could not parse route status: {route_raw[:200]}"
+        if (unrouted or 0) > 0 or (errors or 0) > 0:
+            return False, f"{unrouted or 0} unrouted net(s), {errors or 0} net(s) with routing errors"
+        return True, "fully placed and routed"
+
+    async def _restore_best_state(self, reason: str) -> None:
+        """Reopen the best checkpoint in Vivado AND resync RapidWright to it,
+        so both live sessions match the state the history says is best."""
+        if self.checkpoint_manager is None:
+            return
+        best_ckpt = self.checkpoint_manager.get_best_checkpoint()
+        if not best_ckpt:
+            return
+        logger.warning("Restoring best checkpoint %s (%s).", best_ckpt, reason)
+        await self.call_tool(
+            "vivado_open_checkpoint", {"dcp_path": best_ckpt, "timeout": 600}, internal=True
+        )
+        self.active_checkpoint = best_ckpt
+        reload_result = await self.call_tool(
+            "rapidwright_read_checkpoint", {"dcp_path": best_ckpt}, internal=True
+        )
+        if "error" in reload_result.lower() and "success" not in reload_result.lower():
+            logger.error(
+                "Failed to re-sync RapidWright to restored checkpoint %s: %s",
+                best_ckpt, reload_result[:300],
+            )
+
+    def _next_place_directive(self) -> str:
+        """Directive sweep (item 3a): pick the first PLACE_DIRECTIVE_SWEEP entry
+        not yet tried this run; once all have been tried, re-run the best
+        performer instead of an arbitrary repeat."""
+        for directive in PLACE_DIRECTIVE_SWEEP:
+            if directive not in self.place_directive_results:
+                return directive
+
+        def wns_of(item: tuple[str, dict]) -> float:
+            wns = item[1].get("wns_after")
+            return wns if isinstance(wns, (int, float)) else float("-inf")
+
+        return max(self.place_directive_results.items(), key=wns_of)[0]
+
+    def _note_recipe_outcome(self, status: str, wns_after: Optional[float]) -> None:
+        """Per-recipe search memory (item 3): record how this attempt's
+        parameters performed so the NEXT attempt of the same recipe can move in
+        parameter space instead of repeating."""
+        action = self.last_action_key
+        if action == "place_design_explore" and self.last_place_directive:
+            self.place_directive_results[self.last_place_directive] = {
+                "status": status,
+                "wns_after": wns_after,
+                "iteration": self.iteration,
+            }
+        if action in {"pblock", "pblock_full_replace"}:
+            entry = {
+                "action": action,
+                "iteration": self.iteration,
+                "status": status,
+                "wns_after": wns_after,
+                "targets": [str(t) for t in self.last_targets[:2]],
+            }
+            if self.last_pblock_sizing:
+                entry.update(self.last_pblock_sizing)
+            self.pblock_attempt_history.append(entry)
+            del self.pblock_attempt_history[:-10]
+
+    async def _fetch_congestion_summary(self) -> dict:
+        """Item 4: worst router congestion level for the current routed design,
+        cached per iteration (report_design_analysis is not cheap). Unknown
+        (None) means 'could not measure', never 'no congestion'."""
+        if self.last_congestion_info.get("iteration") == self.iteration:
+            return self.last_congestion_info
+        info: dict = {"iteration": self.iteration, "congestion_level": None, "detail": ""}
+        if self.design_state == "routed":
+            raw = await self.call_tool(
+                "vivado_run_tcl",
+                {"command": "report_design_analysis -congestion -return_string", "timeout": 600},
+                internal=True,
+            )
+            level, detail = self._parse_congestion_report(raw)
+            info["congestion_level"] = level
+            info["detail"] = detail
+        self.last_congestion_info = info
+        return info
+
+    @staticmethod
+    def _parse_congestion_report(raw: str) -> tuple[Optional[int], str]:
+        """Tolerant parse of `report_design_analysis -congestion`: the table
+        format shifts between Vivado versions, so accept any of the known
+        shapes and take the worst level seen. Deliberately permissive -- a
+        slight overestimate only demotes pblock with a reason the LLM can
+        rebut, whereas a strict parser that breaks on a format change would
+        silently lose the congestion signal entirely."""
+        if not raw:
+            return None, "empty congestion report"
+        levels: list[int] = []
+        # Table rows like "| NORTH | 5 | ..." (direction then level).
+        for match in re.finditer(r"(?im)^\s*\|?\s*(north|south|east|west)\b[^\d\n]*(\d+)", raw):
+            levels.append(int(match.group(2)))
+        # Prose like "Congestion Level: 5".
+        for match in re.finditer(r"(?i)congestion[^\n\d]{0,40}level[^\n\d]{0,10}(\d+)", raw):
+            levels.append(int(match.group(1)))
+        # Window sizes like "32x32" (2^level tiles on a side).
+        for match in re.finditer(r"\b(\d+)x\1\b", raw):
+            side = int(match.group(1))
+            if side >= 2:
+                levels.append(side.bit_length() - 1)
+        if not levels:
+            return None, "no congestion level found in report"
+        worst = max(levels)
+        return worst, f"worst congestion level {worst} (~{2 ** worst}x{2 ** worst} tile window)"
+
+    async def _fetch_clock_regions(self, cell_names: list[str]) -> dict[str, str]:
+        """Item 4: CLOCK_REGION per placed cell (first site), one Tcl round-trip
+        for the batch. Missing/unplaced cells are simply absent from the map."""
+        regions: dict[str, str] = {}
+        cells = [str(c) for c in cell_names if c][:20]
+        if not cells or self.design_state == "unplaced":
+            return regions
+        snippets = [
+            (
+                f"set _s [lindex [get_sites -quiet -of_objects [get_cells -quiet {{{cell}}}]] 0]; "
+                f"if {{$_s ne {{}}}} {{puts \"CLOCKREGION|{cell}|[get_property CLOCK_REGION $_s]\"}}"
+            )
+            for cell in cells
+        ]
+        raw = await self.call_tool(
+            "vivado_run_tcl", {"command": " ; ".join(snippets), "timeout": 120}, internal=True
+        )
+        for line in raw.splitlines():
+            if line.startswith("CLOCKREGION|"):
+                parts = line.split("|", 2)
+                if len(parts) == 3 and parts[2].strip():
+                    regions[parts[1]] = parts[2].strip()
+        return regions
 
     def _time_remaining_s(self) -> Optional[float]:
         if self.checkpoint_manager is None:
@@ -1661,6 +1983,16 @@ class DCPOptimizer(DCPOptimizerBase):
     async def _record_bisection_pass(self, period_ns: float, wns: float) -> None:
         if self.checkpoint_manager is None:
             return
+        # Same timing-provenance gate as _record_iteration_timing: a passing
+        # WNS under a tightened clock only counts if the design is verifiably
+        # fully placed and routed (a re-route that errored out can leave the
+        # previous "routed" state flag stale).
+        routed_ok, routed_detail = await self._verify_routed_state()
+        if not routed_ok:
+            logger.warning(
+                "Rejecting bisection pass at %.6f ns: %s", period_ns, routed_detail
+            )
+            return
         achieved_fmax = self.calculate_fmax(wns, period_ns)
         if achieved_fmax is not None and (self.best_fmax_mhz is None or achieved_fmax > self.best_fmax_mhz):
             self.best_fmax_mhz = achieved_fmax
@@ -1733,6 +2065,26 @@ class DCPOptimizer(DCPOptimizerBase):
                 self._blacklist_failure_targets(failed_action, failed_targets)
                 self._remember_no_action_failure(failed_action, failed_targets)
                 self.last_no_action_failure_key = failure_key
+        elif failure.get("error_type") != "vivado_license_failure":
+            # BUG FIX (failure memory): hard execution failures used to leave
+            # action_failure_memory completely untouched -- only "no action
+            # target" failures were remembered. So a recipe that blew up
+            # identically every time it ran kept full selection priority: run
+            # 20260711 chose pblock_full_replace at iterations 4, 6 AND 9 with
+            # the exact same ranges and the exact same vivado_command_failure.
+            # Route hard failures through the same consecutive-failure /
+            # structural-window bookkeeping as no-action failures so repeated
+            # broken recipes cool down. Deadlock is impossible by construction:
+            # every cooldown expires (cooldown_until_iter), and
+            # _build_timing_context's deadlock breaker re-opens forbidden
+            # actions if all allowed ones are simultaneously exhausted.
+            # (Target blacklisting is intentionally NOT applied here: hard
+            # failure targets are things like pblock range strings, and the
+            # failure says the recipe broke, not that the cells are bad.)
+            failure_key = (failed_action, tuple(failed_targets), self.iteration)
+            if self.last_no_action_failure_key != failure_key:
+                self._remember_no_action_failure(failed_action, failed_targets)
+                self.last_no_action_failure_key = failure_key
         if self.checkpoint_manager is None:
             return
         iteration = {
@@ -1759,6 +2111,7 @@ class DCPOptimizer(DCPOptimizerBase):
         self.checkpoint_manager.stall_count += 1
         self.no_improvement_count += 1
         self.consecutive_no_improvement += 1
+        self._note_recipe_outcome("failed", None)
         self.checkpoint_manager.iterations.append(iteration)
         persist = getattr(self.checkpoint_manager, "_persist_history", None)
         if callable(persist):
@@ -1862,6 +2215,13 @@ class DCPOptimizer(DCPOptimizerBase):
 
     async def _append_iteration_context(self) -> None:
         self._prune_conversation()
+        if self.design_state != "routed" and self.checkpoint_manager is not None:
+            # Safety net: no iteration may ever start against an unplaced or
+            # half-implemented design, whatever the previous action left
+            # behind. Restore the validated best and continue from there.
+            await self._restore_best_state(
+                f"design state was '{self.design_state}' at iteration start"
+            )
         current_wns = await self._get_current_wns()
         if current_wns is not None:
             await self._refresh_target_candidates(current_wns)
@@ -1870,16 +2230,20 @@ class DCPOptimizer(DCPOptimizerBase):
         timing_context = await self._build_timing_context(current_wns)
         self.last_timing_context = timing_context
         prompt = (
-            "Given the timing state above, select one action from `allowed_actions`.\n"
-            "You may not choose any action in `forbidden_actions`.\n\n"
+            "Given the timing state above, select one action from `allowed_actions` "
+            "(a ranked list -- earlier entries carry a stronger prior).\n"
+            "You may not choose any action in `forbidden_actions` (hard blocks).\n"
+            "If you choose an action listed in `action_guidance`, you must rebut its "
+            "guidance reason with evidence from this run (failure history, directive "
+            "sweep results, congestion) inside why_this_fits_delay_class.\n\n"
             "Respond in this JSON format only, no other text:\n"
             "{\n"
             "  \"delay_class_acknowledged\": <copy delay_class from input>,\n"
             "  \"endpoint_type_acknowledged\": <copy endpoint_type from input>,\n"
             "  \"chosen_action\": <must be from allowed_actions>,\n"
             "  \"action_parameters\": <object; valid keys per action are documented in action_parameters_schema below -- use them, especially after a failure reported in last_action_failure>,\n"
-            "  \"why_this_fits_delay_class\": <one sentence, must reference net_pct or logic_pct>,\n"
-            "  \"why_not_top_forbidden_action\": <one sentence explaining why the most tempting forbidden action does not apply here>,\n"
+            "  \"why_this_fits_delay_class\": <one sentence, must reference net_pct or logic_pct; if the action is in action_guidance, also rebut its reason here>,\n"
+            "  \"why_not_top_forbidden_action\": <one sentence: why the most tempting discouraged/forbidden action does not apply here>,\n"
             "  \"confidence\": <1-5>\n"
             "}\n\n"
             f"{json.dumps(timing_context, indent=2)}"
@@ -1906,6 +2270,13 @@ class DCPOptimizer(DCPOptimizerBase):
         # those same values first, then applies at most one hypothesis
         # (veto and/or reorder) on top if it cleared CONFIDENCE_FLOOR --
         # see diagnosis.action_adjustment / diagnosis.reasoning_trace below.
+        # Item 4: congestion is a pblock/placement decision-changer, so fetch
+        # it BEFORE diagnosis runs (hypotheses and actions_for() read
+        # last_congestion_info). Skipped for logic-delay-bound designs, where
+        # no pblock decision is on the table and the report costs real time.
+        if self.path_delay_classification != "logic_delay_bound":
+            await self._fetch_congestion_summary()
+
         failures = self.analysis_engine.normalize(self.current_target_candidates)
         clusters = self.analysis_engine.cluster(failures)
         diagnosis = await self.analysis_engine.diagnose(clusters, current_wns)
@@ -2030,6 +2401,18 @@ class DCPOptimizer(DCPOptimizerBase):
                 action: ACTION_PARAMETERS_SCHEMA.get(action, {})
                 for action in allowed
             },
+            # Item 1 (priors, not gates): reasons an allowed action is
+            # currently discouraged. Choosing one requires rebutting the
+            # reason -- see TIMING_DECISION_SYSTEM_PROMPT.
+            "action_guidance": dict(self.last_action_guidance),
+            # Item 3 (search within a recipe): what this run has already
+            # tried, so the next attempt moves in parameter space.
+            "place_directives_tried": dict(self.place_directive_results),
+            "pblock_attempt_history": list(self.pblock_attempt_history[-5:]),
+            # Item 4 (decision-changing physical evidence).
+            "congestion_level": self.last_congestion_info.get("congestion_level"),
+            "congestion_detail": self.last_congestion_info.get("detail"),
+            "cluster_clock_regions": sorted(diagnosis.cluster_clock_regions),
             # Analysis Layer (Stage 2): cluster_count/primary_diagnosis/
             # reasoning_trace are always descriptive/logging. action_adjustment
             # is the one field that reflects an actual change to allowed/
@@ -2055,6 +2438,24 @@ class DCPOptimizer(DCPOptimizerBase):
             return "REGISTER"
         return "LUT"
 
+    def _demote_actions(
+        self,
+        allowed: list[str],
+        actions: list[str] | set[str],
+        reason: str,
+    ) -> list[str]:
+        """Move `actions` to the end of the ranked `allowed` list and record
+        `reason` in last_action_guidance. This is the priors replacement for
+        the old hard-forbid: the LLM can still choose a demoted action, but
+        must rebut the recorded reason (see TIMING_DECISION_SYSTEM_PROMPT)."""
+        demoted = [action for action in allowed if action in set(actions)]
+        if not demoted:
+            return allowed
+        for action in demoted:
+            existing = self.last_action_guidance.get(action)
+            self.last_action_guidance[action] = f"{existing}; {reason}" if existing else reason
+        return [action for action in allowed if action not in demoted] + demoted
+
     def _allowed_forbidden_actions(
         self,
         delay_class: str,
@@ -2063,48 +2464,67 @@ class DCPOptimizer(DCPOptimizerBase):
         avg_spread: Optional[float],
         current_wns: Optional[float],
     ) -> tuple[list[str], list[str]]:
+        """Rank the full action menu instead of hard-forbidding by delay class.
+
+        Reworked from hard gates to priors: run 20260711's only improvement
+        (place_design_explore, -0.92 -> -0.493 ns) came from an action this
+        function had put in `forbidden` for net_delay_bound designs -- the LLM
+        only got to use it because the deadlock breaker happened to re-open the
+        forbidden list. `forbidden` now contains only structural impossibilities
+        (unimplemented actions, license blocks); everything else stays in
+        `allowed`, ranked by prior, with demotion reasons recorded in
+        self.last_action_guidance for the LLM to weigh and rebut.
+        """
+        self.last_action_guidance = {}
+        every_action = [
+            *RAPIDWRIGHT_STRUCTURAL_ACTIONS,
+            "place_design_explore",
+            "replicate_register",
+            "phys_opt_design",
+            "phys_opt_design_retime",
+            "fanout_split",
+            "lut_opt",
+        ]
+        # logic_restructure is named in older prompts but has no dispatcher
+        # branch in execute_validated_action -- a true hard block.
+        forbidden = ["logic_restructure"]
+
         if delay_class == "net_delay_bound":
-            allowed = [
-                *RAPIDWRIGHT_STRUCTURAL_ACTIONS,
-                "place_design_explore",
-                "replicate_register",
-                "phys_opt_design",
-            ]
-            forbidden = ["lut_opt", "logic_restructure", "fanout_split"]
+            allowed = list(every_action)
+            allowed = self._demote_actions(
+                allowed,
+                ["lut_opt", "fanout_split"],
+                f"delay class is net_delay_bound (net_pct={net_pct}); logic-side changes rarely fix routing-bound paths",
+            )
         elif delay_class == "logic_delay_bound":
-            allowed = ["lut_opt", "phys_opt_design_retime", "fanout_split"]
-            forbidden = [
-                "pblock",
-                "place_design_explore",
-                "rapidwright_optimize_cell_placement",
-                "rapidwright_analyze_net_detour",
-                "rapidwright_analyze_fabric_for_pblock",
-                "rapidwright_convert_fabric_region_to_pblock",
-            ]
+            preferred = ["lut_opt", "phys_opt_design_retime", "fanout_split"]
+            allowed = preferred + [action for action in every_action if action not in preferred]
+            allowed = self._demote_actions(
+                allowed,
+                [
+                    "pblock",
+                    "pblock_full_replace",
+                    "place_design_explore",
+                    "rapidwright_optimize_cell_placement",
+                ],
+                "delay class is logic_delay_bound; placement changes do not reduce logic depth",
+            )
         else:
             allowed = [
                 *RAPIDWRIGHT_STRUCTURAL_ACTIONS,
                 "phys_opt_design_retime",
                 "phys_opt_design",
                 "place_design_explore",
+                "replicate_register",
                 "fanout_split",
                 "lut_opt",
             ]
-            forbidden = []
 
         if endpoint_type in {"BRAM_CONTROL", "DSP_CONTROL"}:
-            allowed = [action for action in allowed if action != "fanout_split"]
-            # BUG FIX: this used to also re-add "rapidwright_analyze_fabric_for_pblock"
-            # and "rapidwright_convert_fabric_region_to_pblock" here, undoing the
-            # deliberate exclusion of those two precursor-only actions from
-            # RAPIDWRIGHT_STRUCTURAL_ACTIONS / RAPIDWRIGHT_PLACEMENT_ACTIONS above.
-            # Choosing "pblock" already runs both of these internally via
-            # _compute_pblock_ranges before applying the region, so exposing them
-            # as independently selectable actions here just gave the LLM a way to
-            # burn iterations on a no-op precursor step (and, per the bug fixed in
-            # _record_iteration_timing above, drive that action into permanent
-            # cooldown) for any path landing on a BRAM/DSP control pin, without ever
-            # reaching a design-changing action.
+            # NOTE: the pblock range-analysis precursor actions are deliberately
+            # NOT re-added here -- choosing "pblock" already runs them
+            # internally via _compute_pblock_ranges, and exposing them
+            # independently only let the LLM burn iterations on no-op steps.
             for action in [
                 "rapidwright_optimize_cell_placement",
                 "pblock",
@@ -2113,8 +2533,11 @@ class DCPOptimizer(DCPOptimizerBase):
             ]:
                 if action not in allowed:
                     allowed.append(action)
-            if "fanout_split" not in forbidden:
-                forbidden.append("fanout_split")
+            allowed = self._demote_actions(
+                allowed,
+                ["fanout_split"],
+                f"endpoint is a {endpoint_type} pin; routing to a hard-block control pin needs physical proximity, not net splitting",
+            )
 
         if (
             avg_spread is not None
@@ -2125,19 +2548,11 @@ class DCPOptimizer(DCPOptimizerBase):
             placement_first = [action for action in RAPIDWRIGHT_PLACEMENT_ACTIONS if action in allowed]
             allowed = placement_first + [action for action in allowed if action not in placement_first]
 
-        # BUG FIX: this used to check `action in allowed` only, against the
-        # static delay-class allowed list computed above -- NOT against
-        # cooldown/exhaustion state. _filter_exhausted_actions() only runs
-        # later, in _build_timing_context(), so a structural action that is
-        # currently on cooldown (e.g. after repeated pblock/cell-placement
-        # failures) still counted as "available" here. That meant once WNS
-        # dropped below PHYS_OPT_MIN_USEFUL_WNS_NS, phys_opt-family actions
-        # were locked out *permanently* for the rest of the run, even once
-        # both pblock and rapidwright_optimize_cell_placement were
-        # simultaneously exhausted and provably not working -- leaving the
-        # LLM stuck cycling between two cooling-down actions with no way to
-        # ever reach a logic-level fix. Check exhaustion here too, so that
-        # "structural available" actually means "usable this iteration."
+        # Incremental phys_opt genuinely cannot fix deeply negative WNS, so
+        # demote it (with the reason) while structural actions are usable.
+        # This is a demotion, not the old hard forbid, and it deliberately no
+        # longer touches place_design_explore -- a full re-place is not an
+        # incremental optimization (see PHYS_OPT_INCREMENTAL_ACTIONS).
         active_exhausted = set(self._active_exhausted_actions())
         structural_available = any(
             action in allowed and action not in active_exhausted
@@ -2148,30 +2563,11 @@ class DCPOptimizer(DCPOptimizerBase):
             and current_wns < PHYS_OPT_MIN_USEFUL_WNS_NS
             and structural_available
         ):
-            phys_actions = set(VIVADO_INCREMENTAL_IMPLEMENTATION_ACTIONS)
-            allowed = [action for action in allowed if action not in phys_actions]
-            for action in sorted(phys_actions):
-                if action not in forbidden:
-                    forbidden.append(action)
-            logger.info(
-                "Skipping phys_opt candidates because WNS %.3f ns is below %.3f ns and structural actions are available.",
-                current_wns,
-                PHYS_OPT_MIN_USEFUL_WNS_NS,
-            )
-        elif (
-            current_wns is not None
-            and current_wns < PHYS_OPT_MIN_USEFUL_WNS_NS
-            and not structural_available
-            and any(action in RAPIDWRIGHT_STRUCTURAL_ACTIONS for action in allowed)
-        ):
-            logger.warning(
-                "WNS %.3f ns is below %.3f ns and structural actions (%s) are "
-                "all currently on cooldown/exhausted; leaving phys_opt-family "
-                "actions in allowed_actions as a fallback instead of stranding "
-                "the optimizer with only actions it cannot use this iteration.",
-                current_wns,
-                PHYS_OPT_MIN_USEFUL_WNS_NS,
-                sorted(active_exhausted & set(RAPIDWRIGHT_STRUCTURAL_ACTIONS)),
+            allowed = self._demote_actions(
+                allowed,
+                PHYS_OPT_INCREMENTAL_ACTIONS,
+                f"WNS {current_wns:.3f} ns is below {PHYS_OPT_MIN_USEFUL_WNS_NS:.3f} ns; "
+                f"incremental phys_opt cannot close that gap while structural actions remain",
             )
 
         if self.implementation_license_available is False:
@@ -2575,6 +2971,31 @@ class DCPOptimizer(DCPOptimizerBase):
             num_candidates * PBLOCK_FFS_PER_CANDIDATE_PATH,
             PBLOCK_MIN_TARGET_FF_COUNT,
         )
+        # Item 3b (region search memory): if the previous pblock attempt
+        # executed cleanly but regressed or changed nothing, the region was
+        # most likely too tight -- grow the next auto-sized request instead of
+        # recomputing the identical one. An explicit LLM-provided
+        # target_lut_count always wins over this heuristic.
+        if not params.get("target_lut_count"):
+            last_pblock = next(
+                (attempt for attempt in reversed(self.pblock_attempt_history)
+                 if attempt.get("action") == "pblock"),
+                None,
+            )
+            if last_pblock and last_pblock.get("status") in {"regression", "no_improvement"}:
+                prev_lut = int(last_pblock.get("target_lut_count") or 0)
+                prev_ff = int(last_pblock.get("target_ff_count") or 0)
+                if prev_lut > 0:
+                    grown_lut = int(prev_lut * PBLOCK_REGRESSION_GROW_FACTOR)
+                    grown_ff = int(max(prev_ff, estimated_ff_count) * PBLOCK_REGRESSION_GROW_FACTOR)
+                    logger.info(
+                        "pblock search memory: previous attempt (iter %s, %s LUTs) ended in "
+                        "'%s'; growing this request to %s LUTs instead of repeating the size.",
+                        last_pblock.get("iteration"), prev_lut,
+                        last_pblock.get("status"), grown_lut,
+                    )
+                    estimated_lut_count = max(estimated_lut_count, grown_lut)
+                    estimated_ff_count = max(estimated_ff_count, grown_ff)
         target_lut_count = int(params.get("target_lut_count") or estimated_lut_count)
         target_ff_count = int(params.get("target_ff_count") or estimated_ff_count)
         target_dsp_count = int(params.get("target_dsp_count") or 0)
@@ -2697,6 +3118,12 @@ class DCPOptimizer(DCPOptimizerBase):
         computed.setdefault("pblock_name", f"{DEFAULT_PBLOCK_NAME_PREFIX}_{self.iteration:03d}")
         computed.setdefault("apply_to", "current_design")
         computed.setdefault("is_soft", False)
+        # Item 3b: remembered by _note_recipe_outcome alongside the attempt's
+        # outcome so the next auto-sizing can move instead of repeating.
+        self.last_pblock_sizing = {
+            "target_lut_count": target_lut_count,
+            "target_ff_count": target_ff_count,
+        }
         self.last_rapidwright_edit_summary = {
             "action": "pblock_range_computation",
             "cells_moved": 0,
@@ -2848,6 +3275,7 @@ class DCPOptimizer(DCPOptimizerBase):
         self.last_batch_size = 1
         ranges = params.get("ranges")
         region: Optional[dict] = None
+        self.last_pblock_sizing = None
 
         if not ranges:
             util_text = await self.call_tool("vivado_report_utilization_for_pblock", {}, internal=True)
@@ -2862,6 +3290,10 @@ class DCPOptimizer(DCPOptimizerBase):
                     f"Could not derive whole-design LUT/FF counts from utilization report: {util_text[:300]}",
                     command="pblock_full_replace",
                 )
+            self.last_pblock_sizing = {
+                "target_lut_count": target_lut_count,
+                "target_ff_count": target_ff_count,
+            }
             fabric_text = await self.call_tool(
                 "rapidwright_analyze_fabric_for_pblock",
                 {
@@ -2955,6 +3387,17 @@ class DCPOptimizer(DCPOptimizerBase):
                 command="pblock_full_replace",
             )
 
+        # BUG FIX (root cause of the failed full_replace iterations in run
+        # 20260711, iters 4/6/9): this call was missing internal=True, so
+        # call_tool() intercepted it and routed it through
+        # _maybe_run_pblock_or_phys_opt() -- which re-classified the worst
+        # path and ran the phys_opt cascade ON THE DESIGN WE JUST UNPLACED
+        # (vivado.jou: `place_design -unplace` followed by five failing
+        # phys_opt_design attempts). The phys_opt failure text then wasn't
+        # JSON, so _parse_json_result() returned {}, the error check passed,
+        # and place+route ran WITHOUT any pblock ever being created -- a
+        # random whole-design re-place recorded as vivado_command_failure.
+        # internal=True sends the call straight to the Vivado server.
         apply_result = await self.call_tool(
             "vivado_create_and_apply_pblock",
             {
@@ -2963,9 +3406,12 @@ class DCPOptimizer(DCPOptimizerBase):
                 "apply_to": "current_design",
                 "is_soft": False,
             },
+            internal=True,
         )
         apply_payload = self._parse_json_result(apply_result)
-        if self._result_has_error(apply_payload):
+        if self._result_has_error(apply_payload) or self._action_failure(
+            apply_result, default_command="vivado_create_and_apply_pblock"
+        ):
             logger.error(f"pblock_full_replace apply failed - full result:\n{apply_result}")
             await _restore_best_after_failure()
             return self._failure_json(
@@ -3247,6 +3693,28 @@ class DCPOptimizer(DCPOptimizerBase):
             await self._record_wns_parse_error("iteration_history", str(e), str(wns))
             return
 
+        # Timing provenance gate: a WNS observation may only become iteration
+        # history (and potentially best_checkpoint) if the live design is
+        # verifiably fully placed and routed. The client-side tracker catches
+        # the cheap cases; _verify_routed_state() asks Vivado itself, so a
+        # half-implemented state left by a buggy/failed action can never be
+        # checkpointed as "best" on the strength of estimated timing.
+        if self.design_state != "routed":
+            await self._record_wns_parse_error(
+                "design_state",
+                f"design state is '{self.design_state}', not routed; timing observation rejected",
+                str(wns),
+            )
+            return
+        routed_ok, routed_detail = await self._verify_routed_state()
+        if not routed_ok:
+            await self._record_wns_parse_error(
+                "route_status",
+                f"Vivado state check failed ({routed_detail}); timing observation rejected",
+                str(wns),
+            )
+            return
+
         checkpoint_dir = self.run_dir / "checkpoints"
         checkpoint_dir.mkdir(parents=True, exist_ok=True)
         checkpoint_path = checkpoint_dir / f"iter_{self.iteration:03d}.dcp"
@@ -3277,6 +3745,7 @@ class DCPOptimizer(DCPOptimizerBase):
         self.no_improvement_count = self.checkpoint_manager.stall_count
         self.consecutive_no_improvement = self.checkpoint_manager.stall_count
         self.last_recorded_wns = wns
+        self._note_recipe_outcome(str(iteration.get("status")), wns)
         if iteration.get("status") in {"improved", "marginal"}:
             self._publish_best_to_output()
         # Fix #1: gate the reset/remember-failure bookkeeping on
@@ -3816,6 +4285,9 @@ class DCPOptimizer(DCPOptimizerBase):
             "endpoint_type": timing_context.get("endpoint_type"),
             "allowed_actions": list(timing_context.get("allowed_actions", [])),
             "forbidden_actions": list(timing_context.get("forbidden_actions", [])),
+            "action_guidance": dict(timing_context.get("action_guidance", {})),
+            "congestion_level": timing_context.get("congestion_level"),
+            "cluster_clock_regions": list(timing_context.get("cluster_clock_regions", [])),
             "llm_chosen_action": decision.get("chosen_action"),
             "structural_override_active": timing_context.get("structural_override_active", False),
             "stuck_iterations": timing_context.get("stuck_iterations", 0),
@@ -3897,6 +4369,7 @@ class DCPOptimizer(DCPOptimizerBase):
         action = decision.get("chosen_action")
         params = decision.get("action_parameters") or {}
         self.last_rapidwright_edit_summary = None
+        self.last_action_mutated_design = False
         # Fix #1: set the never-renamed dispatch key exactly once per action,
         # before any of the per-action branches below run. _remember_recipe()
         # is still allowed to rewrite self.last_recipe for display purposes;
@@ -3914,27 +4387,26 @@ class DCPOptimizer(DCPOptimizerBase):
             self.last_batch_size = 1
             return await self.call_tool("vivado_phys_opt_design", params)
         if action == "place_design_explore":
-            current_wns = timing_context.get("wns_ns")
-            if current_wns is not None and current_wns < PHYS_OPT_MIN_USEFUL_WNS_NS:
-                return self._failure_json(
-                    "implementation_action_below_useful_wns",
-                    (
-                        f"place_design_explore skipped because WNS {current_wns:.3f} ns is below "
-                        f"{PHYS_OPT_MIN_USEFUL_WNS_NS:.3f} ns and structural RapidWright actions are required first."
-                    ),
-                    command="place_design_explore",
-                )
+            # NOTE: the old WNS floor guard (implementation_action_below_useful_wns)
+            # is gone. It borrowed PHYS_OPT_MIN_USEFUL_WNS_NS from incremental
+            # phys_opt, but a full re-place is not incremental -- it was this
+            # exact action, at WNS -0.92 ns, that produced run 20260711's only
+            # improvement. Deeply negative WNS is an argument FOR a re-place,
+            # not against it.
             if not await self._check_implementation_license():
                 return self._failure_json(
                     "vivado_license_failure",
                     "Vivado Implementation license is unavailable; place_design/route_design disabled.",
                     command="place_design/route_design",
                 )
+            directive = str(params.get("directive") or self._next_place_directive())
+            route_directive = str(params.get("route_directive") or "Explore")
             self.last_recipe = action
-            self.last_targets = [str(timing_context["worst_path"].get("end_cell"))]
+            self.last_place_directive = directive
+            self.last_targets = [f"directive:{directive}"]
             self.last_batch_size = 1
-            place = await self.call_tool("vivado_place_design", {"directive": "Explore", "timeout": 3600})
-            route = await self.call_tool("vivado_route_design", {"directive": "Explore", "timeout": 3600})
+            place = await self.call_tool("vivado_place_design", {"directive": directive, "timeout": 3600})
+            route = await self.call_tool("vivado_route_design", {"directive": route_directive, "timeout": 3600})
             return place + "\n\n" + route
         if action == "pblock_full_replace":
             return await self._execute_pblock_full_replace(dict(params))
@@ -4345,6 +4817,17 @@ Proceed by selecting exactly one validated action per timing-context turn."""
                 if failure:
                     self._record_failed_action(failure)
                     print(f"\nAction failed: {failure.get('error_type')}\n{failure.get('message', '')}\n")
+                    if self.last_action_mutated_design:
+                        # The failed action already issued mutating commands
+                        # (place/route/phys_opt/pblock/unplace or a RapidWright
+                        # edit), so the live session no longer matches
+                        # best_checkpoint -- and some failure paths (e.g. an
+                        # error detected only in the combined output) leave a
+                        # half-transformed design live. Never let the next
+                        # iteration build on that.
+                        await self._restore_best_state(
+                            f"action {failure.get('command')} failed after mutating the design"
+                        )
                     # BUG FIX: this `continue` used to skip straight to the next
                     # loop iteration, bypassing the ABSOLUTE_STALL_HARD_LIMIT
                     # check below entirely -- since _record_failed_action already
@@ -4460,11 +4943,24 @@ Proceed by selecting exactly one validated action per timing-context turn."""
         if self.start_time is not None:
             total_runtime = (self.end_time or time.time()) - self.start_time
         
-        # Calculate fmax values
-        initial_fmax = self.calculate_fmax(self.initial_wns, self.clock_period)
-        best_fmax = self.best_fmax_mhz
-        if best_fmax is None and self.best_wns > float('-inf'):
-            best_fmax = self.calculate_fmax(self.best_wns, self.clock_period)
+        # Calculate fmax values from VALIDATED checkpoint history when
+        # available (see _print_optimization_summary for why the raw
+        # self.best_wns/self.best_fmax_mhz ratchets are not trustworthy).
+        cm = self.checkpoint_manager
+        if cm is not None and cm.best_wns is not None:
+            initial_fmax = cm.baseline_fmax_mhz
+            best_fmax = cm.best_fmax_mhz
+            best_wns = cm.best_wns
+            initial_wns = cm.baseline_wns
+            best_checkpoint = cm.get_best_checkpoint()
+        else:
+            initial_fmax = self.calculate_fmax(self.initial_wns, self.clock_period)
+            best_fmax = self.best_fmax_mhz
+            if best_fmax is None and self.best_wns > float('-inf'):
+                best_fmax = self.calculate_fmax(self.best_wns, self.clock_period)
+            best_wns = self.best_wns if self.best_wns > float('-inf') else None
+            initial_wns = self.initial_wns
+            best_checkpoint = None
         fmax_improvement = (best_fmax - initial_fmax) if (initial_fmax is not None and best_fmax is not None) else None
         
         report = {
@@ -4482,12 +4978,13 @@ Proceed by selecting exactly one validated action per timing-context turn."""
                 "total_cost": self.total_cost,
                 "clock_period_ns": self.clock_period,
                 "current_period_ns": self.current_period_ns,
-                "initial_wns": self.initial_wns,
-                "best_wns": self.best_wns,
-                "wns_improvement": self.best_wns - self.initial_wns if self.initial_wns is not None else None,
+                "initial_wns": initial_wns,
+                "best_wns": best_wns,
+                "wns_improvement": (best_wns - initial_wns) if (best_wns is not None and initial_wns is not None) else None,
                 "initial_fmax_mhz": initial_fmax,
                 "best_fmax_mhz": best_fmax,
                 "fmax_improvement_mhz": fmax_improvement,
+                "best_checkpoint": best_checkpoint,
                 "total_tool_calls": len(self.tool_call_details),
                 "total_tool_time_seconds": total_tool_time,
                 "tool_call_counts": tool_counts
@@ -4513,15 +5010,35 @@ Proceed by selecting exactly one validated action per timing-context turn."""
             total_runtime = (self.end_time or time.time()) - self.start_time
             print(f"\nTOTAL RUNTIME: {total_runtime:.2f} seconds ({total_runtime/60:.2f} minutes)")
         
-        best_wns = self.best_wns if self.best_wns > float('-inf') else None
-        result_lines = self._format_fmax_results(
-            self.clock_period, self.initial_wns, best_wns, result_label="Best"
-        )
-        if result_lines:
-            print(f"\nFMAX RESULTS:")
-            print("\n".join(result_lines))
-        if self.best_fmax_mhz is not None:
-            print(f"  {'Best achieved Fmax:':<21s}{self.best_fmax_mhz:8.2f} MHz")
+        # Summary correctness: report ONLY validated numbers. The raw
+        # self.best_wns / self.best_fmax_mhz ratchets record every WNS ever
+        # observed mid-flight -- including observations from states that were
+        # later rolled back or rejected -- so they can only overstate the
+        # result. CheckpointManager.best_wns/best_fmax_mhz are updated
+        # exclusively by record() for iterations whose checkpoint was written
+        # and classified improved/marginal, and best_checkpoint is the DCP
+        # those numbers were measured on.
+        cm = self.checkpoint_manager
+        if cm is not None and cm.best_wns is not None:
+            result_lines = self._format_fmax_results(
+                cm.clock_period_ns, cm.baseline_wns, cm.best_wns, result_label="Best"
+            )
+            if result_lines:
+                print(f"\nFMAX RESULTS (validated from checkpoint history):")
+                print("\n".join(result_lines))
+            if cm.best_fmax_mhz is not None:
+                print(f"  {'Best achieved Fmax:':<21s}{cm.best_fmax_mhz:8.2f} MHz")
+            print(f"  {'Best checkpoint:':<21s}{cm.get_best_checkpoint()}")
+        else:
+            best_wns = self.best_wns if self.best_wns > float('-inf') else None
+            result_lines = self._format_fmax_results(
+                self.clock_period, self.initial_wns, best_wns, result_label="Best"
+            )
+            if result_lines:
+                print(f"\nFMAX RESULTS (unvalidated -- no checkpoint history):")
+                print("\n".join(result_lines))
+            if self.best_fmax_mhz is not None:
+                print(f"  {'Best achieved Fmax:':<21s}{self.best_fmax_mhz:8.2f} MHz")
         if self.current_period_ns is not None:
             print(f"  {'Current period:':<21s}{self.current_period_ns:8.3f} ns")
         

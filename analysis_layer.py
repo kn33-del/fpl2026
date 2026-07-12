@@ -69,6 +69,12 @@ DETOUR_RATIO_FLAG_THRESHOLD = 2.0
 # Below this fraction of extracted candidates, a recurring cell is fanout
 # but not dominant enough to override the base delay-class thresholds.
 FANOUT_DOMINANCE_FRACTION = 0.30
+# Outcome loop (design doc section 8, now real): how much one net
+# win/loss of a hypothesis's own prescriptions moves its confidence, and the
+# cap so a long streak can't zero out (or saturate) a hypothesis entirely --
+# the physical evidence must always stay part of the argument.
+OUTCOME_CONFIDENCE_STEP = 0.08
+OUTCOME_CONFIDENCE_CAP = 0.25
 
 
 @dataclass
@@ -138,6 +144,11 @@ class Diagnosis:
     # explanation of what, if anything, the primary hypothesis changed
     # versus the base _allowed_forbidden_actions output.
     action_adjustment: Optional[str] = None
+    # Item 4 evidence, carried for the timing context and actions_for():
+    # clock regions spanned by the primary cluster's cells, and the design's
+    # worst router congestion level (None = could not measure).
+    cluster_clock_regions: set[str] = field(default_factory=set)
+    congestion_level: Optional[int] = None
 
 
 class _UnionFind:
@@ -172,6 +183,12 @@ def _spread_thresholds():
     return _dcp.DECISION_SPREAD_TILE_THRESHOLD, _dcp.DECISION_SPREAD_NET_THRESHOLD
 
 
+def _congestion_high_threshold() -> int:
+    # Same deferred-import pattern as _spread_thresholds().
+    import dcp_optimizer as _dcp
+    return _dcp.CONGESTION_LEVEL_HIGH
+
+
 def _rule_localized_congestion(cluster: FailureCluster, evidence: dict) -> RootCauseHypothesis:
     spread_threshold, net_threshold = _spread_thresholds()
     confidence = HYPOTHESIS_PRIOR
@@ -200,14 +217,39 @@ def _rule_localized_congestion(cluster: FailureCluster, evidence: dict) -> RootC
         confidence -= 0.15
         contradicting.append("fewer than 2 members in this cluster; congestion needs multiple co-located paths.")
 
+    # Item 4: real congestion measurement. This is the direct evidence this
+    # hypothesis previously had to infer from spread+net_pct alone.
+    congestion_level = evidence.get("congestion_level")
+    if congestion_level is not None:
+        if congestion_level >= _congestion_high_threshold():
+            confidence += 0.25
+            supporting.append(
+                f"router congestion level {congestion_level} measured on the design -- "
+                f"direct evidence of congestion, not an inference from spread."
+            )
+        elif congestion_level <= 3:
+            confidence -= 0.2
+            contradicting.append(
+                f"measured congestion level is only {congestion_level}; the router is not "
+                f"actually congested, whatever the spread numbers suggest."
+            )
+
+    # Note: when congestion IS the diagnosis, packing tighter makes it worse.
+    # The recommended fix is spreading, so pblock is recommended only when
+    # congestion was not directly measured high (actions_for also applies a
+    # global congestion demotion on the pblock family).
+    recommended = ["pblock"]
+    if congestion_level is not None and congestion_level >= _congestion_high_threshold():
+        recommended = ["place_design_explore", "fanout_split"]
+
     return RootCauseHypothesis(
         name="localized_congestion",
         cluster_id=cluster.id,
         confidence=max(0.0, min(1.0, confidence)),
         supporting_evidence=supporting,
         contradicting_evidence=contradicting,
-        recommended_actions=["pblock"],
-        evidence_requests=["cluster_avg_spread", "net_pct"],
+        recommended_actions=recommended,
+        evidence_requests=["cluster_avg_spread", "net_pct", "congestion_level"],
     )
 
 
@@ -255,6 +297,23 @@ def _rule_long_interconnect(cluster: FailureCluster, evidence: dict) -> RootCaus
         else:
             confidence -= 0.1
             contradicting.append("no cluster cell showed a flagged routing detour ratio.")
+
+    # Item 4: clock-region spread is direct evidence of genuinely long
+    # interconnect -- a cluster spanning multiple clock regions pays region
+    # crossing penalties no local nudge can remove.
+    clock_regions = evidence.get("clock_regions") or set()
+    if len(clock_regions) >= 2:
+        confidence += 0.15
+        supporting.append(
+            f"cluster cells span {len(clock_regions)} clock regions "
+            f"({sorted(clock_regions)}) -- crossings confirm real physical distance."
+        )
+    elif len(clock_regions) == 1:
+        confidence -= 0.1
+        contradicting.append(
+            f"all cluster cells sit in one clock region ({next(iter(clock_regions))}); "
+            f"distance is intra-region only."
+        )
 
     return RootCauseHypothesis(
         name="long_interconnect",
@@ -331,6 +390,20 @@ def _rule_placement_already_compact(cluster: FailureCluster, evidence: dict) -> 
                 f"avg spread {avg_spread:.1f} tiles / logic_pct {logic_pct} doesn't support "
                 f"'placement is already fine' -- either cells are spread out or delay is net-bound."
             )
+
+    # Item 4: a single clock region corroborates compactness independently of
+    # the tile-distance estimate.
+    clock_regions = evidence.get("clock_regions") or set()
+    if len(clock_regions) == 1:
+        confidence += 0.1
+        supporting.append(
+            f"all cluster cells share clock region {next(iter(clock_regions))}."
+        )
+    elif len(clock_regions) >= 2:
+        confidence -= 0.1
+        contradicting.append(
+            f"cluster spans {len(clock_regions)} clock regions -- not compact."
+        )
 
     return RootCauseHypothesis(
         name="placement_already_compact",
@@ -502,12 +575,26 @@ class AnalysisEngine:
             "logic_pct": opt.path_delay_breakdown.get("logic_pct"),
             "cluster_avg_spread": None,
             "cluster_max_spread": None,
+            # Item 4: congestion was already fetched (and cached) by
+            # _build_timing_context before diagnosis runs; clock regions cost
+            # one batched Tcl round-trip for the cluster's cells.
+            "congestion_level": opt.last_congestion_info.get("congestion_level"),
+            "clock_regions": set(),
         }
         if len(cell_names) >= 2:
             spread = await opt._measure_cluster_spread(cell_names)
             if spread:
                 evidence["cluster_avg_spread"] = spread.get("avg_distance")
                 evidence["cluster_max_spread"] = spread.get("max_distance")
+        if cell_names:
+            try:
+                region_map = await opt._fetch_clock_regions(cell_names)
+            except Exception:
+                region_map = {}
+            evidence["clock_regions"] = set(region_map.values())
+            for member in cluster.members:
+                member.clock_region = region_map.get(member.end_cell) or region_map.get(member.start_cell)
+            cluster.clock_regions = set(evidence["clock_regions"])
         return evidence
 
     async def _gather_detour_evidence(self) -> Optional[list[dict]]:
@@ -531,6 +618,62 @@ class AnalysisEngine:
         if not payload or opt._result_has_error(payload):
             return None
         return payload.get("all_cells") or payload.get("candidates") or []
+
+    # ------------------------------------------------------------------
+    # outcome loop (item 2 / design doc section 8): a hypothesis whose own
+    # prescriptions keep failing THIS RUN should lose the argument to the
+    # runner-up, whatever the static physical-evidence scoring says.
+    # ------------------------------------------------------------------
+    def _outcome_adjustment(self, hypothesis: RootCauseHypothesis) -> tuple[float, Optional[str]]:
+        """Confidence delta from this run's recorded outcomes of iterations
+        where `hypothesis` was primary AND the chosen action was one it
+        recommended (so it owns the result). Bounded by OUTCOME_CONFIDENCE_CAP
+        so history can shift the ranking but never silence the evidence."""
+        manager = getattr(self.opt, "checkpoint_manager", None)
+        records = getattr(manager, "iterations", None) if manager is not None else None
+        if not records:
+            return 0.0, None
+        wins = 0
+        losses = 0
+        for record in records:
+            if record.get("primary_diagnosis") != hypothesis.name:
+                continue
+            chosen = record.get("llm_chosen_action")
+            if hypothesis.recommended_actions and chosen not in hypothesis.recommended_actions:
+                continue
+            status = record.get("status")
+            if status in ("improved", "marginal"):
+                wins += 1
+            elif status in ("regression", "failed", "no_improvement"):
+                losses += 1
+        if wins == losses:
+            return 0.0, None
+        delta = OUTCOME_CONFIDENCE_STEP * (wins - losses)
+        delta = max(-OUTCOME_CONFIDENCE_CAP, min(OUTCOME_CONFIDENCE_CAP, delta))
+        note = (
+            f"outcome history: {hypothesis.name}'s own prescriptions scored "
+            f"{wins} win(s) / {losses} loss(es) this run -> confidence {delta:+.2f}"
+        )
+        return delta, note
+
+    def _apply_outcome_adjustments(
+        self, hypotheses: list[RootCauseHypothesis], reasoning_trace: list[str]
+    ) -> None:
+        adjusted = False
+        for hypothesis in hypotheses:
+            delta, note = self._outcome_adjustment(hypothesis)
+            if delta:
+                hypothesis.confidence = max(0.0, min(1.0, hypothesis.confidence + delta))
+                if note:
+                    target = (
+                        hypothesis.supporting_evidence if delta > 0
+                        else hypothesis.contradicting_evidence
+                    )
+                    target.append(note)
+                    reasoning_trace.append(note)
+                adjusted = True
+        if adjusted:
+            hypotheses.sort(key=lambda h: h.confidence, reverse=True)
 
     # ------------------------------------------------------------------
     # diagnose (normalize -> cluster already done by caller; this is
@@ -583,6 +726,7 @@ class AnalysisEngine:
                 endpoint_type=endpoint_type,
                 net_pct=global_net_pct,
                 avg_spread=global_avg_spread,
+                congestion_level=opt.last_congestion_info.get("congestion_level"),
             )
 
         worst_path_in_primary = any(m.endpoint == worst_endpoint for m in primary_cluster.members)
@@ -621,6 +765,9 @@ class AnalysisEngine:
             else:
                 reasoning_trace.append("net-detour evidence unavailable; keeping cheap-evidence ranking.")
 
+        # Item 2: this run's own results get the last word on the ranking.
+        self._apply_outcome_adjustments(hypotheses, reasoning_trace)
+
         primary_hypothesis = hypotheses[0]
         reasoning_trace.append(
             "scored hypotheses: "
@@ -644,6 +791,8 @@ class AnalysisEngine:
             endpoint_type=endpoint_type,
             net_pct=global_net_pct,
             avg_spread=global_avg_spread,
+            cluster_clock_regions=set(cheap_evidence.get("clock_regions") or set()),
+            congestion_level=cheap_evidence.get("congestion_level"),
         )
 
     # ------------------------------------------------------------------
@@ -652,14 +801,16 @@ class AnalysisEngine:
     def actions_for(
         self, diagnosis: Diagnosis, current_wns: Optional[float]
     ) -> tuple[list[str], list[str]]:
-        """Base allowed/forbidden comes from the optimizer's existing,
-        unchanged _allowed_forbidden_actions -- that's the safety net every
-        hypothesis adjusts on top of, never replaces. A hypothesis only
-        takes effect once it clears CONFIDENCE_FLOOR, and even then a veto
-        is skipped if it would empty `allowed` entirely (better to fall
-        back to the base thresholds than strand the optimizer with zero
-        options)."""
-        allowed, forbidden = self.opt._allowed_forbidden_actions(
+        """Base ranked menu comes from _allowed_forbidden_actions, which under
+        the priors model (item 1) hard-forbids only structural impossibilities
+        and records demotion reasons in opt.last_action_guidance. A hypothesis
+        that clears CONFIDENCE_FLOOR DEMOTES the actions it argues against
+        (moving them to the end of the ranking with a recorded reason the LLM
+        can rebut) instead of the old hard veto -- which removes the whole
+        veto-would-empty-allowed substitution dance: a demotion can never
+        strand the optimizer with zero options."""
+        opt = self.opt
+        allowed, forbidden = opt._allowed_forbidden_actions(
             diagnosis.delay_class,
             diagnosis.endpoint_type,
             diagnosis.net_pct,
@@ -669,66 +820,56 @@ class AnalysisEngine:
         hyp = diagnosis.primary_hypothesis
         adjustment_notes: list[str] = []
 
+        # Item 4: measured congestion is a menu-wide gate, independent of
+        # which hypothesis won -- constraining cells into ANY tighter region
+        # worsens congestion, so the whole pblock family gets demoted with a
+        # reason (and the spreading recipes named as the alternative).
+        congestion = diagnosis.congestion_level
+        if congestion is not None and congestion >= _congestion_high_threshold():
+            pblock_family = [a for a in allowed if a in ("pblock", "pblock_full_replace")]
+            if pblock_family:
+                allowed = opt._demote_actions(
+                    allowed,
+                    pblock_family,
+                    f"measured router congestion level is {congestion} "
+                    f"(>= {_congestion_high_threshold()}); packing cells into a tighter "
+                    f"region will worsen it -- prefer spreading placement "
+                    f"(place_design_explore with AltSpreadLogic_high/ExtraNetDelay_high) "
+                    f"or fanout reduction",
+                )
+                adjustment_notes.append(
+                    f"congestion level {congestion} demoted {pblock_family}"
+                )
+
         if hyp.confidence >= CONFIDENCE_FLOOR:
             if hyp.veto_actions:
-                vetoed = [a for a in hyp.veto_actions if a in allowed]
-                if vetoed and len(vetoed) < len(allowed):
-                    allowed = [a for a in allowed if a not in hyp.veto_actions]
-                    for action in vetoed:
-                        if action not in forbidden:
-                            forbidden.append(action)
-                    adjustment_notes.append(
-                        f"{hyp.name} (confidence {hyp.confidence:.2f}) vetoed {vetoed}"
+                demoted = [a for a in allowed if a in set(hyp.veto_actions)]
+                if demoted:
+                    evidence_line = (
+                        hyp.supporting_evidence[0]
+                        if hyp.supporting_evidence
+                        else "see diagnosis reasoning trace"
                     )
-                elif vetoed:
-                    # BUG FIX: this used to skip the veto entirely whenever it
-                    # would have emptied `allowed`, on the theory that leaving
-                    # the optimizer with *something* beats zero options. In
-                    # practice that meant a maximally-confident hypothesis
-                    # correctly concluding "none of these base actions will
-                    # work" was powerless -- the LLM kept being handed back
-                    # exactly the actions the diagnosis just disqualified,
-                    # forever (this is what produced 30+ stalled iterations
-                    # cycling pblock <-> rapidwright_optimize_cell_placement
-                    # in run 13 after placement_already_compact took over).
-                    # If the hypothesis names recommended_actions outside the
-                    # vetoed set, substitute those in instead of giving up.
-                    fallback = [a for a in hyp.recommended_actions if a not in hyp.veto_actions]
-                    if fallback:
-                        for action in vetoed:
-                            if action not in forbidden:
-                                forbidden.append(action)
-                        # BUG FIX: a fallback action can be something the base
-                        # delay-class gate globally forbids -- e.g.
-                        # fanout_split is unconditionally forbidden for
-                        # net_delay_bound in _allowed_forbidden_actions, even
-                        # though a confident excessive_fanout diagnosis on a
-                        # net_delay_bound path is exactly the case that needs
-                        # it. validate_llm_action() checks `chosen in
-                        # forbidden` *before* it checks `chosen in allowed`
-                        # (forbidden wins), so substituting fanout_split into
-                        # `allowed` while it's still sitting in `forbidden`
-                        # meant the LLM's pick would get bounced as
-                        # "chosen_action_is_forbidden" every single time,
-                        # despite being the thing we just offered it. Keep
-                        # the two lists mutually exclusive.
-                        forbidden = [a for a in forbidden if a not in fallback]
-                        allowed = fallback
-                        adjustment_notes.append(
-                            f"{hyp.name} (confidence {hyp.confidence:.2f}) vetoed every "
-                            f"base action ({vetoed}) and substituted its own recommended "
-                            f"actions {fallback} instead of leaving the optimizer stuck."
-                        )
-                    else:
-                        adjustment_notes.append(
-                            f"{hyp.name} would veto every allowed action ({vetoed}) and "
-                            f"has no recommended_actions to substitute; skipping the veto "
-                            f"rather than stranding the optimizer with zero options."
-                        )
+                    allowed = opt._demote_actions(
+                        allowed,
+                        demoted,
+                        f"{hyp.name} (confidence {hyp.confidence:.2f}) argues against "
+                        f"this action: {evidence_line}",
+                    )
+                    adjustment_notes.append(
+                        f"{hyp.name} (confidence {hyp.confidence:.2f}) demoted {demoted}"
+                    )
             if hyp.recommended_actions:
                 preferred = [a for a in hyp.recommended_actions if a in allowed]
                 if preferred:
                     allowed = preferred + [a for a in allowed if a not in preferred]
+                    # A confident hypothesis promoting an action overrides any
+                    # static delay-class guidance still attached to it (e.g. a
+                    # confident excessive_fanout diagnosis promoting
+                    # fanout_split on a net-delay-bound path -- exactly the
+                    # case the static prior discourages).
+                    for action in preferred:
+                        opt.last_action_guidance.pop(action, None)
                     adjustment_notes.append(
                         f"{hyp.name} (confidence {hyp.confidence:.2f}) prioritized {preferred}"
                     )
@@ -737,9 +878,6 @@ class AnalysisEngine:
         hyp.recommended_actions = hyp.recommended_actions or list(allowed)
         # Defensive invariant: validate_llm_action() checks `chosen in
         # forbidden` before `chosen in allowed`, so any overlap between the
-        # two lists silently makes an offered action unusable. Enforce
-        # allowed/forbidden are mutually exclusive here regardless of which
-        # branch above produced them, rather than relying on every future
-        # edit to this function to remember to keep them in sync by hand.
+        # two lists silently makes an offered action unusable.
         forbidden = [a for a in forbidden if a not in allowed]
         return allowed, forbidden
