@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -m py_compile dcp_optimizer.py analysis_layer.py checkpoint_manager.py)",
+      "Bash(python -m pytest tests/ -q)",
+      "Bash(python -m py_compile dcp_optimizer.py analysis_layer.py)"
+    ]
+  }
+}
