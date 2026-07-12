@@ -130,6 +130,15 @@ RAPIDWRIGHT_STRUCTURAL_ACTIONS = [
     # everything, applies the pblock to the whole design, and re-places +
     # re-routes inside it.
     "pblock_full_replace",
+    # History(16) forensics: the old run's 501 MHz turned out to come from an
+    # ACCIDENTAL whole-design unplace + place + route (the pblock_full_replace
+    # interception bug's side effect), credited to the place_design_explore
+    # iteration that merely measured its leftover. A full re-place is the one
+    # recipe with a proven win on this benchmark, so its action belongs in
+    # the structural family -- previously the stuck-detector's structural
+    # override REMOVED place_design_explore from the menu mid-stall because
+    # it wasn't listed here.
+    "place_design_explore",
 ]
 PBLOCK_ACTION_FAMILY = {
     "pblock",
@@ -147,6 +156,9 @@ RAPIDWRIGHT_PLACEMENT_ACTIONS = [
     # Fix #9: for widely-spread net-delay-bound designs, the whole-design
     # re-place is the empirically strongest known recipe, so it goes first.
     "pblock_full_replace",
+    # The plain unplace-first re-place (see history(16) forensics above) --
+    # the actual source of the 501 MHz result -- ranks right behind it.
+    "place_design_explore",
     # "rapidwright_analyze_fabric_for_pblock",
     # "rapidwright_convert_fabric_region_to_pblock",
     "pblock",
@@ -190,6 +202,25 @@ PBLOCK_REGRESSION_GROW_FACTOR = 1.5
 # pblock action) is more likely to hurt than help. Level N means a 2^N x 2^N
 # congested tile window; AMD guidance treats level 5 (32x32) as problematic.
 CONGESTION_LEVEL_HIGH = 5
+# Run history(16) lesson: this OOC design consistently shows ~6 unplaced
+# primitive cells after ANY fresh place (even Vivado's own place_design) or
+# RapidWright checkpoint round-trip, while route status still reports 0
+# failed nets / fully routed -- they have no routable nets and cannot be on
+# a timing path. The previous run's best checkpoint (501 MHz) came from this
+# exact flow. Treating any unplaced primitive as fatal therefore rejected
+# every improving recipe. Unplaced primitives are benign as long as the
+# count stays small AND route status is clean; a genuinely broken state
+# (failed placer, mid-flight unplace) leaves hundreds-to-thousands unplaced
+# and unrouted nets, both far past this tolerance.
+UNPLACED_CELLS_BENIGN_MAX = 25
+# Score-aware stall accounting: validation failures that abort in seconds
+# (range checks, candidate rejections) must not burn the expensive-stall
+# budget that exists to stop wasted place/route cycles -- run history(16)
+# ended after 5 failures that consumed almost no Vivado time, abandoning the
+# whole remaining time budget. Failures cheaper than this threshold count
+# against a separate, much larger cap instead.
+CHEAP_FAILURE_RUNTIME_S = 60
+STALL_LIMIT_CHEAP_FAILURES = 15
 DEFAULT_PBLOCK_TARGET_LUT_COUNT = 20000
 DEFAULT_PBLOCK_TARGET_FF_COUNT = 40000
 DEFAULT_PBLOCK_NAME_PREFIX = "pblock_net_delay"
@@ -202,7 +233,11 @@ ACTION_PARAMETERS_SCHEMA = {
     "pblock": {
         "target_lut_count": "int, LUTs the clustering pblock region must fit (default: sized per candidate path)",
         "target_ff_count": "int, FFs the region must fit",
-        "use_clock_regions": "bool, emit CLOCKREGION ranges instead of site ranges (default false)",
+        "use_clock_regions": (
+            "bool, emit CLOCKREGION ranges instead of site ranges (default false; "
+            "DISCOURAGED -- twice produced regions far from the critical cluster; "
+            "if the result misses the cluster it is auto-converted back to site ranges)"
+        ),
     },
     "pblock_full_replace": {
         "target_lut_count": "int, override whole-design LUT budget (default: 1.5x design utilization)",
@@ -1063,6 +1098,15 @@ class DCPOptimizer(DCPOptimizerBase):
         # iteration: {"iteration": int, "congestion_level": Optional[int],
         # "detail": str}.
         self.last_congestion_info: dict = {}
+        # History(16) forensics: the input DCP itself carries ~6 benign
+        # unplaced primitives (no routable nets; route status is clean).
+        # Probed once at run start so the provenance gate can tell "the
+        # design's normal artifacts" apart from "an action broke placement".
+        self.baseline_unplaced_cells: Optional[int] = None
+        # Consecutive action failures that aborted cheaply (validation
+        # rejections costing < CHEAP_FAILURE_RUNTIME_S). These get a much
+        # larger stall budget than expensive place/route stalls.
+        self.cheap_failure_streak: int = 0
 
     async def start_servers(self):
         """Start and connect to both MCP servers."""
@@ -1729,15 +1773,38 @@ class DCPOptimizer(DCPOptimizerBase):
         match = re.search(r"STATE_UNPLACED:(\d+)", raw)
         return int(match.group(1)) if match else None
 
+    def _unplaced_tolerance(self) -> int:
+        """How many unplaced primitives count as benign design artifacts.
+
+        History(16) forensics: this design's input DCP ships with ~6 unplaced
+        primitives that have no routable nets -- Vivado's own placer skips
+        them, its router reports 0 failed nets around them, and the previous
+        run's winning (contest-valid) checkpoint contained them. RapidWright
+        round-trips preserve them. A genuinely broken state (failed placer,
+        mid-flight unplace) leaves hundreds-to-thousands unplaced, far past
+        this tolerance -- and unrouted nets besides."""
+        baseline = self.baseline_unplaced_cells or 0
+        return max(UNPLACED_CELLS_BENIGN_MAX, baseline + 10)
+
     async def _verify_routed_state(self) -> tuple[bool, str]:
         """Ask Vivado (not just our client-side tracker) whether the design is
         fully placed and routed. This is the provenance gate a WNS observation
-        must pass before it may become iteration history / best_checkpoint."""
+        must pass before it may become iteration history / best_checkpoint.
+
+        Route status is the PRIMARY criterion: if every routable net is
+        routed, unplaced primitives (up to _unplaced_tolerance) cannot sit on
+        any timing path and are benign. The first version of this gate
+        treated ANY unplaced primitive as fatal, which rejected every result
+        this design can produce -- including a completed place_design run --
+        and zeroed out run history(16)."""
         unplaced = await self._count_unplaced_cells()
         if unplaced is None:
             return False, "could not verify placement state"
-        if unplaced > 0:
-            return False, f"{unplaced} primitive cell(s) are unplaced"
+        if unplaced > self._unplaced_tolerance():
+            return False, (
+                f"{unplaced} primitive cell(s) are unplaced "
+                f"(tolerance {self._unplaced_tolerance()})"
+            )
         route_raw = await self.call_tool("vivado_report_route_status", {"timeout": 300}, internal=True)
         unrouted_match = re.search(r"#\s*of\s+unrouted\s+nets[.\s]*:\s*(\d+)", route_raw, re.IGNORECASE)
         errors_match = re.search(r"#\s*of\s+nets\s+with\s+routing\s+errors[.\s]*:\s*(\d+)", route_raw, re.IGNORECASE)
@@ -1749,6 +1816,14 @@ class DCPOptimizer(DCPOptimizerBase):
             return False, f"could not parse route status: {route_raw[:200]}"
         if (unrouted or 0) > 0 or (errors or 0) > 0:
             return False, f"{unrouted or 0} unrouted net(s), {errors or 0} net(s) with routing errors"
+        if unplaced and unplaced > 0:
+            logger.warning(
+                "Design has %d unplaced primitive cell(s) but route status is clean "
+                "(0 unrouted / 0 errors); treating them as benign artifacts -- cells "
+                "without routable nets cannot be on a timing path.",
+                unplaced,
+            )
+            return True, f"fully routed ({unplaced} benign unplaced primitive(s))"
         return True, "fully placed and routed"
 
     async def _restore_best_state(self, reason: str) -> None:
@@ -2273,7 +2348,7 @@ class DCPOptimizer(DCPOptimizerBase):
             "  \"chosen_action\": <must be from allowed_actions>,\n"
             "  \"action_parameters\": <object; valid keys per action are documented in action_parameters_schema below -- use them, especially after a failure reported in last_action_failure>,\n"
             "  \"why_this_fits_delay_class\": <one sentence, must reference net_pct or logic_pct; if the action is in action_guidance, also rebut its reason here>,\n"
-            "  \"why_not_top_forbidden_action\": <one sentence: why the most tempting discouraged/forbidden action does not apply here>,\n"
+            "  \"why_not_top_forbidden_action\": <one sentence about the HIGHEST-RANKED action in allowed_actions that you did NOT choose (or the most tempting entry in action_guidance): why not it -- do NOT discuss forbidden_actions here, those are hard-blocked and uninteresting>,\n"
             "  \"confidence\": <1-5>\n"
             "}\n\n"
             f"{json.dumps(timing_context, indent=2)}"
@@ -2507,8 +2582,7 @@ class DCPOptimizer(DCPOptimizerBase):
         """
         self.last_action_guidance = {}
         every_action = [
-            *RAPIDWRIGHT_STRUCTURAL_ACTIONS,
-            "place_design_explore",
+            *RAPIDWRIGHT_STRUCTURAL_ACTIONS,  # includes place_design_explore
             "replicate_register",
             "phys_opt_design",
             "phys_opt_design_retime",
@@ -2541,10 +2615,9 @@ class DCPOptimizer(DCPOptimizerBase):
             )
         else:
             allowed = [
-                *RAPIDWRIGHT_STRUCTURAL_ACTIONS,
+                *RAPIDWRIGHT_STRUCTURAL_ACTIONS,  # includes place_design_explore
                 "phys_opt_design_retime",
                 "phys_opt_design",
-                "place_design_explore",
                 "replicate_register",
                 "fanout_split",
                 "lut_opt",
@@ -3125,14 +3198,37 @@ class DCPOptimizer(DCPOptimizerBase):
                 for region in (timing_context.get("cluster_clock_regions") or [])
                 if region
             }
-            if "CLOCKREGION" in str(ranges) and cluster_regions:
-                if not self._clockregion_ranges_cover(str(ranges), cluster_regions):
+            if (
+                "CLOCKREGION" in str(ranges)
+                and cluster_regions
+                and not self._clockregion_ranges_cover(str(ranges), cluster_regions)
+            ):
+                # History(16) lesson: failing this check outright burned an
+                # iteration and left recovery to the LLM (which never
+                # retried). The SLICE-range conversion of the SAME fabric
+                # region is what produced the old run's improving pblock, so
+                # fall back to it automatically instead of failing.
+                logger.warning(
+                    "Clock-region pblock %s misses the critical cluster's regions %s; "
+                    "auto-falling back to site-range conversion of the same fabric region.",
+                    ranges, sorted(cluster_regions),
+                )
+                convert_args["use_clock_regions"] = False
+                params["use_clock_regions"] = False
+                range_text = await self.call_tool(
+                    "rapidwright_convert_fabric_region_to_pblock", convert_args, internal=True
+                )
+                range_payload = self._parse_json_result(range_text)
+                if self._result_has_error(range_payload):
                     return None, (
-                        f"computed clock-region pblock {ranges} does not contain any of the "
-                        f"critical cluster's clock regions {sorted(cluster_regions)}; constraining "
-                        f"critical cells into a far-away region drags them across the die and "
-                        f"regresses timing. Retry without use_clock_regions, or pass explicit "
-                        f"ranges near {sorted(cluster_regions)}."
+                        f"site-range fallback conversion failed after the clock-region "
+                        f"result missed the cluster: {range_payload.get('error') or range_text[:300]}"
+                    )
+                ranges = range_payload.get("pblock_ranges")
+                if not ranges:
+                    return None, (
+                        "site-range fallback conversion returned no pblock_ranges after "
+                        "the clock-region result missed the cluster."
                     )
 
             # --- Fix #2b: reject regions that would be packed too densely. ---
@@ -3495,6 +3591,29 @@ class DCPOptimizer(DCPOptimizerBase):
             return self._failure_json(
                 apply_payload.get("error_type", "full_replace_pblock_failed"),
                 apply_payload.get("message", apply_result[:4000]),
+                command="pblock_full_replace",
+            )
+
+        # History(16) iter 4: LLM-supplied explicit ranges packed 31370 LUTs
+        # into a region with 26880 -- the DRC flagged it BEFORE placement, but
+        # we placed anyway and burned minutes on a doomed run. The apply
+        # payload carries that DRC result; abort on it while the failure is
+        # still cheap.
+        resource_validation = apply_payload.get("resource_validation") or {}
+        validation_errors = list(resource_validation.get("errors") or [])
+        if validation_errors:
+            logger.error(
+                "pblock_full_replace resource validation failed pre-placement: %s",
+                validation_errors,
+            )
+            await _restore_best_after_failure()
+            return self._failure_json(
+                "full_replace_region_too_small",
+                (
+                    "Pblock resource validation failed before placement: "
+                    + "; ".join(str(err)[:200] for err in validation_errors[:3])
+                    + ". Increase the ranges (or target_lut_count/target_ff_count) and retry."
+                ),
                 command="pblock_full_replace",
             )
 
@@ -4487,12 +4606,15 @@ class DCPOptimizer(DCPOptimizerBase):
             self.last_batch_size = 1
             return await self.call_tool("vivado_phys_opt_design", params)
         if action == "place_design_explore":
-            # NOTE: the old WNS floor guard (implementation_action_below_useful_wns)
-            # is gone. It borrowed PHYS_OPT_MIN_USEFUL_WNS_NS from incremental
-            # phys_opt, but a full re-place is not incremental -- it was this
-            # exact action, at WNS -0.92 ns, that produced run 20260711's only
-            # improvement. Deeply negative WNS is an argument FOR a re-place,
-            # not against it.
+            # History(16) forensics: Vivado's place_design is INCREMENTAL over
+            # an existing placement -- on a fully placed design it is a
+            # near-total no-op regardless of directive (history(16) iter 3
+            # measured WNS identical to baseline after "AltSpreadLogic_high").
+            # The 501 MHz result credited to this action actually came from an
+            # accidental unplace + place + route. So: unplace first, always.
+            # That makes this the plain whole-design re-place recipe (the
+            # pblock-less variant of pblock_full_replace), and makes the
+            # directive sweep actually sweep something.
             if not await self._check_implementation_license():
                 return self._failure_json(
                     "vivado_license_failure",
@@ -4505,8 +4627,29 @@ class DCPOptimizer(DCPOptimizerBase):
             self.last_place_directive = directive
             self.last_targets = [f"directive:{directive}"]
             self.last_batch_size = 1
+            unplace_result = await self.call_tool(
+                "vivado_run_tcl", {"command": "place_design -unplace", "timeout": 600}, internal=True
+            )
+            if self._vivado_output_has_error(unplace_result):
+                return self._failure_json(
+                    "replace_unplace_failed",
+                    f"place_design -unplace failed: {unplace_result[:2000]}",
+                    command="place_design_explore",
+                )
             place = await self.call_tool("vivado_place_design", {"directive": directive, "timeout": 3600})
+            if self._action_failure(place, default_command="vivado_place_design"):
+                return self._failure_json(
+                    "replace_place_failed",
+                    f"place_design -directive {directive} failed after unplace: {place[:2000]}",
+                    command="place_design_explore",
+                )
             route = await self.call_tool("vivado_route_design", {"directive": route_directive, "timeout": 3600})
+            if self._action_failure(route, default_command="vivado_route_design"):
+                return self._failure_json(
+                    "replace_route_failed",
+                    f"route_design -directive {route_directive} failed after re-place: {route[:2000]}",
+                    command="place_design_explore",
+                )
             return place + "\n\n" + route
         if action == "pblock_full_replace":
             return await self._execute_pblock_full_replace(dict(params))
@@ -4797,22 +4940,18 @@ class DCPOptimizer(DCPOptimizerBase):
             dcp = self.run_dir / f"cell_placement_iter_{self.iteration:03d}.dcp"
             result += "\n\n" + await self.call_tool("rapidwright_write_checkpoint", {"dcp_path": str(dcp), "overwrite": True})
             result += "\n\n" + await self.call_tool("vivado_open_checkpoint", {"dcp_path": str(dcp), "timeout": 600})
-            # Run 20260712 lesson: RapidWright candidates can carry unplaced
-            # primitives (cells it unplaced but could not re-site -- the "No
-            # available site near centroid" errors). Routing and measuring
-            # such a candidate produces timing the provenance gate rightly
-            # rejects, but by then a route cycle is wasted and the mutant is
-            # live. Fail fast here instead, as a bare failure JSON so the
-            # main loop's _action_failure() sees it, records the failure into
-            # action memory, and restores the best checkpoint.
+            # Fail fast only on candidates with unplaced primitives BEYOND the
+            # design's benign baseline artifacts (see _unplaced_tolerance --
+            # this design always shows ~6, plus one per failed move; the
+            # post-route provenance gate re-verifies with route status).
             candidate_unplaced = await self._count_unplaced_cells()
-            if candidate_unplaced:
+            if candidate_unplaced and candidate_unplaced > self._unplaced_tolerance():
                 return self._failure_json(
                     "invalid_design_state",
                     (
                         f"rapidwright_optimize_cell_placement produced a candidate with "
-                        f"{candidate_unplaced} unplaced primitive cell(s); refusing to route or "
-                        f"measure it. The moved cells could not all be legally re-sited."
+                        f"{candidate_unplaced} unplaced primitive cell(s) (tolerance "
+                        f"{self._unplaced_tolerance()}); refusing to route or measure it."
                     ),
                     command=action,
                 )
@@ -4843,14 +4982,15 @@ class DCPOptimizer(DCPOptimizerBase):
             dcp = self.run_dir / f"fanout_split_iter_{self.iteration:03d}.dcp"
             result += "\n\n" + await self.call_tool("rapidwright_write_checkpoint", {"dcp_path": str(dcp), "overwrite": True})
             result += "\n\n" + await self.call_tool("vivado_open_checkpoint", {"dcp_path": str(dcp), "timeout": 600})
-            # Same unplaced-candidate fail-fast as the cell-placement flow.
+            # Same tolerance-aware fail-fast as the cell-placement flow.
             candidate_unplaced = await self._count_unplaced_cells()
-            if candidate_unplaced:
+            if candidate_unplaced and candidate_unplaced > self._unplaced_tolerance():
                 return self._failure_json(
                     "invalid_design_state",
                     (
                         f"fanout_split produced a candidate with {candidate_unplaced} unplaced "
-                        f"primitive cell(s); refusing to route or measure it."
+                        f"primitive cell(s) (tolerance {self._unplaced_tolerance()}); refusing "
+                        f"to route or measure it."
                     ),
                     command=action,
                 )
@@ -4880,6 +5020,76 @@ class DCPOptimizer(DCPOptimizerBase):
             command=str(action),
         )
     
+    async def _maybe_warm_start_replace(self) -> bool:
+        """Deterministic opening move, GATED on the design's own signature --
+        not unconditional, because every DCP is different.
+
+        A whole-design unplace + re-place is the only recipe with recorded
+        wins on net-delay-bound designs (403 -> 501 MHz accidentally in run
+        20260711, 403 -> 521 MHz in test mode), and its downside is bounded:
+        one place/route cycle, rolled back on regression by the normal
+        checkpoint machinery. So when the input shows exactly that signature
+        (failing WNS + net-delay-bound critical path), run it once
+        deterministically before handing control to the LLM. Designs that
+        already meet timing, or whose paths are logic-bound, skip this
+        entirely -- discarding a good placement is the one case where this
+        bet is negative.
+        """
+        if self.initial_wns is None or self.initial_wns >= 0:
+            logger.info("Warm start skipped: timing met or initial WNS unknown.")
+            return False
+        classification = await self._classify_worst_path_delay()
+        if classification != "net_delay_bound":
+            logger.info(
+                "Warm start skipped: delay class is '%s', not net_delay_bound; "
+                "the input placement is not the demonstrated bottleneck.",
+                classification,
+            )
+            return False
+
+        self.iteration = 1
+        logger.info(
+            "Warm start: input is net-delay-bound with failing WNS (%.3f ns); "
+            "running deterministic whole-design re-place (place Default / route Default, "
+            "the recorded winning directive pair) as iteration 1.",
+            self.initial_wns,
+        )
+        print("=== Warm start: deterministic whole-design re-place (iteration 1) ===\n")
+        self.last_decision_trace = {
+            "llm_chosen_action": "place_design_explore",
+            "warm_start": True,
+            "validation_result": "warm_start",
+        }
+        decision = {
+            "chosen_action": "place_design_explore",
+            "action_parameters": {"directive": "Default", "route_directive": "Default"},
+        }
+        response_text = await self.execute_validated_action(
+            decision, {"worst_path": {}, "delay_class": classification}
+        )
+        failure = self._action_failure(response_text, default_command="place_design_explore")
+        if failure:
+            self._record_failed_action(failure)
+            print(f"\nWarm start failed: {failure.get('error_type')}\n{failure.get('message', '')}\n")
+            if self.last_action_mutated_design:
+                await self._restore_best_state("warm-start re-place failed after mutating the design")
+            summary = (
+                f"A deterministic warm-start whole-design re-place was attempted as iteration 1 "
+                f"and FAILED ({failure.get('error_type')}): {str(failure.get('message'))[:300]}"
+            )
+        else:
+            self.cheap_failure_streak = 0
+            await self.call_tool("vivado_report_timing_summary", {"timeout": 300})
+            summary = (
+                "A deterministic warm-start whole-design re-place (unplace + place Default + "
+                "route Default) was executed as iteration 1 -- it is the recipe with the best "
+                "recorded results on net-delay-bound designs. Its outcome is reflected in the "
+                "timing state and place_directives_tried. Build on it: if it improved, try a "
+                "stronger directive next; if it regressed, choose a different strategy family."
+            )
+        self.messages.append({"role": "user", "content": summary})
+        return True
+
     async def optimize(self, input_dcp: Path, output_dcp: Path) -> bool:
         """Run the optimization workflow."""
         # Start timing the optimization process
@@ -4900,6 +5110,20 @@ class DCPOptimizer(DCPOptimizerBase):
         # improvement and stop path.
         self.output_dcp_path = output_dcp
         self._publish_best_to_output()
+
+        # Probe the input's own unplaced-primitive count so the provenance
+        # gate can distinguish this design's benign artifacts from breakage
+        # (see _unplaced_tolerance).
+        try:
+            self.baseline_unplaced_cells = await self._count_unplaced_cells()
+            if self.baseline_unplaced_cells:
+                logger.info(
+                    "Input DCP has %d unplaced primitive cell(s) at baseline; "
+                    "tolerating up to %d as benign design artifacts.",
+                    self.baseline_unplaced_cells, self._unplaced_tolerance(),
+                )
+        except Exception as exc:
+            logger.warning("Could not probe baseline unplaced-cell count: %s", exc)
 
         # If timing is already met, continue anyway: this contest flow pushes Fmax
         # by tightening the target clock instead of stopping at closure.
@@ -4930,15 +5154,22 @@ INITIAL ANALYSIS RESULTS:
 Proceed by selecting exactly one validated action per timing-context turn."""
             }
         ]
-        
+
+        # Signature-gated deterministic opening move (see the method's
+        # docstring). Consumes iteration 1 when it runs; the LLM loop then
+        # continues from iteration 2 with the warm start's outcome in its
+        # history, directive-sweep memory, and conversation.
+        await self._maybe_warm_start_replace()
+
         max_iterations = 50  # Safety limit
-        
+
         print("=== Starting LLM-Driven Optimization ===\n")
         
         while self.iteration < max_iterations:
             self.iteration += 1
+            iteration_started_at = time.time()
             logger.info(f"=== Iteration {self.iteration} ===")
-            
+
             try:
                 await self._append_iteration_context()
                 decision = await self.get_validated_action_decision(self.last_timing_context)
@@ -4968,12 +5199,31 @@ Proceed by selecting exactly one validated action per timing-context turn."""
                     # dominated by "failed" iterations (e.g. every offered action
                     # cooling down / geometrically invalid) are exactly the case
                     # this limit exists for, so check it here too before moving on.
-                    if self.consecutive_no_improvement >= ABSOLUTE_STALL_HARD_LIMIT:
+                    #
+                    # History(16) refinement: the 5-stall budget was calibrated
+                    # for stalls that each burn a full place/route (real score
+                    # damage). Validation failures that abort in seconds must
+                    # not consume it -- history(16) died after 5 failures that
+                    # used almost no Vivado time, abandoning the whole
+                    # remaining budget. Cheap failures count against a
+                    # separate, much larger cap instead.
+                    iteration_elapsed = time.time() - iteration_started_at
+                    if iteration_elapsed < CHEAP_FAILURE_RUNTIME_S:
+                        self.cheap_failure_streak += 1
+                    else:
+                        self.cheap_failure_streak = 0
+                    effective_stalls = self.consecutive_no_improvement - self.cheap_failure_streak
+                    if (
+                        effective_stalls >= ABSOLUTE_STALL_HARD_LIMIT
+                        or self.consecutive_no_improvement >= STALL_LIMIT_CHEAP_FAILURES
+                    ):
                         logger.error(
-                            "Hard stall limit (%d) reached with no improvement "
-                            "(most recently via repeated action failures); "
+                            "Hard stall limit reached (%d effective stalls, %d total "
+                            "consecutive failures of which %d were cheap); "
                             "stopping and restoring best checkpoint.",
-                            ABSOLUTE_STALL_HARD_LIMIT,
+                            effective_stalls,
+                            self.consecutive_no_improvement,
+                            self.cheap_failure_streak,
                         )
                         if self.checkpoint_manager is not None:
                             best_ckpt = self.checkpoint_manager.get_best_checkpoint()
@@ -4986,6 +5236,9 @@ Proceed by selecting exactly one validated action per timing-context turn."""
                         self._print_optimization_summary()
                         return True
                     continue
+                # An action executed without failing: the cheap-failure streak
+                # is broken regardless of whether WNS improved.
+                self.cheap_failure_streak = 0
                 await self.call_tool("vivado_report_timing_summary", {"timeout": 300})
                 print(f"\n{response_text}\n")
                 

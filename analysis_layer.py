@@ -321,7 +321,19 @@ def _rule_long_interconnect(cluster: FailureCluster, evidence: dict) -> RootCaus
         confidence=max(0.0, min(1.0, confidence)),
         supporting_evidence=supporting,
         contradicting_evidence=contradicting,
-        recommended_actions=["rapidwright_optimize_cell_placement"],
+        # Cells that are GENUINELY far apart (the whole point of this
+        # hypothesis) need a global re-place, not local nudges -- single-cell
+        # moves cannot close a 100+ tile spread, and
+        # rapidwright_optimize_cell_placement has a 100% recorded loss rate
+        # in that regime across three runs. This used to recommend only the
+        # local-nudge action, steering every iteration-1 pick into the
+        # historically worst move; the whole-design re-place recipes (the
+        # only family with a recorded win: 403 -> 501/521 MHz) now lead.
+        recommended_actions=[
+            "place_design_explore",
+            "pblock_full_replace",
+            "rapidwright_optimize_cell_placement",
+        ],
         evidence_requests=evidence_requests,
     )
 

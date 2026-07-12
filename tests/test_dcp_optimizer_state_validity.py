@@ -136,9 +136,7 @@ def test_rejected_observation_is_a_failure_with_restore(opt, tmp_path):
     assert opt.checkpoint_manager.best_wns == -0.978
 
 
-def test_unplaced_candidate_fails_before_routing(opt):
-    """The cell-placement flow must refuse to route a RapidWright candidate
-    that carries unplaced primitives, returning a bare failure JSON."""
+def _run_cell_placement(opt, unplaced_count):
     calls = []
 
     async def fake_call_tool(tool_name, arguments, internal=False):
@@ -148,7 +146,7 @@ def test_unplaced_candidate_fails_before_routing(opt):
                 {"cell": "a", "status": "success"},
             ], "cells_moved": 1, "moved_cells": ["a"]})
         if tool_name == "vivado_run_tcl":
-            return "STATE_UNPLACED:8"
+            return f"STATE_UNPLACED:{unplaced_count}"
         return "ok"
 
     async def fake_spread(cells):
@@ -162,9 +160,38 @@ def test_unplaced_candidate_fails_before_routing(opt):
              "action_parameters": {"cell_names": ["a"]}},
             {"worst_path": {}, "delay_class": "net_delay_bound"},
         ))
+    return result, calls
+
+
+def test_grossly_unplaced_candidate_fails_before_routing(opt):
+    """A candidate with unplaced primitives far beyond the benign tolerance
+    must be rejected as a bare failure JSON, before spending a route."""
+    result, calls = _run_cell_placement(opt, unplaced_count=80)
     payload = json.loads(result)
     assert payload["error_type"] == "invalid_design_state"
     assert "vivado_route_design" not in calls, "must fail before spending a route"
+
+
+def test_benign_unplaced_candidate_still_routes(opt):
+    """History(16) regression: this design ALWAYS shows ~6-8 unplaced
+    primitives (input artifacts + failed moves). Those candidates must route
+    and be measured -- rejecting them vetoed every improving recipe."""
+    result, calls = _run_cell_placement(opt, unplaced_count=8)
+    assert "vivado_route_design" in calls
+    with pytest.raises(json.JSONDecodeError):
+        json.loads(result)  # concatenated tool output, not a failure JSON
+
+
+def test_verify_routed_state_tolerates_benign_unplaced(opt):
+    """Clean route status + a handful of unplaced primitives = valid."""
+    async def fake_call_tool(tool_name, arguments, internal=False):
+        if tool_name == "vivado_run_tcl":
+            return "STATE_UNPLACED:6"
+        return "# of nets with routing errors.......... :           0 :"
+    with patch.object(opt, "call_tool", side_effect=fake_call_tool):
+        ok, detail = asyncio.run(opt._verify_routed_state())
+    assert ok, detail
+    assert "benign" in detail
 
 
 # ---------------------------------------------------------------------------
