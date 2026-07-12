@@ -182,6 +182,161 @@ def test_directive_outcome_recorded(opt):
     assert opt.place_directive_results["Explore"]["status"] == "improved"
 
 
+def test_place_design_explore_unplaces_first(opt):
+    """History(16) forensics: place_design is incremental over an existing
+    placement, so without an unplace it is a no-op and the directive sweep
+    sweeps nothing. The executor must run `place_design -unplace` before
+    place and route, in that order."""
+    calls = []
+
+    async def fake_call_tool(tool_name, arguments, internal=False):
+        calls.append((tool_name, str(arguments.get("command", "")), str(arguments.get("directive", ""))))
+        return "ok"
+
+    async def licensed():
+        return True
+
+    opt.iteration = 1
+    with patch.object(opt, "call_tool", side_effect=fake_call_tool), \
+         patch.object(opt, "_check_implementation_license", side_effect=licensed):
+        asyncio.run(opt.execute_validated_action(
+            {"chosen_action": "place_design_explore",
+             "action_parameters": {"directive": "ExtraTimingOpt"}},
+            {"worst_path": {}, "delay_class": "net_delay_bound"},
+        ))
+
+    unplace_idx = next(i for i, c in enumerate(calls) if "place_design -unplace" in c[1])
+    place_idx = next(i for i, c in enumerate(calls) if c[0] == "vivado_place_design")
+    route_idx = next(i for i, c in enumerate(calls) if c[0] == "vivado_route_design")
+    assert unplace_idx < place_idx < route_idx
+    assert calls[place_idx][2] == "ExtraTimingOpt"
+    assert opt.last_place_directive == "ExtraTimingOpt"
+
+
+def _run_warm_start(opt, initial_wns, classification):
+    captured = {}
+
+    async def fake_classify():
+        return classification
+
+    async def fake_execute(decision, timing_context):
+        captured["decision"] = decision
+        return "ok"
+
+    async def fake_call_tool(tool_name, arguments, internal=False):
+        return "ok"
+
+    opt.initial_wns = initial_wns
+    with patch.object(opt, "_classify_worst_path_delay", side_effect=fake_classify), \
+         patch.object(opt, "execute_validated_action", side_effect=fake_execute), \
+         patch.object(opt, "call_tool", side_effect=fake_call_tool):
+        ran = asyncio.run(opt._maybe_warm_start_replace())
+    return ran, captured
+
+
+def test_warm_start_skips_when_timing_met(opt):
+    ran, _ = _run_warm_start(opt, initial_wns=0.05, classification="net_delay_bound")
+    assert not ran
+    assert opt.iteration == 0
+
+
+def test_warm_start_skips_when_logic_bound(opt):
+    ran, _ = _run_warm_start(opt, initial_wns=-0.9, classification="logic_delay_bound")
+    assert not ran
+
+
+def test_warm_start_runs_replace_on_net_bound_failing_design(opt):
+    ran, captured = _run_warm_start(opt, initial_wns=-0.978, classification="net_delay_bound")
+    assert ran
+    assert opt.iteration == 1
+    decision = captured["decision"]
+    assert decision["chosen_action"] == "place_design_explore"
+    # The recorded winning directive pair from the 501 MHz result.
+    assert decision["action_parameters"] == {"directive": "Default", "route_directive": "Default"}
+    assert any("warm-start" in str(m.get("content", "")).lower() for m in opt.messages)
+
+
+def test_long_interconnect_recommends_global_replace_first():
+    """Cells 100+ tiles apart need a global re-place, not local nudges; the
+    hypothesis's recommendation order must lead with the recipe family that
+    has recorded wins, so both the LLM ranking and the outcome loop's
+    win/loss attribution point at the right actions."""
+    from analysis_layer import _rule_long_interconnect, FailureCluster
+    cluster = FailureCluster(id="c0", members=[], shared_cells=set(), fanout_hotspots=[])
+    hyp = _rule_long_interconnect(cluster, {"cluster_avg_spread": 134.0, "net_pct": 0.82})
+    assert hyp.recommended_actions[0] == "place_design_explore"
+    assert hyp.recommended_actions[1] == "pblock_full_replace"
+    assert "rapidwright_optimize_cell_placement" in hyp.recommended_actions
+
+
+def test_place_design_explore_in_structural_families():
+    """The stuck-detector's structural override must never hide the one
+    recipe family with a proven win on this benchmark."""
+    assert "place_design_explore" in dcp.RAPIDWRIGHT_STRUCTURAL_ACTIONS
+    assert "place_design_explore" in dcp.RAPIDWRIGHT_PLACEMENT_ACTIONS
+
+
+def test_clockregion_pblock_falls_back_to_site_ranges(opt):
+    """History(16) iter 1: a clock-region conversion that misses the cluster
+    must auto-fall back to site ranges of the same fabric region instead of
+    failing the iteration."""
+    opt.current_target_candidates = [{"endpoint": "e", "startpoint": "s", "slack": -0.5}] * 5
+    convert_calls = []
+
+    async def fake_call_tool(tool_name, arguments, internal=False):
+        if tool_name == "rapidwright_analyze_fabric_for_pblock":
+            return json.dumps({"recommended_region": {
+                "col_min": 301, "col_max": 321, "row_min": 28, "row_max": 82}})
+        if tool_name == "rapidwright_convert_fabric_region_to_pblock":
+            convert_calls.append(bool(arguments.get("use_clock_regions")))
+            if arguments.get("use_clock_regions"):
+                return json.dumps({"pblock_ranges": "CLOCKREGION_X5Y0:CLOCKREGION_X5Y1"})
+            return json.dumps({
+                "pblock_ranges": "SLICE_X6Y0:SLICE_X142Y599",
+                "site_counts": {"LUT": 100000, "FF": 200000},
+            })
+        return "ok"
+
+    with patch.object(opt, "call_tool", side_effect=fake_call_tool):
+        computed, error = asyncio.run(opt._compute_pblock_ranges(
+            {"use_clock_regions": True},
+            {"cluster_clock_regions": ["X1Y4", "X2Y4"]},
+        ))
+    assert error is None
+    assert convert_calls == [True, False]
+    assert computed["ranges"].startswith("SLICE_")
+
+
+def test_full_replace_aborts_on_resource_validation_errors(opt):
+    """History(16) iter 4: the DRC flagged 31370 LUTs into 26880 BEFORE
+    placement; the flow must abort there instead of burning the place."""
+    calls = []
+
+    async def fake_call_tool(tool_name, arguments, internal=False):
+        calls.append(tool_name)
+        if tool_name == "vivado_create_and_apply_pblock":
+            return json.dumps({
+                "success": True, "cells_assigned": 100,
+                "resource_validation": {
+                    "is_valid": True,
+                    "errors": ["LUT as Logic: 31370 assigned, only 26880 available"],
+                },
+            })
+        return "ok"
+
+    async def licensed():
+        return True
+
+    opt.iteration = 1
+    with patch.object(opt, "call_tool", side_effect=fake_call_tool), \
+         patch.object(opt, "_check_implementation_license", side_effect=licensed):
+        result = asyncio.run(opt._execute_pblock_full_replace(
+            {"ranges": "SLICE_X0Y240:SLICE_X59Y299"}))
+    payload = json.loads(result)
+    assert payload["error_type"] == "full_replace_region_too_small"
+    assert "vivado_place_design" not in calls
+
+
 # ---------------------------------------------------------------------------
 # Item 3b: pblock sizing memory
 # ---------------------------------------------------------------------------
