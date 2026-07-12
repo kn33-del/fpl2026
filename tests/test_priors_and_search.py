@@ -234,14 +234,56 @@ def test_pblock_attempt_recorded_on_failure(opt, tmp_path):
 # Item 4: congestion + clock regions
 # ---------------------------------------------------------------------------
 
-def test_congestion_parser_table_and_window():
+def test_congestion_parser_strict():
     level, _ = DCPOptimizer._parse_congestion_report(
         "| NORTH | 5 | 12.3 |\n| SOUTH | 3 | 1.0 |")
     assert level == 5
-    level, _ = DCPOptimizer._parse_congestion_report("congested window of 32x32 tiles")
-    assert level == 5
-    level, detail = DCPOptimizer._parse_congestion_report("no table here")
+    # The router's authoritative per-direction summary wins.
+    level, _ = DCPOptimizer._parse_congestion_report(
+        "Direction: North\nCongested clusters found at Level 0\n"
+        "Effective congestion level: 0 Aspect Ratio: 1 Sparse Ratio: 0\n"
+        "Direction: South\nEffective congestion level: 0 Aspect Ratio: 1")
+    assert level == 0
+    # Run 20260712 regression: loose text (window sizes, "Max Cong = 68%",
+    # prose mentioning levels) must NOT produce a level -- a false positive
+    # demotes good actions.
+    level, detail = DCPOptimizer._parse_congestion_report(
+        "North Dir 1x1 Area, Max Cong = 68.0751%, No Congested Regions.\n"
+        "congested window of 32x32 tiles")
     assert level is None and "no congestion level" in detail
+    level, _ = DCPOptimizer._parse_congestion_report("no table here")
+    assert level is None
+
+
+def test_clockregion_ranges_cover():
+    # Run 20260712 iter 3: cluster in X1Y4/X2Y4, computed range X5Y0:X5Y1.
+    assert not DCPOptimizer._clockregion_ranges_cover(
+        "CLOCKREGION_X5Y0:CLOCKREGION_X5Y1", {"X1Y4", "X2Y4"})
+    assert DCPOptimizer._clockregion_ranges_cover(
+        "CLOCKREGION_X1Y3:CLOCKREGION_X2Y4", {"X1Y4"})
+    assert DCPOptimizer._clockregion_ranges_cover(
+        "CLOCKREGION_X2Y4", {"X2Y4"})
+    # Unparsable ranges must not block.
+    assert DCPOptimizer._clockregion_ranges_cover(
+        "SLICE_X0Y0:SLICE_X10Y10", {"X1Y4"})
+
+
+def test_congestion_harvested_from_route_log(opt):
+    opt.iteration = 3
+    opt._update_design_state(
+        "vivado_route_design", {},
+        "Routing complete.\nEffective congestion level: 4 Aspect Ratio: 1\n"
+        "route_design completed successfully")
+    assert opt.last_congestion_info["congestion_level"] == 4
+    # A later fetch that can't parse report_design_analysis keeps the real
+    # measurement instead of downgrading it to unknown.
+    opt.iteration = 4
+
+    async def fake_call_tool(tool_name, arguments, internal=False):
+        return "unparsable report"
+    with patch.object(opt, "call_tool", side_effect=fake_call_tool):
+        info = asyncio.run(opt._fetch_congestion_summary())
+    assert info["congestion_level"] == 4
 
 
 def test_clock_region_fetch(opt):

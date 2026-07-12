@@ -1688,6 +1688,7 @@ class DCPOptimizer(DCPOptimizerBase):
             self.last_action_mutated_design = True
             if not failed:
                 self.design_state = "routed"
+                self._harvest_congestion_from_route_log(result_text)
             return
         if tool_name in ("vivado_phys_opt_design", "vivado_create_and_apply_pblock"):
             self.last_action_mutated_design = True
@@ -1702,6 +1703,7 @@ class DCPOptimizer(DCPOptimizerBase):
                 self.last_action_mutated_design = True
                 if not failed:
                     self.design_state = "routed"
+                    self._harvest_congestion_from_route_log(result_text)
             elif "place_design" in command:
                 self.last_action_mutated_design = True
                 if not failed:
@@ -1709,10 +1711,9 @@ class DCPOptimizer(DCPOptimizerBase):
             elif "phys_opt_design" in command or "create_pblock" in command or "delete_pblocks" in command:
                 self.last_action_mutated_design = True
 
-    async def _verify_routed_state(self) -> tuple[bool, str]:
-        """Ask Vivado (not just our client-side tracker) whether the design is
-        fully placed and routed. This is the provenance gate a WNS observation
-        must pass before it may become iteration history / best_checkpoint."""
+    async def _count_unplaced_cells(self) -> Optional[int]:
+        """Number of unplaced primitive cells in the live design, or None if
+        the probe output could not be parsed."""
         raw = await self.call_tool(
             "vivado_run_tcl",
             {
@@ -1726,9 +1727,15 @@ class DCPOptimizer(DCPOptimizerBase):
             internal=True,
         )
         match = re.search(r"STATE_UNPLACED:(\d+)", raw)
-        if not match:
-            return False, f"could not verify placement state: {raw[:200]}"
-        unplaced = int(match.group(1))
+        return int(match.group(1)) if match else None
+
+    async def _verify_routed_state(self) -> tuple[bool, str]:
+        """Ask Vivado (not just our client-side tracker) whether the design is
+        fully placed and routed. This is the provenance gate a WNS observation
+        must pass before it may become iteration history / best_checkpoint."""
+        unplaced = await self._count_unplaced_cells()
+        if unplaced is None:
+            return False, "could not verify placement state"
         if unplaced > 0:
             return False, f"{unplaced} primitive cell(s) are unplaced"
         route_raw = await self.call_tool("vivado_report_route_status", {"timeout": 300}, internal=True)
@@ -1804,6 +1811,20 @@ class DCPOptimizer(DCPOptimizerBase):
             self.pblock_attempt_history.append(entry)
             del self.pblock_attempt_history[:-10]
 
+    def _harvest_congestion_from_route_log(self, route_output: str) -> None:
+        """Every successful route_design log ends with the router's own
+        congestion report ('Effective congestion level: N' per direction) --
+        the most current, most authoritative congestion measurement there is,
+        and it costs nothing. Cache it so _fetch_congestion_summary rarely
+        needs the (slow, format-unstable) report_design_analysis call."""
+        level, detail = self._parse_congestion_report(route_output)
+        if level is not None:
+            self.last_congestion_info = {
+                "iteration": self.iteration,
+                "congestion_level": level,
+                "detail": f"{detail} (from route_design log)",
+            }
+
     async def _fetch_congestion_summary(self) -> dict:
         """Item 4: worst router congestion level for the current routed design,
         cached per iteration (report_design_analysis is not cheap). Unknown
@@ -1820,35 +1841,44 @@ class DCPOptimizer(DCPOptimizerBase):
             level, detail = self._parse_congestion_report(raw)
             info["congestion_level"] = level
             info["detail"] = detail
+        if info["congestion_level"] is None and self.last_congestion_info.get("congestion_level") is not None:
+            # Keep the most recent REAL measurement (typically harvested from
+            # the latest route_design log) instead of replacing it with
+            # unknown -- the design hasn't been re-routed since it was taken.
+            info = {**self.last_congestion_info, "iteration": self.iteration}
         self.last_congestion_info = info
         return info
 
     @staticmethod
     def _parse_congestion_report(raw: str) -> tuple[Optional[int], str]:
-        """Tolerant parse of `report_design_analysis -congestion`: the table
-        format shifts between Vivado versions, so accept any of the known
-        shapes and take the worst level seen. Deliberately permissive -- a
-        slight overestimate only demotes pblock with a reason the LLM can
-        rebut, whereas a strict parser that breaks on a format change would
-        silently lose the congestion signal entirely."""
+        """Parse `report_design_analysis -congestion` STRICTLY.
+
+        Run 20260712 lesson: the first version of this parser was 'tolerant'
+        (loose direction/level regexes plus an NxN window heuristic) and read
+        level 5 out of a report whose router summary said 'Effective
+        congestion level: 0' in every direction. That false 5 demoted the
+        whole pblock family -- including the recipe family that had produced
+        the previous run's best result. A false positive here is WORSE than
+        no signal (it vetoes good actions with authority it doesn't have), so
+        only two unambiguous formats are accepted; anything else is
+        'unknown', which demotes nothing.
+        """
         if not raw:
             return None, "empty congestion report"
         levels: list[int] = []
-        # Table rows like "| NORTH | 5 | ..." (direction then level).
-        for match in re.finditer(r"(?im)^\s*\|?\s*(north|south|east|west)\b[^\d\n]*(\d+)", raw):
-            levels.append(int(match.group(2)))
-        # Prose like "Congestion Level: 5".
-        for match in re.finditer(r"(?i)congestion[^\n\d]{0,40}level[^\n\d]{0,10}(\d+)", raw):
+        # The router's own authoritative summary line, one per direction:
+        #   "Effective congestion level: 5"
+        for match in re.finditer(r"(?i)effective congestion level:\s*(\d+)", raw):
             levels.append(int(match.group(1)))
-        # Window sizes like "32x32" (2^level tiles on a side).
-        for match in re.finditer(r"\b(\d+)x\1\b", raw):
-            side = int(match.group(1))
-            if side >= 2:
-                levels.append(side.bit_length() - 1)
+        # Strict report_design_analysis table rows: "| NORTH | 5 |"
+        for match in re.finditer(
+            r"(?im)^\s*\|\s*(?:north|south|east|west)\s*\|\s*(\d+)\s*\|", raw
+        ):
+            levels.append(int(match.group(1)))
         if not levels:
             return None, "no congestion level found in report"
         worst = max(levels)
-        return worst, f"worst congestion level {worst} (~{2 ** worst}x{2 ** worst} tile window)"
+        return worst, f"worst effective congestion level {worst} (~{2 ** worst}x{2 ** worst} tile window)"
 
     async def _fetch_clock_regions(self, cell_names: list[str]) -> dict[str, str]:
         """Item 4: CLOCK_REGION per placed cell (first site), one Tcl round-trip
@@ -3082,6 +3112,29 @@ class DCPOptimizer(DCPOptimizerBase):
             if not ranges:
                 return None, f"RapidWright pblock range conversion returned no pblock_ranges: {range_text[:300]}"
 
+            # Run 20260712 lesson (iter 3, WNS -0.978 -> -3.682): the fabric
+            # analyzer recommends a region with FREE RESOURCES, which is not
+            # necessarily anywhere near the critical cells. Converted to
+            # clock-region form that produced CLOCKREGION_X5Y0:X5Y1 while the
+            # critical cluster sits in X1Y4/X2Y4 -- constraining the cells
+            # into it dragged them across the die. We now measure the
+            # cluster's clock regions (item 4), so require the computed
+            # clock-region range to actually contain at least one of them.
+            cluster_regions = {
+                str(region)
+                for region in (timing_context.get("cluster_clock_regions") or [])
+                if region
+            }
+            if "CLOCKREGION" in str(ranges) and cluster_regions:
+                if not self._clockregion_ranges_cover(str(ranges), cluster_regions):
+                    return None, (
+                        f"computed clock-region pblock {ranges} does not contain any of the "
+                        f"critical cluster's clock regions {sorted(cluster_regions)}; constraining "
+                        f"critical cells into a far-away region drags them across the die and "
+                        f"regresses timing. Retry without use_clock_regions, or pass explicit "
+                        f"ranges near {sorted(cluster_regions)}."
+                    )
+
             # --- Fix #2b: reject regions that would be packed too densely. ---
             site_counts = range_payload.get("site_counts") or {}
             utilization_error = self._check_pblock_utilization(
@@ -3140,6 +3193,31 @@ class DCPOptimizer(DCPOptimizerBase):
         computed["_fabric_region"] = region
         logger.info("Computed pblock ranges via RapidWright: %s", ranges)
         return computed, None
+
+    @staticmethod
+    def _clockregion_ranges_cover(ranges: str, cluster_regions: set[str]) -> bool:
+        """True if any cluster clock region (e.g. 'X1Y4') falls inside any
+        CLOCKREGION_XaYb[:CLOCKREGION_XcYd] span in `ranges`. Unparsable
+        ranges return True (don't block on formats we don't understand)."""
+        spans: list[tuple[int, int, int, int]] = []
+        for match in re.finditer(
+            r"CLOCKREGION_X(\d+)Y(\d+)(?:\s*:\s*CLOCKREGION_X(\d+)Y(\d+))?", ranges
+        ):
+            x0, y0 = int(match.group(1)), int(match.group(2))
+            x1 = int(match.group(3)) if match.group(3) else x0
+            y1 = int(match.group(4)) if match.group(4) else y0
+            spans.append((min(x0, x1), max(x0, x1), min(y0, y1), max(y0, y1)))
+        if not spans:
+            return True
+        for region in cluster_regions:
+            region_match = re.fullmatch(r"X(\d+)Y(\d+)", region.strip())
+            if not region_match:
+                continue
+            x, y = int(region_match.group(1)), int(region_match.group(2))
+            for x_min, x_max, y_min, y_max in spans:
+                if x_min <= x <= x_max and y_min <= y <= y_max:
+                    return True
+        return False
 
     def _find_pblock_overlap(self, region: dict) -> Optional[dict]:
         """Return the first previously-applied pblock region that overlaps `region`, or None."""
@@ -3699,19 +3777,41 @@ class DCPOptimizer(DCPOptimizerBase):
         # the cheap cases; _verify_routed_state() asks Vivado itself, so a
         # half-implemented state left by a buggy/failed action can never be
         # checkpointed as "best" on the strength of estimated timing.
+        #
+        # Run 20260712 lesson: a rejected observation must be handled as a
+        # FAILED ACTION (failure memory penalty, stall counter, LLM feedback)
+        # plus a restore of the best checkpoint. The first version of this
+        # gate recorded a passive "wns_parse_error" instead -- no rollback, no
+        # penalty, nothing the outcome loop counts -- so the optimizer kept
+        # re-running the same mutant-producing recipe on top of the mutant
+        # design for four straight iterations while learning nothing.
         if self.design_state != "routed":
-            await self._record_wns_parse_error(
-                "design_state",
-                f"design state is '{self.design_state}', not routed; timing observation rejected",
-                str(wns),
+            self.recorded_iterations.add(self.iteration)
+            self._record_failed_action({
+                "error_type": "invalid_design_state",
+                "command": self.last_action_key,
+                "message": (
+                    f"Action completed but design state is '{self.design_state}', not routed; "
+                    f"timing observation {wns:.3f} ns rejected."
+                ),
+            })
+            await self._restore_best_state(
+                f"design state '{self.design_state}' after {self.last_action_key}"
             )
             return
         routed_ok, routed_detail = await self._verify_routed_state()
         if not routed_ok:
-            await self._record_wns_parse_error(
-                "route_status",
-                f"Vivado state check failed ({routed_detail}); timing observation rejected",
-                str(wns),
+            self.recorded_iterations.add(self.iteration)
+            self._record_failed_action({
+                "error_type": "invalid_design_state",
+                "command": self.last_action_key,
+                "message": (
+                    f"Action completed but left the design in an invalid state ({routed_detail}); "
+                    f"timing observation {wns:.3f} ns rejected."
+                ),
+            })
+            await self._restore_best_state(
+                f"invalid design state after {self.last_action_key} ({routed_detail})"
             )
             return
 
@@ -4697,6 +4797,25 @@ class DCPOptimizer(DCPOptimizerBase):
             dcp = self.run_dir / f"cell_placement_iter_{self.iteration:03d}.dcp"
             result += "\n\n" + await self.call_tool("rapidwright_write_checkpoint", {"dcp_path": str(dcp), "overwrite": True})
             result += "\n\n" + await self.call_tool("vivado_open_checkpoint", {"dcp_path": str(dcp), "timeout": 600})
+            # Run 20260712 lesson: RapidWright candidates can carry unplaced
+            # primitives (cells it unplaced but could not re-site -- the "No
+            # available site near centroid" errors). Routing and measuring
+            # such a candidate produces timing the provenance gate rightly
+            # rejects, but by then a route cycle is wasted and the mutant is
+            # live. Fail fast here instead, as a bare failure JSON so the
+            # main loop's _action_failure() sees it, records the failure into
+            # action memory, and restores the best checkpoint.
+            candidate_unplaced = await self._count_unplaced_cells()
+            if candidate_unplaced:
+                return self._failure_json(
+                    "invalid_design_state",
+                    (
+                        f"rapidwright_optimize_cell_placement produced a candidate with "
+                        f"{candidate_unplaced} unplaced primitive cell(s); refusing to route or "
+                        f"measure it. The moved cells could not all be legally re-sited."
+                    ),
+                    command=action,
+                )
             result += "\n\n" + await self.call_tool("vivado_route_design", {"directive": "Default", "timeout": 3600})
             return result
         if action == "fanout_split":
@@ -4724,6 +4843,17 @@ class DCPOptimizer(DCPOptimizerBase):
             dcp = self.run_dir / f"fanout_split_iter_{self.iteration:03d}.dcp"
             result += "\n\n" + await self.call_tool("rapidwright_write_checkpoint", {"dcp_path": str(dcp), "overwrite": True})
             result += "\n\n" + await self.call_tool("vivado_open_checkpoint", {"dcp_path": str(dcp), "timeout": 600})
+            # Same unplaced-candidate fail-fast as the cell-placement flow.
+            candidate_unplaced = await self._count_unplaced_cells()
+            if candidate_unplaced:
+                return self._failure_json(
+                    "invalid_design_state",
+                    (
+                        f"fanout_split produced a candidate with {candidate_unplaced} unplaced "
+                        f"primitive cell(s); refusing to route or measure it."
+                    ),
+                    command=action,
+                )
             result += "\n\n" + await self.call_tool("vivado_route_design", {"directive": "Default", "timeout": 3600})
             return result
         if action == "lut_opt":

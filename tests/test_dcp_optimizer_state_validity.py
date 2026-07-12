@@ -101,6 +101,72 @@ def test_verify_routed_state(opt):
         assert asyncio.run(opt._verify_routed_state())[0] is False
 
 
+def test_rejected_observation_is_a_failure_with_restore(opt, tmp_path):
+    """Run 20260712 regression: a provenance-gate rejection must penalize the
+    action and restore the best checkpoint -- not record a passive
+    wns_parse_error that leaves the mutant design live and teaches nothing."""
+    opt.checkpoint_manager = CheckpointManager(
+        input_dcp="in.dcp", output_dir=str(tmp_path / "ckpt"), clock_name="clk")
+    opt.checkpoint_manager.start_baseline(wns=-0.978, period_ns=1.5)
+    opt.iteration = 1
+    opt.clock_period = 1.5
+    opt.last_action_key = "rapidwright_optimize_cell_placement"
+    opt.last_recipe = "rapidwright_cell_placement"
+    opt.last_targets = ["layer0_reg/data_out_reg[41]"]
+
+    restores = []
+
+    async def fake_verify():
+        return False, "8 primitive cell(s) are unplaced"
+
+    async def fake_restore(reason):
+        restores.append(reason)
+
+    with patch.object(opt, "_verify_routed_state", side_effect=fake_verify), \
+         patch.object(opt, "_restore_best_state", side_effect=fake_restore):
+        asyncio.run(opt._record_iteration_timing(-1.349, 1.0))
+
+    last = opt.checkpoint_manager.iterations[-1]
+    assert last["status"] == "failed"
+    assert last["error_type"] == "invalid_design_state"
+    assert opt.action_failure_counts.get("rapidwright_optimize_cell_placement") == 1
+    assert opt.checkpoint_manager.stall_count == 1
+    assert restores, "best checkpoint must be restored after a rejected observation"
+    # And the best numbers were never polluted.
+    assert opt.checkpoint_manager.best_wns == -0.978
+
+
+def test_unplaced_candidate_fails_before_routing(opt):
+    """The cell-placement flow must refuse to route a RapidWright candidate
+    that carries unplaced primitives, returning a bare failure JSON."""
+    calls = []
+
+    async def fake_call_tool(tool_name, arguments, internal=False):
+        calls.append(tool_name)
+        if tool_name == "rapidwright_optimize_cell_placement":
+            return json.dumps({"results": [
+                {"cell": "a", "status": "success"},
+            ], "cells_moved": 1, "moved_cells": ["a"]})
+        if tool_name == "vivado_run_tcl":
+            return "STATE_UNPLACED:8"
+        return "ok"
+
+    async def fake_spread(cells):
+        return None
+
+    opt.iteration = 1
+    with patch.object(opt, "call_tool", side_effect=fake_call_tool), \
+         patch.object(opt, "_measure_cluster_spread", side_effect=fake_spread):
+        result = asyncio.run(opt.execute_validated_action(
+            {"chosen_action": "rapidwright_optimize_cell_placement",
+             "action_parameters": {"cell_names": ["a"]}},
+            {"worst_path": {}, "delay_class": "net_delay_bound"},
+        ))
+    payload = json.loads(result)
+    assert payload["error_type"] == "invalid_design_state"
+    assert "vivado_route_design" not in calls, "must fail before spending a route"
+
+
 # ---------------------------------------------------------------------------
 # Fix 3: pblock_full_replace must not be intercepted / reordered
 # ---------------------------------------------------------------------------
