@@ -1127,6 +1127,15 @@ class DCPOptimizer(DCPOptimizerBase):
         # rejections costing < CHEAP_FAILURE_RUNTIME_S). These get a much
         # larger stall budget than expensive place/route stalls.
         self.cheap_failure_streak: int = 0
+        # Cross-run persistent priors: per-design action/directive win-loss
+        # records accumulated across runs (~/.fpl26_action_priors.json). Used
+        # to demote proven losers on the SAME design from iteration 1 and to
+        # pick the warm start's directive from measured history instead of a
+        # hardcoded default.
+        self.crossrun_store_path: Path = Path.home() / ".fpl26_action_priors.json"
+        self.crossrun_design_key: Optional[str] = None
+        self.crossrun_priors: dict = {}
+        self._crossrun_saved: bool = False
 
     async def start_servers(self):
         """Start and connect to both MCP servers."""
@@ -1920,6 +1929,65 @@ class DCPOptimizer(DCPOptimizerBase):
                 "detail": f"{detail} (from route_design log)",
             }
 
+    def _load_crossrun_priors(self, input_dcp: Path) -> None:
+        """Load this design's action/directive records from previous runs."""
+        self.crossrun_design_key = input_dcp.stem
+        try:
+            store = json.loads(self.crossrun_store_path.read_text(encoding="utf-8"))
+            self.crossrun_priors = dict(store.get(self.crossrun_design_key) or {})
+        except (OSError, json.JSONDecodeError):
+            self.crossrun_priors = {}
+        if self.crossrun_priors:
+            logger.info(
+                "Loaded cross-run priors for %s: %d action record(s), %d directive record(s).",
+                self.crossrun_design_key,
+                len(self.crossrun_priors.get("actions") or {}),
+                len(self.crossrun_priors.get("directives") or {}),
+            )
+
+    def _save_crossrun_priors(self) -> None:
+        """Merge this run's outcomes into the persistent per-design store."""
+        if self._crossrun_saved or self.checkpoint_manager is None or not self.crossrun_design_key:
+            return
+        self._crossrun_saved = True
+        try:
+            store = json.loads(self.crossrun_store_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            store = {}
+        entry = store.setdefault(self.crossrun_design_key, {})
+        actions = entry.setdefault("actions", {})
+        directives = entry.setdefault("directives", {})
+        for record in self.checkpoint_manager.iterations:
+            action = str(record.get("llm_chosen_action") or record.get("recipe") or "")
+            status = str(record.get("status"))
+            bucket = "good" if status in ("improved", "marginal") else "bad"
+            if action:
+                action_record = actions.setdefault(action, {"good": 0, "bad": 0})
+                action_record[bucket] = int(action_record.get(bucket, 0)) + 1
+            targets = record.get("targets") or []
+            if targets and str(targets[0]).startswith("directive:"):
+                directive = str(targets[0]).split(":", 1)[1]
+                directive_record = directives.setdefault(directive, {"good": 0, "bad": 0})
+                directive_record[bucket] = int(directive_record.get(bucket, 0)) + 1
+        try:
+            self.crossrun_store_path.write_text(
+                json.dumps(store, indent=2) + "\n", encoding="utf-8"
+            )
+            logger.info("Saved cross-run priors to %s", self.crossrun_store_path)
+        except OSError as exc:
+            logger.warning("Could not save cross-run priors: %s", exc)
+
+    def _best_crossrun_directive(self) -> Optional[str]:
+        """The place directive with the best cross-run record on this design,
+        or None if nothing has ever won."""
+        directives = (self.crossrun_priors or {}).get("directives") or {}
+        best_name, best_score = None, 0
+        for name, record in directives.items():
+            score = int(record.get("good", 0)) - int(record.get("bad", 0))
+            if int(record.get("good", 0)) > 0 and score > best_score:
+                best_name, best_score = name, score
+        return best_name
+
     async def _fetch_congestion_summary(self) -> dict:
         """Item 4: worst router congestion level for the current routed design,
         cached per iteration (report_design_analysis is not cheap). Unknown
@@ -2551,6 +2619,10 @@ class DCPOptimizer(DCPOptimizerBase):
             "place_directives_untried": [
                 d for d in PLACE_DIRECTIVE_SWEEP if d not in self.place_directive_results
             ],
+            # Cross-run memory: measured win/loss records for this design
+            # from previous runs -- weigh these like this run's own history.
+            "crossrun_action_records": dict((self.crossrun_priors or {}).get("actions") or {}),
+            "crossrun_directive_records": dict((self.crossrun_priors or {}).get("directives") or {}),
             "pblock_attempt_history": list(self.pblock_attempt_history[-5:]),
             # Item 4 (decision-changing physical evidence).
             "congestion_level": self.last_congestion_info.get("congestion_level"),
@@ -2712,6 +2784,21 @@ class DCPOptimizer(DCPOptimizerBase):
                 f"WNS {current_wns:.3f} ns is below {PHYS_OPT_MIN_USEFUL_WNS_NS:.3f} ns; "
                 f"incremental phys_opt cannot close that gap while structural actions remain",
             )
+
+        # Cross-run priors: an action with zero wins and repeated losses on
+        # THIS design across previous runs starts demoted (with its record as
+        # the reason) instead of earning its losses all over again --
+        # rapidwright_optimize_cell_placement is 0-for-everything across four
+        # runs on the LogicNets benchmark, yet opened every run at full rank.
+        for prior_action, prior_record in ((self.crossrun_priors or {}).get("actions") or {}).items():
+            good = int(prior_record.get("good", 0))
+            bad = int(prior_record.get("bad", 0))
+            if prior_action in allowed and good == 0 and bad >= 3:
+                allowed = self._demote_actions(
+                    allowed,
+                    [prior_action],
+                    f"0 wins / {bad} losses across previous runs on this design",
+                )
 
         # Exploit-after-win (run 20260712_051231, measured): from a fresh
         # improvement, full re-place re-rolls went 0/3 (AltSpreadLogic_high
@@ -4743,6 +4830,40 @@ class DCPOptimizer(DCPOptimizerBase):
                     command="place_design_explore",
                 )
             return place + "\n\n" + route
+        if action == "route_explore":
+            # Route-only refinement: rip up and re-route the CURRENT placement
+            # with a stronger directive, never touching cell locations. The
+            # lowest-variance move in the menu -- the placement that earned
+            # the current WNS is preserved by construction, so the downside
+            # is bounded by one route cycle (rolled back on regression).
+            if not await self._check_implementation_license():
+                return self._failure_json(
+                    "vivado_license_failure",
+                    "Vivado Implementation license is unavailable; route_design disabled.",
+                    command="route_explore",
+                )
+            if self.design_state != "routed":
+                return self._failure_json(
+                    "invalid_design_state",
+                    f"route_explore requires a routed design to re-route; state is '{self.design_state}'.",
+                    command="route_explore",
+                )
+            directive = str(params.get("directive") or "Explore")
+            self.last_recipe = action
+            self.last_targets = [f"directive:{directive}"]
+            self.last_batch_size = 1
+            route = await self.call_tool(
+                "vivado_route_design",
+                {"directive": directive, "timeout": self._implementation_timeout_s()},
+                internal=True,
+            )
+            if self._action_failure(route, default_command="vivado_route_design"):
+                return self._failure_json(
+                    "route_explore_failed",
+                    f"route_design -directive {directive} failed: {route[:2000]}",
+                    command="route_explore",
+                )
+            return route
         if action == "pblock_full_replace":
             return await self._execute_pblock_full_replace(dict(params))
         if action == "pblock":
@@ -5119,6 +5240,57 @@ class DCPOptimizer(DCPOptimizerBase):
             command=str(action),
         )
     
+    async def _endgame_polish(self) -> None:
+        """Stall limit reached but wall-clock remains: spend it polishing the
+        best checkpoint with cheap incremental passes instead of exiting
+        early. Contest score only pays for the final DCP; unspent minutes are
+        worthless, and every pass here is measured through the normal
+        recording machinery (improvements become the new published best,
+        regressions roll back)."""
+        if self.checkpoint_manager is None:
+            return
+        remaining = self._time_remaining_s()
+        if remaining is None or remaining < ENDGAME_MIN_REMAINING_S:
+            return
+        if self.implementation_license_available is False:
+            return
+        logger.info(
+            "Endgame polish: stall limit hit with %.0f s of budget left; "
+            "running incremental passes on the best checkpoint.",
+            remaining,
+        )
+        print("=== Endgame polish: spending remaining budget on the best checkpoint ===\n")
+        await self._restore_best_state("endgame polish on best checkpoint")
+        polish_steps = [
+            ("phys_opt_design", {"directive": "Explore"}),
+            ("route_explore", {"directive": "Explore"}),
+            ("phys_opt_design", {"directive": "AggressiveExplore"}),
+            ("route_explore", {"directive": "NoTimingRelaxation"}),
+            ("phys_opt_design", {"directive": "Default"}),
+        ]
+        for polish_action, polish_params in polish_steps:
+            remaining = self._time_remaining_s()
+            if remaining is not None and remaining < ENDGAME_MIN_REMAINING_S:
+                logger.info("Endgame polish: %.0f s left, stopping the polish chain.", remaining or 0)
+                break
+            self.iteration += 1
+            self.last_decision_trace = {
+                "llm_chosen_action": polish_action,
+                "endgame_polish": True,
+                "validation_result": "endgame_polish",
+            }
+            response = await self.execute_validated_action(
+                {"chosen_action": polish_action, "action_parameters": dict(polish_params)},
+                {"worst_path": {}, "delay_class": self.path_delay_classification},
+            )
+            failure = self._action_failure(response, default_command=polish_action)
+            if failure:
+                self._record_failed_action(failure)
+                if self.last_action_mutated_design:
+                    await self._restore_best_state("endgame polish step failed")
+                continue
+            await self.call_tool("vivado_report_timing_summary", {"timeout": 300})
+
     async def _maybe_warm_start_replace(self) -> bool:
         """Deterministic opening move, GATED on the design's own signature --
         not unconditional, because every DCP is different.
@@ -5147,11 +5319,14 @@ class DCPOptimizer(DCPOptimizerBase):
             return False
 
         self.iteration = 1
+        # Cross-run priors trump the hardcoded default: if a directive has a
+        # winning record on this exact design from previous runs, open with it.
+        warm_directive = self._best_crossrun_directive() or "Default"
         logger.info(
             "Warm start: input is net-delay-bound with failing WNS (%.3f ns); "
-            "running deterministic whole-design re-place (place Default / route Default, "
-            "the recorded winning directive pair) as iteration 1.",
-            self.initial_wns,
+            "running deterministic whole-design re-place (place %s / route Default) "
+            "as iteration 1.",
+            self.initial_wns, warm_directive,
         )
         print("=== Warm start: deterministic whole-design re-place (iteration 1) ===\n")
         self.last_decision_trace = {
@@ -5161,7 +5336,7 @@ class DCPOptimizer(DCPOptimizerBase):
         }
         decision = {
             "chosen_action": "place_design_explore",
-            "action_parameters": {"directive": "Default", "route_directive": "Default"},
+            "action_parameters": {"directive": warm_directive, "route_directive": "Default"},
         }
         response_text = await self.execute_validated_action(
             decision, {"worst_path": {}, "delay_class": classification}
@@ -5204,6 +5379,7 @@ class DCPOptimizer(DCPOptimizerBase):
             return False
 
         self._initialize_run_helpers(input_dcp)
+        self._load_crossrun_priors(input_dcp)
         # Fix #10: publish immediately (the input design itself at first) so
         # the contest output path is never empty, then re-publish on every
         # improvement and stop path.
@@ -5324,6 +5500,7 @@ Proceed by selecting exactly one validated action per timing-context turn."""
                             self.consecutive_no_improvement,
                             self.cheap_failure_streak,
                         )
+                        await self._endgame_polish()
                         if self.checkpoint_manager is not None:
                             best_ckpt = self.checkpoint_manager.get_best_checkpoint()
                             if best_ckpt:
@@ -5358,6 +5535,7 @@ Proceed by selecting exactly one validated action per timing-context turn."""
                         "stopping and restoring best checkpoint.",
                         ABSOLUTE_STALL_HARD_LIMIT,
                     )
+                    await self._endgame_polish()
                     if self.checkpoint_manager is not None:
                         best_ckpt = self.checkpoint_manager.get_best_checkpoint()
                         if best_ckpt:
@@ -5482,6 +5660,7 @@ Proceed by selecting exactly one validated action per timing-context turn."""
     
     def _print_optimization_summary(self, max_iterations_reached: bool = False):
         """Print detailed optimization summary including token usage and costs."""
+        self._save_crossrun_priors()
         title = "Optimization Summary (Max Iterations Reached)" if max_iterations_reached else "Optimization Summary"
         print(f"\n{'='*70}")
         print(f"{title}")
