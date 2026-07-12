@@ -256,6 +256,44 @@ def test_warm_start_runs_replace_on_net_bound_failing_design(opt):
     assert any("warm-start" in str(m.get("content", "")).lower() for m in opt.messages)
 
 
+def test_exploit_after_win_promotes_refinement(opt, tmp_path):
+    """Run 20260712_051231 measured: re-rolls from a winning state went 0/3,
+    refinement 5/6. When the last recorded iteration improved (stall_count
+    resets to 0), refinement must lead the ranking and fresh re-places must
+    carry a demotion reason."""
+    cm = CheckpointManager(input_dcp="in.dcp", output_dir=str(tmp_path / "ckpt"), clock_name="clk")
+    cm.start_baseline(wns=-0.978, period_ns=1.5)
+    ckpt = tmp_path / "ckpt" / "iter_001.dcp"
+    ckpt.write_bytes(b"dcp")
+    cm.record(recipe="place_design_explore", targets=["directive:Default"],
+              wns_after=-0.494, vivado_runtime_s=1.0, checkpoint_path=str(ckpt))
+    opt.checkpoint_manager = cm
+    assert cm.stall_count == 0
+
+    allowed, _ = opt._allowed_forbidden_actions(
+        "net_delay_bound", "REGISTER", 0.74, 112.0, -0.494)
+    assert allowed[0] == "pblock"
+    assert "phys_opt_design" in allowed[:3]
+    assert "place_design_explore" in opt.last_action_guidance
+    assert "IMPROVED" in opt.last_action_guidance["place_design_explore"]
+
+
+def test_no_refinement_promotion_after_stall(opt, tmp_path):
+    cm = CheckpointManager(input_dcp="in.dcp", output_dir=str(tmp_path / "ckpt"), clock_name="clk")
+    cm.start_baseline(wns=-0.978, period_ns=1.5)
+    ckpt = tmp_path / "ckpt" / "iter_001.dcp"
+    ckpt.write_bytes(b"dcp")
+    cm.record(recipe="place_design_explore", targets=["x"],
+              wns_after=-1.2, vivado_runtime_s=1.0, checkpoint_path=str(ckpt))
+    opt.checkpoint_manager = cm
+    assert cm.stall_count == 1
+
+    allowed, _ = opt._allowed_forbidden_actions(
+        "net_delay_bound", "REGISTER", 0.74, 112.0, -0.978)
+    # No fresh win -> normal ranking, re-place family not demoted for that reason.
+    assert "IMPROVED" not in opt.last_action_guidance.get("place_design_explore", "")
+
+
 def test_long_interconnect_recommends_global_replace_first():
     """Cells 100+ tiles apart need a global re-place, not local nudges; the
     hypothesis's recommendation order must lead with the recipe family that
