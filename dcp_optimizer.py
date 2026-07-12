@@ -170,7 +170,13 @@ VIVADO_INCREMENTAL_IMPLEMENTATION_ACTIONS = {
     "phys_opt_design_retime",
     "replicate_register",
     "place_design_explore",
+    "route_explore",
 }
+# Endgame budget-spender: when the stall limit fires but this much wall-clock
+# remains, polish the best checkpoint with cheap incremental passes instead of
+# exiting early -- every unspent minute is score left on the table only if
+# the passes regress, and regressions roll back.
+ENDGAME_MIN_REMAINING_S = 600
 # Actions that only make small incremental improvements to an existing
 # placement, and therefore genuinely cannot fix a deeply negative WNS.
 # Deliberately EXCLUDES place_design_explore: a full re-place is not
@@ -271,6 +277,14 @@ ACTION_PARAMETERS_SCHEMA = {
         ),
         "route_directive": "str, route_design directive (default 'Explore')",
     },
+    "route_explore": {
+        "directive": (
+            "str, route_design directive for a re-route of the CURRENT placement "
+            "(placement untouched -- lowest-variance refinement). Options: 'Explore' "
+            "(default), 'AggressiveExplore', 'NoTimingRelaxation', 'MoreGlobalIterations', "
+            "'HigherDelayCost'"
+        ),
+    },
     "replicate_register": {},
 }
 # Fix #5 (pblock sizing): the old fallback chain used the WHOLE design's
@@ -333,14 +347,20 @@ PRIORS (the reasoning behind the ranking -- use them, and notice when evidence c
 - BRAM_CONTROL/DSP_CONTROL endpoints: routing to a hard-block control pin needs physical
   proximity (pblock, replicate_register, place_design_explore); net splitting rarely helps.
 - avg_tile_spread > 30 on a net-bound path: address placement before any routing-only fix.
-- High router congestion (see congestion in the timing state): packing cells tighter
-  (any pblock action) usually makes congestion worse; prefer spreading placements
-  (place_design_explore with AltSpreadLogic_high / ExtraNetDelay_high) or fanout reduction.
+- ONLY if measured congestion_level >= 5: packing cells tighter (any pblock action) makes
+  congestion worse; prefer spread-oriented placement or fanout reduction. If
+  congestion_level is 0 or unknown, do NOT pick spreading directives (AltSpreadLogic,
+  ExtraNetDelay) -- spreading an already-spread-out design makes net delay WORSE
+  (measured: -92 MHz).
 
 LEARN FROM THIS RUN'S RESULTS:
+- If the PREVIOUS iteration improved, you are holding a fresh win: polish it with
+  incremental moves (phys_opt_design, route_explore, pblock + incremental re-route)
+  before any fresh whole-design re-place -- a re-roll discards the winning placement
+  and has measured 0/3 success from a winning state, while refinement measured 5/6.
 - An action that regressed or failed on the same targets is worth less than its ranking.
-- A recipe family that produced this run's best result is worth re-trying with a stronger
-  or different directive (see place_directives_tried) before switching families.
+- When choosing a place directive, pick from place_directives_untried (in the timing
+  state) rather than inventing one; place_directives_tried shows measured results.
 - Do not repeat an action+parameters combination that already failed; change what the
   failure evidence says was wrong (region size, directive, targets), or change action.
 """
@@ -1640,14 +1660,14 @@ class DCPOptimizer(DCPOptimizerBase):
             retime = False
         retime_flag = " -retime" if retime else ""
         command = f"phys_opt_design -directive {directive}{retime_flag}"
-        result = await self.call_tool("vivado_run_tcl", {"command": command, "timeout": 3600}, internal=True)
+        result = await self.call_tool("vivado_run_tcl", {"command": command, "timeout": self._implementation_timeout_s()}, internal=True)
         if self._action_failure(result, default_command=command).get("error_type") == "vivado_license_failure":
             return result
         if self._vivado_output_has_error(result) and retime:
             self.phys_opt_retime_supported = False
             logger.warning("phys_opt retime failed with directive %s; retrying without -retime", directive)
             command = f"phys_opt_design -directive {directive}"
-            result = await self.call_tool("vivado_run_tcl", {"command": command, "timeout": 3600}, internal=True)
+            result = await self.call_tool("vivado_run_tcl", {"command": command, "timeout": self._implementation_timeout_s()}, internal=True)
         elif retime:
             self.phys_opt_retime_supported = True
         return result
@@ -1985,6 +2005,21 @@ class DCPOptimizer(DCPOptimizerBase):
         elapsed = time.time() - self.checkpoint_manager.started_at_epoch_s
         return self.checkpoint_manager.hard_limit_seconds - elapsed
 
+    def _implementation_timeout_s(self, default_s: int = 1200) -> int:
+        """Timeout for a single place/route/phys_opt command.
+
+        These used to be a flat 3600 s -- longer than the entire 3500 s run
+        budget, so one hung command (e.g. a pexpect prompt desync in the
+        Vivado server) silently ate the whole contest run. A healthy full
+        place or route on these designs takes 2-4 minutes; cap at 20 minutes
+        or the remaining budget, whichever is smaller, so a hang costs
+        minutes, fires the VivadoToolCallError recovery (reopen best
+        checkpoint), and the run continues."""
+        remaining = self._time_remaining_s()
+        if remaining is None:
+            return default_s
+        return int(max(300, min(default_s, remaining)))
+
     async def _set_clock_period(self, period_ns: float) -> bool:
         if not self.target_clock:
             return False
@@ -2006,7 +2041,7 @@ class DCPOptimizer(DCPOptimizerBase):
         if not await self._set_clock_period(period_ns):
             return None
         await self._run_phys_opt_with_policy({})
-        route = await self.call_tool("vivado_route_design", {"directive": "Default", "timeout": 3600}, internal=True)
+        route = await self.call_tool("vivado_route_design", {"directive": "Default", "timeout": self._implementation_timeout_s()}, internal=True)
         if self._vivado_output_has_error(route):
             logger.warning("Route under tightened clock returned errors: %s", route[:300])
         return await self._get_current_wns()
@@ -2513,6 +2548,9 @@ class DCPOptimizer(DCPOptimizerBase):
             # Item 3 (search within a recipe): what this run has already
             # tried, so the next attempt moves in parameter space.
             "place_directives_tried": dict(self.place_directive_results),
+            "place_directives_untried": [
+                d for d in PLACE_DIRECTIVE_SWEEP if d not in self.place_directive_results
+            ],
             "pblock_attempt_history": list(self.pblock_attempt_history[-5:]),
             # Item 4 (decision-changing physical evidence).
             "congestion_level": self.last_congestion_info.get("congestion_level"),
@@ -2583,6 +2621,7 @@ class DCPOptimizer(DCPOptimizerBase):
         self.last_action_guidance = {}
         every_action = [
             *RAPIDWRIGHT_STRUCTURAL_ACTIONS,  # includes place_design_explore
+            "route_explore",
             "replicate_register",
             "phys_opt_design",
             "phys_opt_design_retime",
@@ -2618,6 +2657,7 @@ class DCPOptimizer(DCPOptimizerBase):
                 *RAPIDWRIGHT_STRUCTURAL_ACTIONS,  # includes place_design_explore
                 "phys_opt_design_retime",
                 "phys_opt_design",
+                "route_explore",
                 "replicate_register",
                 "fanout_split",
                 "lut_opt",
@@ -2672,6 +2712,34 @@ class DCPOptimizer(DCPOptimizerBase):
                 f"WNS {current_wns:.3f} ns is below {PHYS_OPT_MIN_USEFUL_WNS_NS:.3f} ns; "
                 f"incremental phys_opt cannot close that gap while structural actions remain",
             )
+
+        # Exploit-after-win (run 20260712_051231, measured): from a fresh
+        # improvement, full re-place re-rolls went 0/3 (AltSpreadLogic_high
+        # -92 MHz, ExtraTimingOpt -91 MHz, Explore -26 MHz) while incremental
+        # refinement went 5/6 positive (pblock+re-route +0.25/+5.6/+1.3 MHz,
+        # phys_opt +3.9/+1.1 MHz). When the last recorded iteration improved,
+        # lead with refinement and demote fresh re-rolls with the reason --
+        # polish the win before rolling the dice on it.
+        sitting_on_fresh_win = (
+            self.checkpoint_manager is not None
+            and bool(self.checkpoint_manager.iterations)
+            and self.checkpoint_manager.stall_count == 0
+        )
+        if sitting_on_fresh_win:
+            refine_first = [
+                action for action in
+                ("pblock", "phys_opt_design", "route_explore", "phys_opt_design_retime")
+                if action in allowed and action not in self.last_action_guidance
+            ]
+            if refine_first:
+                allowed = refine_first + [a for a in allowed if a not in refine_first]
+                allowed = self._demote_actions(
+                    allowed,
+                    [a for a in ("place_design_explore", "pblock_full_replace") if a in allowed],
+                    "the previous iteration IMPROVED -- refine the win first (phys_opt, "
+                    "incremental pblock + re-route); fresh whole-design re-places from a "
+                    "winning state regressed 3 out of 3 times this campaign",
+                )
 
         if self.implementation_license_available is False:
             implementation_actions = set(VIVADO_INCREMENTAL_IMPLEMENTATION_ACTIONS) | {"fanout_split"}
@@ -3458,10 +3526,23 @@ class DCPOptimizer(DCPOptimizerBase):
             target_ff_count = int(params.get("target_ff_count") or counts.get("FF") or 0)
             target_dsp_count = int(params.get("target_dsp_count") or counts.get("DSP") or 0)
             target_bram_count = int(params.get("target_bram_count") or counts.get("BRAM") or 0)
-            if target_lut_count <= 0 or target_ff_count <= 0:
+            if target_lut_count > 0 and target_ff_count <= 0:
+                # Run 20260712_051231 iter 3: the utilization report returned
+                # a real LUT count but FFs: 0 (server-side parse miss -- the
+                # design plainly has thousands of registers). Don't fail the
+                # whole recipe over the secondary number; estimate FFs from
+                # LUTs (UltraScale+ slices carry 2 FFs per LUT, so 2x is a
+                # safe region-sizing upper bound).
+                target_ff_count = target_lut_count * 2
+                logger.warning(
+                    "Utilization report gave FF count 0 with %d LUTs; estimating "
+                    "%d FFs (2x LUTs) for pblock sizing.",
+                    target_lut_count, target_ff_count,
+                )
+            if target_lut_count <= 0:
                 return self._failure_json(
                     "full_replace_utilization_unavailable",
-                    f"Could not derive whole-design LUT/FF counts from utilization report: {util_text[:300]}",
+                    f"Could not derive whole-design LUT count from utilization report: {util_text[:300]}",
                     command="pblock_full_replace",
                 )
             self.last_pblock_sizing = {
@@ -3619,7 +3700,7 @@ class DCPOptimizer(DCPOptimizerBase):
 
         place_result = await self.call_tool(
             "vivado_place_design",
-            {"directive": str(params.get("place_directive") or "Default"), "timeout": 3600},
+            {"directive": str(params.get("place_directive") or "Default"), "timeout": self._implementation_timeout_s()},
             internal=True,
         )
         if self._action_failure(place_result, default_command="vivado_place_design"):
@@ -3632,7 +3713,7 @@ class DCPOptimizer(DCPOptimizerBase):
             )
         route_result = await self.call_tool(
             "vivado_route_design",
-            {"directive": str(params.get("route_directive") or "Default"), "timeout": 3600},
+            {"directive": str(params.get("route_directive") or "Default"), "timeout": self._implementation_timeout_s()},
             internal=True,
         )
         if self._action_failure(route_result, default_command="vivado_route_design"):
@@ -4541,12 +4622,23 @@ class DCPOptimizer(DCPOptimizerBase):
     async def _request_action_json(self) -> tuple[dict, str]:
         self.llm_call_count += 1
         logger.info(f"LLM action-selection call #{self.llm_call_count}")
-        response = self.openai.chat.completions.create(
-            model=self.model,
-            messages=self.messages,
-            max_tokens=1200,
-            extra_body={"usage": {"include": True}},
-        )
+        try:
+            # The last unbounded wait in the loop: without a timeout, a stalled
+            # OpenRouter request froze the entire run with no recovery path
+            # (every stop condition is checked between iterations, so a hang
+            # inside one is forever). On failure, return an empty decision --
+            # validation fails, one reprompt happens, and after that the
+            # deterministic fallback picks the top-ranked allowed action.
+            response = self.openai.chat.completions.create(
+                model=self.model,
+                messages=self.messages,
+                max_tokens=1200,
+                timeout=180.0,
+                extra_body={"usage": {"include": True}},
+            )
+        except Exception as exc:
+            logger.error("LLM action-selection call failed or timed out: %s", exc)
+            return {}, ""
         if hasattr(response, "usage") and response.usage:
             self.total_prompt_tokens += response.usage.prompt_tokens
             self.total_completion_tokens += response.usage.completion_tokens
@@ -4636,14 +4728,14 @@ class DCPOptimizer(DCPOptimizerBase):
                     f"place_design -unplace failed: {unplace_result[:2000]}",
                     command="place_design_explore",
                 )
-            place = await self.call_tool("vivado_place_design", {"directive": directive, "timeout": 3600})
+            place = await self.call_tool("vivado_place_design", {"directive": directive, "timeout": self._implementation_timeout_s()})
             if self._action_failure(place, default_command="vivado_place_design"):
                 return self._failure_json(
                     "replace_place_failed",
                     f"place_design -directive {directive} failed after unplace: {place[:2000]}",
                     command="place_design_explore",
                 )
-            route = await self.call_tool("vivado_route_design", {"directive": route_directive, "timeout": 3600})
+            route = await self.call_tool("vivado_route_design", {"directive": route_directive, "timeout": self._implementation_timeout_s()})
             if self._action_failure(route, default_command="vivado_route_design"):
                 return self._failure_json(
                     "replace_route_failed",
@@ -4674,7 +4766,14 @@ class DCPOptimizer(DCPOptimizerBase):
             self.last_recipe = action
             self.last_targets = [str(params.get("pblock_name", "pblock_opt")), str(params.get("ranges"))]
             self.last_batch_size = 1
-            result = await self.call_tool("vivado_create_and_apply_pblock", params)
+            # internal=True: same interception bug class as pblock_full_replace.
+            # Without it, call_tool rerouted this through
+            # _maybe_run_pblock_or_phys_opt, which re-classified the path and
+            # ran hidden phys_opt passes first (run 20260712_051231 iters
+            # 12/13: recipe mislabeled "vivado_phys_opt_mixed_path", stale
+            # ranges reapplied, 0 cells matched). The ranges were already
+            # computed above; send the call straight to the server.
+            result = await self.call_tool("vivado_create_and_apply_pblock", params, internal=True)
             payload = self._parse_json_result(result)
             if self._result_has_error(payload):
                 logger.error(f"pblock_assignment_failed - full result:\n{result}")
@@ -4696,7 +4795,7 @@ class DCPOptimizer(DCPOptimizerBase):
             # (now respecting the new pblock) and re-route before returning,
             # or this action can never have any measurable timing effect.
             place_result = await self.call_tool(
-                "vivado_place_design", {"directive": "Explore", "timeout": 3600}, internal=True
+                "vivado_place_design", {"directive": "Explore", "timeout": self._implementation_timeout_s()}, internal=True
             )
             if self._action_failure(place_result, default_command="vivado_place_design"):
                 # BUG FIX: this used to cap the stored message at 300 chars,
@@ -4715,7 +4814,7 @@ class DCPOptimizer(DCPOptimizerBase):
                     command="pblock",
                 )
             route_result = await self.call_tool(
-                "vivado_route_design", {"directive": "Explore", "timeout": 3600}, internal=True
+                "vivado_route_design", {"directive": "Explore", "timeout": self._implementation_timeout_s()}, internal=True
             )
             if self._action_failure(route_result, default_command="vivado_route_design"):
                 logger.error(f"pblock_route_failed - full route_design output:\n{route_result}")
@@ -4955,7 +5054,7 @@ class DCPOptimizer(DCPOptimizerBase):
                     ),
                     command=action,
                 )
-            result += "\n\n" + await self.call_tool("vivado_route_design", {"directive": "Default", "timeout": 3600})
+            result += "\n\n" + await self.call_tool("vivado_route_design", {"directive": "Default", "timeout": self._implementation_timeout_s()})
             return result
         if action == "fanout_split":
             if not await self._check_implementation_license():
@@ -4994,7 +5093,7 @@ class DCPOptimizer(DCPOptimizerBase):
                     ),
                     command=action,
                 )
-            result += "\n\n" + await self.call_tool("vivado_route_design", {"directive": "Default", "timeout": 3600})
+            result += "\n\n" + await self.call_tool("vivado_route_design", {"directive": "Default", "timeout": self._implementation_timeout_s()})
             return result
         if action == "lut_opt":
             pins = params.get("hierarchical_input_pins") or []
