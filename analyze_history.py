@@ -16,7 +16,7 @@ from collections import Counter, defaultdict
 
 REROLL_RECIPES = {"place_design_explore", "pblock_full_replace"}
 REFINE_RECIPES = {"vivado_pblock", "pblock", "vivado_phys_opt", "phys_opt_design",
-                  "phys_opt_design_retime", "vivado_phys_opt_mixed_path"}
+                  "phys_opt_design_retime", "vivado_phys_opt_mixed_path", "route_explore"}
 
 GOOD = {"improved", "marginal"}
 BAD = {"regression", "no_improvement", "failed", "wns_parse_error"}

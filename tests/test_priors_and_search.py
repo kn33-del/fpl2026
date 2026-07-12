@@ -294,6 +294,120 @@ def test_no_refinement_promotion_after_stall(opt, tmp_path):
     assert "IMPROVED" not in opt.last_action_guidance.get("place_design_explore", "")
 
 
+def test_route_explore_reroutes_without_touching_placement(opt):
+    calls = []
+
+    async def fake_call_tool(tool_name, arguments, internal=False):
+        calls.append((tool_name, str(arguments.get("directive", "")), internal))
+        return "route_design completed successfully"
+
+    async def licensed():
+        return True
+
+    opt.iteration = 1
+    with patch.object(opt, "call_tool", side_effect=fake_call_tool), \
+         patch.object(opt, "_check_implementation_license", side_effect=licensed):
+        result = asyncio.run(opt.execute_validated_action(
+            {"chosen_action": "route_explore", "action_parameters": {"directive": "AggressiveExplore"}},
+            {"worst_path": {}, "delay_class": "net_delay_bound"},
+        ))
+    assert calls == [("vivado_route_design", "AggressiveExplore", True)]
+    assert "completed" in result
+    assert not any(name == "vivado_place_design" for name, _, _ in calls)
+
+
+def test_route_explore_refuses_unrouted_state(opt):
+    async def licensed():
+        return True
+
+    opt.design_state = "placed"
+    with patch.object(opt, "_check_implementation_license", side_effect=licensed):
+        result = asyncio.run(opt.execute_validated_action(
+            {"chosen_action": "route_explore", "action_parameters": {}},
+            {"worst_path": {}, "delay_class": "net_delay_bound"},
+        ))
+    assert json.loads(result)["error_type"] == "invalid_design_state"
+
+
+def test_endgame_polish_skips_without_budget(opt, tmp_path):
+    opt.checkpoint_manager = CheckpointManager(
+        input_dcp="in.dcp", output_dir=str(tmp_path / "ckpt"), clock_name="clk")
+    opt.checkpoint_manager.start_baseline(wns=-0.9, period_ns=1.5)
+    executed = []
+
+    async def fake_execute(decision, ctx):
+        executed.append(decision["chosen_action"])
+        return "ok"
+
+    with patch.object(opt, "_time_remaining_s", return_value=120.0), \
+         patch.object(opt, "execute_validated_action", side_effect=fake_execute):
+        asyncio.run(opt._endgame_polish())
+    assert executed == []
+
+
+def test_endgame_polish_spends_remaining_budget(opt, tmp_path):
+    opt.checkpoint_manager = CheckpointManager(
+        input_dcp="in.dcp", output_dir=str(tmp_path / "ckpt"), clock_name="clk")
+    opt.checkpoint_manager.start_baseline(wns=-0.45, period_ns=1.5)
+    executed = []
+    restores = []
+
+    async def fake_execute(decision, ctx):
+        executed.append(decision["chosen_action"])
+        return "ok"
+
+    async def fake_call_tool(tool_name, arguments, internal=False):
+        return "ok"
+
+    async def fake_restore(reason):
+        restores.append(reason)
+
+    with patch.object(opt, "_time_remaining_s", return_value=2000.0), \
+         patch.object(opt, "execute_validated_action", side_effect=fake_execute), \
+         patch.object(opt, "call_tool", side_effect=fake_call_tool), \
+         patch.object(opt, "_restore_best_state", side_effect=fake_restore):
+        asyncio.run(opt._endgame_polish())
+    # Restored to best first, then ran the polish chain.
+    assert restores and "endgame" in restores[0]
+    assert "phys_opt_design" in executed and "route_explore" in executed
+
+
+def test_crossrun_priors_roundtrip_and_demotion(opt, tmp_path):
+    opt.crossrun_store_path = tmp_path / "priors.json"
+    opt.checkpoint_manager = CheckpointManager(
+        input_dcp="in.dcp", output_dir=str(tmp_path / "ckpt"), clock_name="clk")
+    opt.checkpoint_manager.start_baseline(wns=-0.978, period_ns=1.5)
+    # Simulate a finished run's ledger: cell placement lost 3x, Default won.
+    opt.checkpoint_manager.iterations = [
+        {"llm_chosen_action": "rapidwright_optimize_cell_placement", "status": "failed", "targets": []},
+        {"llm_chosen_action": "rapidwright_optimize_cell_placement", "status": "regression", "targets": []},
+        {"llm_chosen_action": "rapidwright_optimize_cell_placement", "status": "failed", "targets": []},
+        {"llm_chosen_action": "place_design_explore", "status": "improved",
+         "targets": ["directive:Default"]},
+    ]
+    opt.crossrun_design_key = "logicnets_jscl_2025.1"
+    opt._save_crossrun_priors()
+    # Saving twice must not double-count.
+    opt._save_crossrun_priors()
+    store = json.loads(opt.crossrun_store_path.read_text())
+    record = store["logicnets_jscl_2025.1"]["actions"]["rapidwright_optimize_cell_placement"]
+    assert record == {"good": 0, "bad": 3}
+    assert store["logicnets_jscl_2025.1"]["directives"]["Default"]["good"] == 1
+
+    # A fresh optimizer on the same design loads them and demotes the loser.
+    from pathlib import Path
+    opt2 = DCPOptimizer(api_key="dummy", run_dir=tmp_path)
+    opt2.crossrun_store_path = opt.crossrun_store_path
+    opt2._load_crossrun_priors(Path("/x/logicnets_jscl_2025.1.dcp"))
+    assert opt2._best_crossrun_directive() == "Default"
+    allowed, _ = opt2._allowed_forbidden_actions(
+        "net_delay_bound", "REGISTER", 0.82, 112.0, -0.978)
+    assert "rapidwright_optimize_cell_placement" in opt2.last_action_guidance
+    assert "previous runs" in opt2.last_action_guidance["rapidwright_optimize_cell_placement"]
+    assert allowed[-1] == "rapidwright_optimize_cell_placement" or \
+        allowed.index("rapidwright_optimize_cell_placement") > allowed.index("pblock")
+
+
 def test_long_interconnect_recommends_global_replace_first():
     """Cells 100+ tiles apart need a global re-place, not local nudges; the
     hypothesis's recommendation order must lead with the recipe family that
