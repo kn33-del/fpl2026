@@ -227,6 +227,55 @@ UNPLACED_CELLS_BENIGN_MAX = 25
 # against a separate, much larger cap instead.
 CHEAP_FAILURE_RUNTIME_S = 60
 STALL_LIMIT_CHEAP_FAILURES = 15
+# --- Cost model (2026-07-12) ---
+# Motivating incident: on a large design, place_design -directive Explore took
+# 15.5 min and the following route Explore was killed by the remaining-budget
+# timeout clamp at ~15 min -- 30+ minutes spent, ZERO valid recorded results.
+# Root cause: the optimizer had no idea what actions cost. Durations are now
+# measured per kind (place/route/phys_opt) in self.action_durations, persisted
+# per design in the cross-run store ("durations"), and every dispatch is
+# priced before it runs.
+# A design is "large" when a full place is measured (or known from a prior
+# run) to exceed this, or the primitive count does:
+LARGE_DESIGN_PLACE_DURATION_S = 300
+LARGE_DESIGN_PRIMITIVE_COUNT = 100_000
+# An action is demoted when the remaining budget is below 1.3x its estimated
+# cost, and dispatch is hard-refused below 1.0x -- a cheap recorded failure
+# always beats a half-finished expensive action.
+ACTION_COST_DEMOTE_FACTOR = 1.3
+# Pricing for an action whose duration has never been measured on a
+# large/unknown-scale design: 2x the longest known duration, at least this.
+# Small designs keep the pre-cost-model behavior (no gate) instead.
+UNKNOWN_EXPENSIVE_ACTION_MIN_S = 900
+CHEAP_ACTION_COST_S = 120
+# On a large design, full re-places (place_design_explore +
+# pblock_full_replace, warm start included) are capped per run: warm start +
+# at most one more, and none once elapsed time passes this budget fraction.
+FULL_REPLACE_LARGE_DESIGN_CAP = 2
+FULL_REPLACE_BUDGET_FRACTION_CUTOFF = 0.5
+# After place completes inside a re-place recipe, the requested route
+# directive is downgraded to Default when the remaining budget is below this
+# multiple of the estimated route duration -- a completed Default route
+# always beats a killed Explore route.
+ROUTE_DOWNGRADE_FACTOR = 1.2
+# Phase 0 diagnostic battery (one-time, pre-LLM): total wall-clock cap, and
+# the minimum remaining budget for the report_qor_suggestions probe on a
+# large design (the report itself can take minutes there).
+INITIAL_DIAGNOSTICS_BUDGET_S = 240
+QOR_SUGGESTIONS_MIN_REMAINING_S = 45 * 60
+# run_recipe macro-action (recipe architecture, tranche 1): stage whitelist
+# and cap. Excludes run_recipe itself (no recursion); stages still pass
+# through execute_validated_action, so the budget gate and the full re-place
+# cap apply to each stage individually.
+RUN_RECIPE_MAX_STAGES = 6
+RUN_RECIPE_STAGE_WHITELIST = {
+    "place_design_explore",
+    "route_explore",
+    "phys_opt_design",
+    "phys_opt_design_retime",
+    "pblock",
+    "fanout_split",
+}
 DEFAULT_PBLOCK_TARGET_LUT_COUNT = 20000
 DEFAULT_PBLOCK_TARGET_FF_COUNT = 40000
 DEFAULT_PBLOCK_NAME_PREFIX = "pblock_net_delay"
@@ -286,6 +335,15 @@ ACTION_PARAMETERS_SCHEMA = {
         ),
     },
     "replicate_register": {},
+    "run_recipe": {
+        "stages": (
+            "list[{\"action\": str, \"params\": dict}], max 6 stages executed "
+            "sequentially with a per-stage budget check (the recipe stops cleanly "
+            "when the next stage no longer fits) and per-stage keep-best/rollback. "
+            "Allowed stage actions: place_design_explore, route_explore, "
+            "phys_opt_design, phys_opt_design_retime, pblock, fanout_split"
+        ),
+    },
 }
 # Fix #5 (pblock sizing): the old fallback chain used the WHOLE design's
 # lut_count/ff_count (from rapidwright_read_checkpoint) or a hardcoded 20000
@@ -363,6 +421,17 @@ LEARN FROM THIS RUN'S RESULTS:
   state) rather than inventing one; place_directives_tried shows measured results.
 - Do not repeat an action+parameters combination that already failed; change what the
   failure evidence says was wrong (region size, directive, targets), or change action.
+
+BUDGET AWARENESS:
+- The timing state carries design_scale, time_remaining_s, and this design's measured
+  action durations. An action whose estimated cost exceeds the remaining budget is
+  refused at dispatch (insufficient_budget) -- treat "costs ~N min" guidance as real,
+  and prefer refinements that fit over expensive re-rolls that will be refused.
+- run_recipe executes a full pipeline in one decision -- prefer it over issuing the
+  same stages one iteration at a time. Stages are whitelisted (place_design_explore,
+  route_explore, phys_opt_design, phys_opt_design_retime, pblock, fanout_split), max 6;
+  each stage is measured and kept-or-rolled-back individually, and the recipe stops
+  cleanly when the next stage no longer fits the remaining budget.
 """
 
 
@@ -1136,6 +1205,23 @@ class DCPOptimizer(DCPOptimizerBase):
         self.crossrun_design_key: Optional[str] = None
         self.crossrun_priors: dict = {}
         self._crossrun_saved: bool = False
+        # Cost model (2026-07-12): wall-times measured this run, per action
+        # kind ("place"/"route"/"phys_opt"). max() of these -- else the
+        # cross-run "durations" prior -- prices every dispatch; see
+        # _estimated_action_cost_s and the insufficient_budget gate.
+        self.action_durations: dict[str, list[float]] = {}
+        # "small" | "large" | "unknown". Drives the full re-place cap and the
+        # pessimistic pricing of never-measured actions; refined as evidence
+        # arrives (cross-run priors at load, primitive count after
+        # rapidwright_read_checkpoint, measured place after the warm start).
+        self.design_scale: str = "unknown"
+        # Full re-places dispatched this run (place_design_explore +
+        # pblock_full_replace, warm start and run_recipe stages included).
+        # Capped on large designs -- see _full_replace_blocked_reason.
+        self.full_replace_attempts: int = 0
+        # Phase 0 diagnostic battery results (logic floor WNS, fanout
+        # profile, QoR suggestions), probed once before the first LLM turn.
+        self.design_signature: dict = {}
 
     async def start_servers(self):
         """Start and connect to both MCP servers."""
@@ -1281,6 +1367,12 @@ class DCPOptimizer(DCPOptimizerBase):
             elapsed_time = time.time() - start_time
             self.last_vivado_runtime_s = elapsed_time if tool_name.startswith("vivado_") else self.last_vivado_runtime_s
 
+            # Cost model: learn what place/route/phys_opt actually cost on
+            # THIS design (including the re-place flows issued via run_tcl).
+            duration_kind = self._duration_kind_for_call(tool_name, arguments)
+            if duration_kind:
+                self._note_action_duration(duration_kind, elapsed_time)
+
             if not internal:
                 await self._after_tool_success(tool_name, arguments, result_text, wns_measured, elapsed_time)
             
@@ -1303,6 +1395,13 @@ class DCPOptimizer(DCPOptimizerBase):
             # WNS/timing parsers would misread as real data.
             error_occurred = True
             elapsed_time = time.time() - start_time
+            # A place/route killed by its timeout still teaches the cost
+            # model: the wall-time is a LOWER bound on the true duration,
+            # which is exactly what the budget gate needs to refuse the next
+            # dispatch that cannot fit.
+            duration_kind = self._duration_kind_for_call(tool_name, arguments)
+            if duration_kind:
+                self._note_action_duration(duration_kind, elapsed_time)
             self.tool_call_details.append({
                 "tool_name": tool_name,
                 "iteration": self.iteration,
@@ -1669,14 +1768,14 @@ class DCPOptimizer(DCPOptimizerBase):
             retime = False
         retime_flag = " -retime" if retime else ""
         command = f"phys_opt_design -directive {directive}{retime_flag}"
-        result = await self.call_tool("vivado_run_tcl", {"command": command, "timeout": self._implementation_timeout_s()}, internal=True)
+        result = await self.call_tool("vivado_run_tcl", {"command": command, "timeout": self._implementation_timeout_s(kind="phys_opt")}, internal=True)
         if self._action_failure(result, default_command=command).get("error_type") == "vivado_license_failure":
             return result
         if self._vivado_output_has_error(result) and retime:
             self.phys_opt_retime_supported = False
             logger.warning("phys_opt retime failed with directive %s; retrying without -retime", directive)
             command = f"phys_opt_design -directive {directive}"
-            result = await self.call_tool("vivado_run_tcl", {"command": command, "timeout": self._implementation_timeout_s()}, internal=True)
+            result = await self.call_tool("vivado_run_tcl", {"command": command, "timeout": self._implementation_timeout_s(kind="phys_opt")}, internal=True)
         elif retime:
             self.phys_opt_retime_supported = True
         return result
@@ -1939,11 +2038,18 @@ class DCPOptimizer(DCPOptimizerBase):
             self.crossrun_priors = {}
         if self.crossrun_priors:
             logger.info(
-                "Loaded cross-run priors for %s: %d action record(s), %d directive record(s).",
+                "Loaded cross-run priors for %s: %d action record(s), %d directive record(s), %d duration prior(s).",
                 self.crossrun_design_key,
                 len(self.crossrun_priors.get("actions") or {}),
                 len(self.crossrun_priors.get("directives") or {}),
+                len(self.crossrun_priors.get("durations") or {}),
             )
+        # Classify the design's scale as early as possible: a prior run's
+        # measured place duration marks a design "large" before this run has
+        # spent a single second learning it the hard way.
+        self._refresh_design_scale()
+        if self.design_scale != "unknown":
+            logger.info("Design scale classified '%s' from cross-run priors.", self.design_scale)
 
     def _save_crossrun_priors(self) -> None:
         """Merge this run's outcomes into the persistent per-design store."""
@@ -1969,6 +2075,15 @@ class DCPOptimizer(DCPOptimizerBase):
                 directive = str(targets[0]).split(":", 1)[1]
                 directive_record = directives.setdefault(directive, {"good": 0, "bad": 0})
                 directive_record[bucket] = int(directive_record.get(bucket, 0)) + 1
+        # Cost model: persist this run's longest measured duration per kind so
+        # the NEXT run prices place/route correctly from iteration 1 instead
+        # of re-learning by burning half its budget. Fresh measurements
+        # replace stale priors on purpose (self-corrects after an anomalous
+        # hang inflated one).
+        durations = entry.setdefault("durations", {})
+        for kind, observed in self.action_durations.items():
+            if observed:
+                durations[kind] = round(max(observed), 1)
         try:
             self.crossrun_store_path.write_text(
                 json.dumps(store, indent=2) + "\n", encoding="utf-8"
@@ -2073,7 +2188,163 @@ class DCPOptimizer(DCPOptimizerBase):
         elapsed = time.time() - self.checkpoint_manager.started_at_epoch_s
         return self.checkpoint_manager.hard_limit_seconds - elapsed
 
-    def _implementation_timeout_s(self, default_s: int = 1200) -> int:
+    @staticmethod
+    def _duration_kind_for_call(tool_name: str, arguments: dict) -> Optional[str]:
+        """Which duration bucket ("place"/"route"/"phys_opt") this tool call's
+        wall-time belongs to, or None if it teaches the cost model nothing.
+        Covers place/route/phys_opt issued via run_tcl (the re-place flows),
+        but not `place_design -unplace`, which is seconds-cheap bookkeeping,
+        not a real place."""
+        if tool_name == "vivado_place_design":
+            return "place"
+        if tool_name == "vivado_route_design":
+            return "route"
+        if tool_name == "vivado_phys_opt_design":
+            return "phys_opt"
+        if tool_name == "vivado_run_tcl":
+            command = str(arguments.get("command") or "")
+            if "place_design -unplace" in command:
+                return None
+            if "route_design" in command:
+                return "route"
+            if "place_design" in command:
+                return "place"
+            if "phys_opt_design" in command:
+                return "phys_opt"
+        return None
+
+    def _note_action_duration(self, kind: str, seconds: float) -> None:
+        self.action_durations.setdefault(kind, []).append(round(float(seconds), 1))
+        # Refine the scale classification the moment new evidence lands --
+        # this is what upgrades "unknown" to "large" right after the warm
+        # start's place completes, before the LLM makes its first decision.
+        self._refresh_design_scale()
+
+    def _estimated_duration(self, kind: str) -> Optional[float]:
+        """Best duration estimate for one action kind: the longest in-run
+        observation (a directive change or timeout kill only ever means the
+        true cost can be HIGHER), else the cross-run prior for this design,
+        else None."""
+        observed = self.action_durations.get(kind) or []
+        if observed:
+            return float(max(observed))
+        prior = ((self.crossrun_priors or {}).get("durations") or {}).get(kind)
+        try:
+            return float(prior) if prior is not None else None
+        except (TypeError, ValueError):
+            return None
+
+    def _refresh_design_scale(self) -> None:
+        """Classify the design's scale from whatever evidence exists so far.
+        "large" flips on the full re-place cap and pessimistic pricing of
+        unmeasured actions; "unknown" keeps the pessimistic pricing only."""
+        place_s = self._estimated_duration("place")
+        try:
+            cell_count = int(self.last_design_info.get("cell_count") or 0)
+        except (TypeError, ValueError):
+            cell_count = 0
+        if (place_s is not None and place_s > LARGE_DESIGN_PLACE_DURATION_S) or (
+            cell_count > LARGE_DESIGN_PRIMITIVE_COUNT
+        ):
+            self.design_scale = "large"
+        elif place_s is not None or cell_count > 0:
+            self.design_scale = "small"
+        else:
+            self.design_scale = "unknown"
+
+    def _estimated_action_cost_s(self, action: str) -> Optional[float]:
+        """Estimated wall-clock cost of dispatching `action` now, or None when
+        there is nothing to gate on (small design, no measurement -- the
+        pre-cost-model behavior). Unmeasured kinds on a large/unknown design
+        are priced pessimistically: 2x the longest known duration, at least
+        UNKNOWN_EXPENSIVE_ACTION_MIN_S -- an optimistic guess here is how the
+        motivating incident burned 30 minutes for zero results."""
+
+        def duration_or_pessimistic(kind: str) -> Optional[float]:
+            known = self._estimated_duration(kind)
+            if known is not None:
+                return known
+            if self.design_scale == "small":
+                return None
+            longest = max(
+                (d for d in (self._estimated_duration(k) for k in ("place", "route", "phys_opt")) if d is not None),
+                default=None,
+            )
+            if longest is None:
+                return float(UNKNOWN_EXPENSIVE_ACTION_MIN_S)
+            return max(float(UNKNOWN_EXPENSIVE_ACTION_MIN_S), 2.0 * longest)
+
+        if action in ("place_design_explore", "pblock_full_replace"):
+            place = duration_or_pessimistic("place")
+            route = duration_or_pessimistic("route")
+            if place is None or route is None:
+                return None
+            return place + route
+        if action == "route_explore":
+            return duration_or_pessimistic("route")
+        if action in PHYS_OPT_INCREMENTAL_ACTIONS:
+            route = duration_or_pessimistic("route")
+            if route is None:
+                return float(CHEAP_ACTION_COST_S)
+            return max(route / 3.0, float(CHEAP_ACTION_COST_S))
+        return float(CHEAP_ACTION_COST_S)
+
+    def _full_replace_blocked_reason(self, action: str) -> Optional[str]:
+        """Per-run cap on full re-places for large designs (warm start plus at
+        most one more, none past 50% of the budget). Returns the human-readable
+        block reason, or None when the dispatch is allowed. Small/unknown
+        designs keep the current uncapped behavior -- their re-places cost
+        minutes, not half the budget."""
+        if action not in ("place_design_explore", "pblock_full_replace"):
+            return None
+        if self.design_scale != "large" or self.checkpoint_manager is None:
+            return None
+        elapsed = time.time() - self.checkpoint_manager.started_at_epoch_s
+        budget = float(self.checkpoint_manager.hard_limit_seconds)
+        if self.full_replace_attempts >= 1 and elapsed > FULL_REPLACE_BUDGET_FRACTION_CUTOFF * budget:
+            return (
+                f"large design, {elapsed / 60.0:.0f} of {budget / 60.0:.0f} budget minutes elapsed "
+                f"(past the {FULL_REPLACE_BUDGET_FRACTION_CUTOFF:.0%} cutoff) with "
+                f"{self.full_replace_attempts} full re-place(s) already spent; no further full "
+                f"re-places this run -- refine the best result instead"
+            )
+        if self.full_replace_attempts >= FULL_REPLACE_LARGE_DESIGN_CAP:
+            return (
+                f"large design: full re-place cap reached ({self.full_replace_attempts} of "
+                f"{FULL_REPLACE_LARGE_DESIGN_CAP} allowed per run, warm start included); "
+                f"refine the best result instead"
+            )
+        return None
+
+    def _maybe_downgrade_route_directive(self, route_directive: str, action_name: str) -> str:
+        """Item 5: re-check the budget AFTER a place completes and downgrade
+        the requested route directive to Default when the remaining time is
+        below ROUTE_DOWNGRADE_FACTOR x the estimated route duration. The
+        downgrade is annotated into last_rapidwright_edit_summary so it shows
+        up in iteration history and the LLM's next context."""
+        if route_directive == "Default":
+            return route_directive
+        remaining = self._time_remaining_s()
+        route_est = self._estimated_duration("route")
+        if remaining is None or route_est is None or remaining >= ROUTE_DOWNGRADE_FACTOR * route_est:
+            return route_directive
+        logger.warning(
+            "%s: downgrading route directive %s -> Default (%.0f s remain, route "
+            "estimated at %.0f s); a completed Default route beats a killed %s route.",
+            action_name, route_directive, remaining, route_est, route_directive,
+        )
+        self.last_rapidwright_edit_summary = {
+            **(self.last_rapidwright_edit_summary or {"action": action_name, "changed_design": True}),
+            "route_directive_downgraded": {
+                "from": route_directive,
+                "to": "Default",
+                "remaining_s": round(remaining),
+                "estimated_route_s": round(route_est),
+            },
+        }
+        return "Default"
+
+    def _implementation_timeout_s(self, default_s: int = 1200, kind: str = "generic") -> int:
         """Timeout for a single place/route/phys_opt command.
 
         These used to be a flat 3600 s -- longer than the entire 3500 s run
@@ -2082,8 +2353,20 @@ class DCPOptimizer(DCPOptimizerBase):
         place or route on these designs takes 2-4 minutes; cap at 20 minutes
         or the remaining budget, whichever is smaller, so a hang costs
         minutes, fires the VivadoToolCallError recovery (reopen best
-        checkpoint), and the run continues."""
+        checkpoint), and the run continues.
+
+        Cost model refinement: when this design's own duration for `kind` is
+        known (measured this run or from a prior run), size the timeout to
+        2.5x that instead -- a large design whose place legitimately takes
+        15 minutes must not be killed at 20 while budget remains, and the
+        remaining-budget clamp still applies."""
         remaining = self._time_remaining_s()
+        known = self._estimated_duration(kind) if kind != "generic" else None
+        if known is not None:
+            budgeted = max(1200.0, 2.5 * known)
+            if remaining is not None:
+                budgeted = min(budgeted, remaining)
+            return int(max(300, budgeted))
         if remaining is None:
             return default_s
         return int(max(300, min(default_s, remaining)))
@@ -2109,7 +2392,7 @@ class DCPOptimizer(DCPOptimizerBase):
         if not await self._set_clock_period(period_ns):
             return None
         await self._run_phys_opt_with_policy({})
-        route = await self.call_tool("vivado_route_design", {"directive": "Default", "timeout": self._implementation_timeout_s()}, internal=True)
+        route = await self.call_tool("vivado_route_design", {"directive": "Default", "timeout": self._implementation_timeout_s(kind="route")}, internal=True)
         if self._vivado_output_has_error(route):
             logger.warning("Route under tightened clock returned errors: %s", route[:300])
         return await self._get_current_wns()
@@ -2568,11 +2851,31 @@ class DCPOptimizer(DCPOptimizerBase):
                 f"rapidwright_convert_fabric_region_to_pblock -> pblock) unless it is "
                 f"already exhausted for this target set."
             )
+        # Cost model (items 1-3): the LLM sees the same numbers the dispatch
+        # gate enforces, so "costs ~N min" guidance is explainable evidence
+        # rather than an invisible veto.
+        remaining_budget = self._time_remaining_s()
+        known_durations = {
+            kind: round(duration, 1)
+            for kind in ("place", "route", "phys_opt")
+            for duration in (self._estimated_duration(kind),)
+            if duration is not None
+        }
         return {
             "iteration": self.iteration,
             "wns_ns": current_wns,
             "tns_ns": self.initial_tns,
             "failing_endpoints": self.initial_failing_endpoints,
+            "time_remaining_s": int(remaining_budget) if remaining_budget is not None else None,
+            "design_scale": self.design_scale,
+            "measured_action_durations_s": known_durations,
+            "full_replace_attempts": self.full_replace_attempts,
+            # Phase 0 signature, minus the multi-KB QoR text (that shipped
+            # once in the initial analysis message).
+            "design_signature": {
+                key: value for key, value in self.design_signature.items()
+                if key != "qor_suggestions"
+            },
             "clock_period_ns": self.current_period_ns or self.clock_period,
             "worst_path": {
                 "slack_ns": worst.get("slack"),
@@ -2694,6 +2997,7 @@ class DCPOptimizer(DCPOptimizerBase):
         every_action = [
             *RAPIDWRIGHT_STRUCTURAL_ACTIONS,  # includes place_design_explore
             "route_explore",
+            "run_recipe",
             "replicate_register",
             "phys_opt_design",
             "phys_opt_design_retime",
@@ -2730,6 +3034,7 @@ class DCPOptimizer(DCPOptimizerBase):
                 "phys_opt_design_retime",
                 "phys_opt_design",
                 "route_explore",
+                "run_recipe",
                 "replicate_register",
                 "fanout_split",
                 "lut_opt",
@@ -2827,6 +3132,32 @@ class DCPOptimizer(DCPOptimizerBase):
                     "incremental pblock + re-route); fresh whole-design re-places from a "
                     "winning state regressed 3 out of 3 times this campaign",
                 )
+
+        # Item 4 (expensive-action cap): on a large design, full re-places
+        # past the per-run cap are demoted here with the reason; dispatch
+        # additionally hard-refuses them (execute_validated_action), so a
+        # rebuttal cannot burn half the budget on a third re-roll.
+        for capped_action in ("place_design_explore", "pblock_full_replace"):
+            cap_reason = self._full_replace_blocked_reason(capped_action)
+            if cap_reason:
+                allowed = self._demote_actions(allowed, [capped_action], cap_reason)
+
+        # Item 3 (affordability): an action that probably cannot finish inside
+        # the remaining budget is demoted at 1.3x its estimated cost (and
+        # hard-refused at 1.0x on dispatch). Motivating incident: a 15.5 min
+        # place Explore followed by a route Explore killed by the budget
+        # clamp -- 30+ minutes, zero valid results.
+        remaining_budget = self._time_remaining_s()
+        if remaining_budget is not None:
+            for candidate in list(allowed):
+                cost = self._estimated_action_cost_s(candidate)
+                if cost is not None and remaining_budget < ACTION_COST_DEMOTE_FACTOR * cost:
+                    allowed = self._demote_actions(
+                        allowed,
+                        [candidate],
+                        f"costs ~{cost / 60.0:.0f} min, {max(remaining_budget, 0) / 60.0:.0f} min "
+                        f"remain -- pick a refinement that fits",
+                    )
 
         if self.implementation_license_available is False:
             implementation_actions = set(VIVADO_INCREMENTAL_IMPLEMENTATION_ACTIONS) | {"fanout_split"}
@@ -3787,7 +4118,7 @@ class DCPOptimizer(DCPOptimizerBase):
 
         place_result = await self.call_tool(
             "vivado_place_design",
-            {"directive": str(params.get("place_directive") or "Default"), "timeout": self._implementation_timeout_s()},
+            {"directive": str(params.get("place_directive") or "Default"), "timeout": self._implementation_timeout_s(kind="place")},
             internal=True,
         )
         if self._action_failure(place_result, default_command="vivado_place_design"):
@@ -3798,9 +4129,13 @@ class DCPOptimizer(DCPOptimizerBase):
                 f"Whole-design pblock applied but placement failed: {place_result[:4000]}",
                 command="pblock_full_replace",
             )
+        # Item 5: re-check the budget now that the place has been paid for.
+        route_directive = self._maybe_downgrade_route_directive(
+            str(params.get("route_directive") or "Default"), "pblock_full_replace"
+        )
         route_result = await self.call_tool(
             "vivado_route_design",
-            {"directive": str(params.get("route_directive") or "Default"), "timeout": self._implementation_timeout_s()},
+            {"directive": route_directive, "timeout": self._implementation_timeout_s(kind="route")},
             internal=True,
         )
         if self._action_failure(route_result, default_command="vivado_route_design"):
@@ -3999,6 +4334,9 @@ class DCPOptimizer(DCPOptimizerBase):
                 self.last_design_info = json.loads(result_text)
             except json.JSONDecodeError:
                 self.last_design_info = {}
+            # The design's cell count is scale evidence (item 2): >100k
+            # primitives marks it "large" before any place has been timed.
+            self._refresh_design_scale()
 
         elif tool_name == "rapidwright_write_checkpoint":
             checkpoint = arguments.get("dcp_path")
@@ -4773,6 +5111,34 @@ class DCPOptimizer(DCPOptimizerBase):
         # is still allowed to rewrite self.last_recipe for display purposes;
         # self.last_action_key is the one all gating logic should read.
         self.last_action_key = str(action)
+        # Item 4 (expensive-action cap): the demotion in
+        # _allowed_forbidden_actions is rebuttable by design; this refusal is
+        # not -- a third full re-place on a large design cannot fit the run
+        # no matter how good the argument for it sounds.
+        cap_reason = self._full_replace_blocked_reason(str(action))
+        if cap_reason:
+            return self._failure_json("full_replace_cap_reached", cap_reason, command=str(action))
+        # Item 3 (affordability): never start an action that cannot finish in
+        # the remaining budget -- a cheap recorded failure the LLM can react
+        # to, instead of an expensive half-finished one killed by a timeout.
+        remaining_budget = self._time_remaining_s()
+        estimated_cost = self._estimated_action_cost_s(str(action))
+        if (
+            remaining_budget is not None
+            and estimated_cost is not None
+            and remaining_budget < estimated_cost
+        ):
+            return self._failure_json(
+                "insufficient_budget",
+                f"{action} is estimated to cost ~{estimated_cost / 60.0:.0f} min but only "
+                f"{max(remaining_budget, 0) / 60.0:.0f} min of budget remain; choose a "
+                f"cheaper refinement action that fits.",
+                command=str(action),
+            )
+        if action in ("place_design_explore", "pblock_full_replace"):
+            # Item 4: count every full re-place dispatch (warm start and
+            # run_recipe stages included) toward the large-design cap.
+            self.full_replace_attempts += 1
         if action in {"phys_opt_design", "phys_opt_design_retime"}:
             if not await self._check_implementation_license():
                 return self._failure_json(
@@ -4815,14 +5181,20 @@ class DCPOptimizer(DCPOptimizerBase):
                     f"place_design -unplace failed: {unplace_result[:2000]}",
                     command="place_design_explore",
                 )
-            place = await self.call_tool("vivado_place_design", {"directive": directive, "timeout": self._implementation_timeout_s()})
+            place = await self.call_tool("vivado_place_design", {"directive": directive, "timeout": self._implementation_timeout_s(kind="place")})
             if self._action_failure(place, default_command="vivado_place_design"):
                 return self._failure_json(
                     "replace_place_failed",
                     f"place_design -directive {directive} failed after unplace: {place[:2000]}",
                     command="place_design_explore",
                 )
-            route = await self.call_tool("vivado_route_design", {"directive": route_directive, "timeout": self._implementation_timeout_s()})
+            # Item 5 (adaptive route directive): the place just consumed real
+            # budget; if what is left cannot comfortably fit the requested
+            # route directive, downgrade to Default -- a completed Default
+            # route always beats an Explore route killed by the budget clamp
+            # (the motivating incident's exact failure mode).
+            route_directive = self._maybe_downgrade_route_directive(route_directive, "place_design_explore")
+            route = await self.call_tool("vivado_route_design", {"directive": route_directive, "timeout": self._implementation_timeout_s(kind="route")})
             if self._action_failure(route, default_command="vivado_route_design"):
                 return self._failure_json(
                     "replace_route_failed",
@@ -4854,7 +5226,7 @@ class DCPOptimizer(DCPOptimizerBase):
             self.last_batch_size = 1
             route = await self.call_tool(
                 "vivado_route_design",
-                {"directive": directive, "timeout": self._implementation_timeout_s()},
+                {"directive": directive, "timeout": self._implementation_timeout_s(kind="route")},
                 internal=True,
             )
             if self._action_failure(route, default_command="vivado_route_design"):
@@ -4864,6 +5236,8 @@ class DCPOptimizer(DCPOptimizerBase):
                     command="route_explore",
                 )
             return route
+        if action == "run_recipe":
+            return await self._execute_run_recipe(dict(params), timing_context)
         if action == "pblock_full_replace":
             return await self._execute_pblock_full_replace(dict(params))
         if action == "pblock":
@@ -4916,7 +5290,7 @@ class DCPOptimizer(DCPOptimizerBase):
             # (now respecting the new pblock) and re-route before returning,
             # or this action can never have any measurable timing effect.
             place_result = await self.call_tool(
-                "vivado_place_design", {"directive": "Explore", "timeout": self._implementation_timeout_s()}, internal=True
+                "vivado_place_design", {"directive": "Explore", "timeout": self._implementation_timeout_s(kind="place")}, internal=True
             )
             if self._action_failure(place_result, default_command="vivado_place_design"):
                 # BUG FIX: this used to cap the stored message at 300 chars,
@@ -4935,7 +5309,7 @@ class DCPOptimizer(DCPOptimizerBase):
                     command="pblock",
                 )
             route_result = await self.call_tool(
-                "vivado_route_design", {"directive": "Explore", "timeout": self._implementation_timeout_s()}, internal=True
+                "vivado_route_design", {"directive": "Explore", "timeout": self._implementation_timeout_s(kind="route")}, internal=True
             )
             if self._action_failure(route_result, default_command="vivado_route_design"):
                 logger.error(f"pblock_route_failed - full route_design output:\n{route_result}")
@@ -5175,7 +5549,7 @@ class DCPOptimizer(DCPOptimizerBase):
                     ),
                     command=action,
                 )
-            result += "\n\n" + await self.call_tool("vivado_route_design", {"directive": "Default", "timeout": self._implementation_timeout_s()})
+            result += "\n\n" + await self.call_tool("vivado_route_design", {"directive": "Default", "timeout": self._implementation_timeout_s(kind="route")})
             return result
         if action == "fanout_split":
             if not await self._check_implementation_license():
@@ -5214,7 +5588,7 @@ class DCPOptimizer(DCPOptimizerBase):
                     ),
                     command=action,
                 )
-            result += "\n\n" + await self.call_tool("vivado_route_design", {"directive": "Default", "timeout": self._implementation_timeout_s()})
+            result += "\n\n" + await self.call_tool("vivado_route_design", {"directive": "Default", "timeout": self._implementation_timeout_s(kind="route")})
             return result
         if action == "lut_opt":
             pins = params.get("hierarchical_input_pins") or []
@@ -5240,6 +5614,106 @@ class DCPOptimizer(DCPOptimizerBase):
             command=str(action),
         )
     
+    async def _execute_run_recipe(self, params: dict, timing_context: dict) -> str:
+        """Item 8 (recipe architecture, tranche 1): execute a whitelisted
+        stage pipeline in ONE LLM decision instead of one stage per
+        iteration. Stages run the way _endgame_polish steps do: a per-stage
+        affordability check (the recipe stops cleanly when the next stage no
+        longer fits the budget), per-stage failure recording + restore-best,
+        and a normal timing probe after each successful stage so keep-best/
+        rollback applies per stage, not per recipe."""
+        stages = params.get("stages")
+        if not isinstance(stages, list) or not stages:
+            return self._failure_json(
+                "invalid_recipe",
+                "run_recipe requires a non-empty 'stages' list of {action, params} objects.",
+                command="run_recipe",
+            )
+        if len(stages) > RUN_RECIPE_MAX_STAGES:
+            return self._failure_json(
+                "invalid_recipe",
+                f"run_recipe allows at most {RUN_RECIPE_MAX_STAGES} stages, got {len(stages)}.",
+                command="run_recipe",
+            )
+        parsed: list[tuple[str, dict]] = []
+        for stage in stages:
+            stage_action = str(stage.get("action") or "") if isinstance(stage, dict) else ""
+            if stage_action not in RUN_RECIPE_STAGE_WHITELIST:
+                return self._failure_json(
+                    "invalid_recipe",
+                    f"run_recipe stage action {stage_action!r} is not allowed; "
+                    f"whitelist: {sorted(RUN_RECIPE_STAGE_WHITELIST)}.",
+                    command="run_recipe",
+                )
+            stage_params = stage.get("params")
+            parsed.append((stage_action, dict(stage_params) if isinstance(stage_params, dict) else {}))
+
+        self.last_recipe = "run_recipe"
+        self.last_targets = [stage_action for stage_action, _ in parsed]
+        self.last_batch_size = len(parsed)
+        outcomes: list[dict] = []
+        stop_reason: Optional[str] = None
+        for position, (stage_action, stage_params) in enumerate(parsed):
+            remaining = self._time_remaining_s()
+            cost = self._estimated_action_cost_s(stage_action)
+            if remaining is not None and cost is not None and remaining < cost:
+                stop_reason = (
+                    f"stage {position} ({stage_action}) costs ~{cost / 60.0:.0f} min but only "
+                    f"{max(remaining, 0) / 60.0:.0f} min remain"
+                )
+                logger.info("run_recipe: stopping cleanly -- %s.", stop_reason)
+                break
+            if position > 0:
+                # Each stage is its own recorded iteration (the first one
+                # rides the iteration the main loop already opened).
+                self.iteration += 1
+            self.last_decision_trace = {
+                "llm_chosen_action": stage_action,
+                "run_recipe_stage": position,
+                "validation_result": "run_recipe",
+            }
+            response = await self.execute_validated_action(
+                {"chosen_action": stage_action, "action_parameters": stage_params},
+                timing_context,
+            )
+            failure = self._action_failure(response, default_command=stage_action)
+            if failure:
+                self._record_failed_action(failure)
+                # Without this, the main loop's post-recipe timing probe would
+                # record the failed stage's iteration a second time as a bogus
+                # no-improvement entry measured on the restored-best design.
+                self.recorded_iterations.add(self.iteration)
+                outcomes.append({
+                    "stage": position,
+                    "action": stage_action,
+                    "status": "failed",
+                    "error_type": failure.get("error_type"),
+                })
+                if self.last_action_mutated_design:
+                    await self._restore_best_state(f"run_recipe stage {stage_action} failed")
+                continue
+            # Normal recording between stages: the timing summary routes
+            # through _after_tool_success -> _record_iteration_timing, so an
+            # improving stage becomes the new best (and is published) and a
+            # regressing one rolls back before the next stage builds on it.
+            await self.call_tool("vivado_report_timing_summary", {"timeout": 300})
+            outcomes.append({"stage": position, "action": stage_action, "status": "executed"})
+
+        if not outcomes:
+            return self._failure_json(
+                "insufficient_budget",
+                f"run_recipe could not start: {stop_reason or 'no stages executed'}.",
+                command="run_recipe",
+            )
+        self.last_action_key = "run_recipe"
+        self.last_recipe = "run_recipe"
+        self.last_targets = [str(outcome["action"]) for outcome in outcomes]
+        return json.dumps({
+            "success": True,
+            "recipe_stages": outcomes,
+            "stopped_early": stop_reason,
+        }, indent=2)
+
     async def _endgame_polish(self) -> None:
         """Stall limit reached but wall-clock remains: spend it polishing the
         best checkpoint with cheap incremental passes instead of exiting
@@ -5290,6 +5764,116 @@ class DCPOptimizer(DCPOptimizerBase):
                     await self._restore_best_state("endgame polish step failed")
                 continue
             await self.call_tool("vivado_report_timing_summary", {"timeout": 300})
+
+    async def _initial_diagnostics(self) -> None:
+        """Phase 0 diagnostic battery (item 7): one-time probes run before the
+        first LLM decision, hard-capped at INITIAL_DIAGNOSTICS_BUDGET_S total.
+        Every probe is individually wrapped: a failed probe is a SKIPPED
+        probe, never a failed run. Results land in self.design_signature,
+        which rides along in the initial analysis message and (compactly, QoR
+        text excluded) in every timing context."""
+        started = time.time()
+        signature: dict = {}
+
+        def _over_budget() -> bool:
+            return (time.time() - started) > INITIAL_DIAGNOSTICS_BUDGET_S
+
+        # (a) Zero-interconnect logic floor: with interconnect delay modeled
+        # as zero, the remaining WNS is pure logic depth -- the fmax ceiling
+        # that NO amount of placement/routing work can beat. The delay model
+        # is restored in a finally: leaving it on "none" would turn every
+        # later WNS observation this run into fantasy. Read the slack via a
+        # raw sentinel (not vivado_get_wns/_get_current_wns) so the strongly
+        # positive floor value can never ratchet best_wns or trip the
+        # positive-WNS sanity limit.
+        try:
+            set_result = await self.call_tool(
+                "vivado_run_tcl",
+                {"command": "set_delay_model -interconnect none", "timeout": 120},
+                internal=True,
+            )
+            try:
+                if not self._vivado_output_has_error(set_result):
+                    raw = await self.call_tool(
+                        "vivado_run_tcl",
+                        {"command": (
+                            "set _p [lindex [get_timing_paths -max_paths 1 -setup] 0]; "
+                            "if {$_p ne {}} {puts \"LOGIC_FLOOR_WNS:[get_property SLACK $_p]\"}"
+                        ), "timeout": 180},
+                        internal=True,
+                    )
+                    match = re.search(r"LOGIC_FLOOR_WNS:([-+]?\d+(?:\.\d+)?)", raw)
+                    if match:
+                        logic_floor_wns = float(match.group(1))
+                        signature["logic_floor_wns_ns"] = logic_floor_wns
+                        period = self.current_period_ns or self.clock_period
+                        if period is not None and period - logic_floor_wns > 0:
+                            # Deliberately NOT calculate_fmax(): that clamps
+                            # positive-WNS results to 1/period, but the whole
+                            # point of the floor is the headroom past it.
+                            signature["logic_fmax_ceiling_mhz"] = round(
+                                1000.0 / (period - logic_floor_wns), 2
+                            )
+            finally:
+                # The input DCP is routed, so "actual" is the model every
+                # real measurement this run must use.
+                await self.call_tool(
+                    "vivado_run_tcl",
+                    {"command": "set_delay_model -interconnect actual", "timeout": 120},
+                    internal=True,
+                )
+        except Exception as exc:
+            logger.warning("Phase 0 logic-floor probe failed (skipped): %s", exc)
+
+        # (b) Critical-net fanout profile, from data initial analysis already
+        # collected (no tool calls): high replication pressure on the worst
+        # paths says fanout_split/replication before placement heroics.
+        try:
+            if self.high_fanout_nets:
+                fanouts = sorted(int(fanout) for _, fanout, _ in self.high_fanout_nets)
+                signature["critical_fanout_max"] = fanouts[-1]
+                signature["critical_fanout_median"] = fanouts[len(fanouts) // 2]
+                signature["critical_high_fanout_nets"] = len(fanouts)
+            signature["worst_path_candidates"] = len(self.current_target_candidates)
+        except Exception as exc:
+            logger.warning("Phase 0 fanout profile failed (skipped): %s", exc)
+
+        # (c) Vivado's own QoR suggestions -- cheap expert hints, but the
+        # report itself can take minutes on a large design, so skip it when
+        # the run cannot spare them.
+        try:
+            remaining = self._time_remaining_s()
+            if _over_budget():
+                logger.info(
+                    "Phase 0: over the %d s diagnostics budget; skipping QoR suggestions.",
+                    INITIAL_DIAGNOSTICS_BUDGET_S,
+                )
+            elif (
+                self.design_scale == "large"
+                and remaining is not None
+                and remaining < QOR_SUGGESTIONS_MIN_REMAINING_S
+            ):
+                logger.info(
+                    "Phase 0: large design with only %.0f min remaining; skipping QoR suggestions.",
+                    remaining / 60.0,
+                )
+            else:
+                raw = await self.call_tool(
+                    "vivado_run_tcl",
+                    {"command": "report_qor_suggestions -return_string", "timeout": 300},
+                    internal=True,
+                )
+                if raw and not self._vivado_output_has_error(raw):
+                    signature["qor_suggestions"] = raw.strip()[:2000]
+        except Exception as exc:
+            logger.warning("Phase 0 QoR suggestions probe failed (skipped): %s", exc)
+
+        self.design_signature = signature
+        if signature:
+            logger.info(
+                "Phase 0 design signature: %s",
+                {key: value for key, value in signature.items() if key != "qor_suggestions"},
+            )
 
     async def _maybe_warm_start_replace(self) -> bool:
         """Deterministic opening move, GATED on the design's own signature --
@@ -5399,6 +5983,19 @@ class DCPOptimizer(DCPOptimizerBase):
                 )
         except Exception as exc:
             logger.warning("Could not probe baseline unplaced-cell count: %s", exc)
+
+        # Phase 0 diagnostic battery (item 7): budget-capped, failure-tolerant
+        # one-time probes. Runs after _load_crossrun_priors so the QoR probe
+        # can respect a prior-run "large" classification.
+        try:
+            await self._initial_diagnostics()
+        except Exception as exc:
+            logger.warning("Phase 0 diagnostics failed entirely (continuing): %s", exc)
+        if self.design_signature:
+            initial_analysis += (
+                "\n\nDESIGN SIGNATURE (phase-0 diagnostics):\n"
+                + json.dumps(self.design_signature, indent=2)
+            )
 
         # If timing is already met, continue anyway: this contest flow pushes Fmax
         # by tightening the target clock instead of stopping at closure.
