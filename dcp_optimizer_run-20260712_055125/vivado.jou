@@ -1,0 +1,61 @@
+#-----------------------------------------------------------
+# Vivado v2025.1 (64-bit)
+# SW Build 6140274 on Wed May 21 22:58:25 MDT 2025
+# IP Build 6138677 on Thu May 22 03:10:11 MDT 2025
+# SharedData Build 6139179 on Tue May 20 17:58:58 MDT 2025
+# Start of session at: Sun Jul 12 05:51:26 2026
+# Process ID         : 58331
+# Current directory  : /home/fpl2026/dcp_optimizer_run-20260712_055125
+# Command line       : vivado -mode tcl -log /home/fpl2026/dcp_optimizer_run-20260712_055125/vivado.log -journal /home/fpl2026/dcp_optimizer_run-20260712_055125/vivado.jou
+# Log file           : /home/fpl2026/dcp_optimizer_run-20260712_055125/vivado.log
+# Journal file       : /home/fpl2026/dcp_optimizer_run-20260712_055125/vivado.jou
+# Running On         : 35ns7cfvpwajp9e9nht0kyrsvp
+# Platform           : Ubuntu
+# Operating System   : Ubuntu 24.04.4 LTS
+# Processor Detail   : AMD EPYC 9V45 96-Core Processor
+# CPU Frequency      : 4494.811 MHz
+# CPU Physical cores : 4
+# CPU Logical cores  : 8
+# Host memory        : 33652 MB
+# Swap memory        : 0 MB
+# Total Virtual      : 33652 MB
+# Available Virtual  : 30281 MB
+#-----------------------------------------------------------
+open_checkpoint {/home/fpl2026/fpl26_contest_benchmarks/boom_soc_2025.1.dcp}
+puts {__timing_summary_e1f91895__}; report_timing_summary -return_string
+set contest_clk [get_clocks -quiet clk_fpl26contest]; if {$contest_clk ne {}} {   puts "CLOCK:clk_fpl26contest";   puts [get_property PERIOD $contest_clk]; } else {   set tp [get_timing_paths -max_paths 1 -setup];   if {$tp ne {}} {     set clk [get_property ENDPOINT_CLOCK $tp];     if {$clk ne {}} {       puts "CLOCK:$clk";       puts [get_property PERIOD [get_clocks $clk]];     }   } }
+set clk_obj [get_clocks -quiet {clk_fpl26contest}]; if {$clk_obj ne {}} {   set tp [get_timing_paths -max_paths 1 -setup -to $clk_obj];   if {[llength $tp] > 0} {set wns_value [get_property SLACK $tp]} else {set wns_value 0.0}; } else {   set tp [get_timing_paths -max_paths 1 -slack_lesser_than 999];   if {[llength $tp] > 0} {set wns_value [get_property SLACK $tp]} else {set wns_value 0.0} }; puts {WNS_VALUE_BEGIN}; puts $wns_value; puts {WNS_VALUE_END}
+set paths [get_timing_paths -max_paths 50 -setup]; foreach p $paths {   set start [get_property STARTPOINT_PIN $p];   set end [get_property ENDPOINT_PIN $p];   puts "AUDIT|$start|$end"; }
+set paths [get_timing_paths -max_paths 20 -setup -slack_lesser_than 0]; if {[llength $paths] == 0} {set paths [get_timing_paths -max_paths 20 -setup]}; foreach p $paths {   set slack [get_property SLACK $p];   set start [get_property STARTPOINT_PIN $p];   set end [get_property ENDPOINT_PIN $p];   if {$start eq {}} {set start [get_property STARTPOINT_CELL $p]};   if {$end eq {}} {set end [get_property ENDPOINT_CELL $p]};   puts "PATH|$slack|$start|$end"; }
+report_timing -return_string -max_paths 1 -delay_type max
+puts {__fanout_analysis_9c7e9621__}; report_timing -return_string -max_paths 50 -delay_type max -sort_by slack
+get_nets {system/tile_prci_domain/tile_reset_domain_boom_tile/lsu/ldq_0_bits_youngest_stq_idx_reg[1]_0}
+get_property PARENT [get_nets {system/tile_prci_domain/tile_reset_domain_boom_tile/lsu/ldq_0_bits_youngest_stq_idx_reg[1]_0}]
+get_nets {system/tile_prci_domain/tile_reset_domain_boom_tile/core/rename_stage/freelist/r_valid_reg_3}
+get_property PARENT [get_nets {system/tile_prci_domain/tile_reset_domain_boom_tile/core/rename_stage/freelist/r_valid_reg_3}]
+get_nets {system/tile_prci_domain/tile_reset_domain_boom_tile/core/rename_stage/freelist/stq_tail_reg[3][0]}
+get_property PARENT [get_nets {system/tile_prci_domain/tile_reset_domain_boom_tile/core/rename_stage/freelist/stq_tail_reg[3][0]}]
+get_nets {system/tile_prci_domain/tile_reset_domain_boom_tile/core/rename_stage/freelist/r_uop_2_is_fencei_reg}
+get_property PARENT [get_nets {system/tile_prci_domain/tile_reset_domain_boom_tile/core/rename_stage/freelist/r_uop_2_is_fencei_reg}]
+get_nets {system/tile_prci_domain/tile_reset_domain_boom_tile/core/rename_stage/freelist/r_uop_2_ldst_val_reg}
+get_property PARENT [get_nets {system/tile_prci_domain/tile_reset_domain_boom_tile/core/rename_stage/freelist/r_uop_2_ldst_val_reg}]
+get_nets {system/tile_prci_domain/tile_reset_domain_boom_tile/core/fp_rename_stage/r_uop_lrs1_reg[2]_0}
+get_property PARENT [get_nets {system/tile_prci_domain/tile_reset_domain_boom_tile/core/fp_rename_stage/r_uop_lrs1_reg[2]_0}]
+report_timing -return_string -max_paths 50 -delay_type max -sort_by slack -nworst 1
+set _unplaced [llength [get_cells -quiet -hierarchical -filter {IS_PRIMITIVE && STATUS == UNPLACED}]]; puts "STATE_UNPLACED:$_unplaced"
+report_timing -return_string -max_paths 1 -delay_type max
+place_design -unplace
+place_design -directive Default
+route_design -directive Default
+puts {__timing_summary_3f59a048__}; report_timing_summary -return_string
+set clk_obj [get_clocks -quiet {clk_fpl26contest}]; if {$clk_obj ne {}} {   set tp [get_timing_paths -max_paths 1 -setup -to $clk_obj];   if {[llength $tp] > 0} {set wns_value [get_property SLACK $tp]} else {set wns_value 0.0}; } else {   set tp [get_timing_paths -max_paths 1 -slack_lesser_than 999];   if {[llength $tp] > 0} {set wns_value [get_property SLACK $tp]} else {set wns_value 0.0} }; puts {WNS_VALUE_BEGIN}; puts $wns_value; puts {WNS_VALUE_END}
+set _unplaced [llength [get_cells -quiet -hierarchical -filter {IS_PRIMITIVE && STATUS == UNPLACED}]]; puts "STATE_UNPLACED:$_unplaced"
+puts {__route_status_940948a1__}; report_route_status -return_string
+write_checkpoint -force {/home/fpl2026/dcp_optimizer_run-20260712_055125/checkpoints/iter_001.dcp}
+puts {__get_wns_b7b1a731__}; set clk_obj [get_clocks -quiet {clk_fpl26contest}]; if {$clk_obj ne {}} {   set wns_path [get_timing_paths -max_paths 1 -setup -to $clk_obj];   if {[llength $wns_path] > 0} {get_property SLACK $wns_path} else {puts 0.0} } else {puts {ERROR: clock not found}}
+set paths [get_timing_paths -max_paths 20 -setup -slack_lesser_than 0]; if {[llength $paths] == 0} {set paths [get_timing_paths -max_paths 20 -setup]}; foreach p $paths {   set slack [get_property SLACK $p];   set start [get_property STARTPOINT_PIN $p];   set end [get_property ENDPOINT_PIN $p];   if {$start eq {}} {set start [get_property STARTPOINT_CELL $p]};   if {$end eq {}} {set end [get_property ENDPOINT_CELL $p]};   puts "PATH|$slack|$start|$end"; }
+report_timing -return_string -max_paths 1 -delay_type max
+report_design_analysis -congestion -return_string
+set _s [lindex [get_sites -quiet -of_objects [get_cells -quiet {system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_0/components_4/data/data_ext/mem_0_0/ram_reg_bram_0}]] 0]; if {$_s ne {}} {puts "CLOCKREGION|system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_0/components_4/data/data_ext/mem_0_0/ram_reg_bram_0|[get_property CLOCK_REGION $_s]"} ; set _s [lindex [get_sites -quiet -of_objects [get_cells -quiet {system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_0/components_4/data/data_ext/mem_0_2/ram_reg_bram_0}]] 0]; if {$_s ne {}} {puts "CLOCKREGION|system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_0/components_4/data/data_ext/mem_0_2/ram_reg_bram_0|[get_property CLOCK_REGION $_s]"} ; set _s [lindex [get_sites -quiet -of_objects [get_cells -quiet {system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_1/components_4/s1_update_idx_reg[9]}]] 0]; if {$_s ne {}} {puts "CLOCKREGION|system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_1/components_4/s1_update_idx_reg[9]|[get_property CLOCK_REGION $_s]"} ; set _s [lindex [get_sites -quiet -of_objects [get_cells -quiet {system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/icache/dataArrayB0Way_3/dataArrayB0Way_0_ext/mem_0_0/ram_reg}]] 0]; if {$_s ne {}} {puts "CLOCKREGION|system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/icache/dataArrayB0Way_3/dataArrayB0Way_0_ext/mem_0_0/ram_reg|[get_property CLOCK_REGION $_s]"} ; set _s [lindex [get_sites -quiet -of_objects [get_cells -quiet {system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/icache/dataArrayB0Way_4/dataArrayB0Way_0_ext/mem_0_0/ram_reg}]] 0]; if {$_s ne {}} {puts "CLOCKREGION|system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/icache/dataArrayB0Way_4/dataArrayB0Way_0_ext/mem_0_0/ram_reg|[get_property CLOCK_REGION $_s]"} ; set _s [lindex [get_sites -quiet -of_objects [get_cells -quiet {system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/icache/dataArrayB0Way_7/dataArrayB0Way_0_ext/mem_0_0/ram_reg}]] 0]; if {$_s ne {}} {puts "CLOCKREGION|system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/icache/dataArrayB0Way_7/dataArrayB0Way_0_ext/mem_0_0/ram_reg|[get_property CLOCK_REGION $_s]"} ; set _s [lindex [get_sites -quiet -of_objects [get_cells -quiet {system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/icache/dataArrayB1Way_3/dataArrayB0Way_0_ext/mem_0_0/ram_reg}]] 0]; if {$_s ne {}} {puts "CLOCKREGION|system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/icache/dataArrayB1Way_3/dataArrayB0Way_0_ext/mem_0_0/ram_reg|[get_property CLOCK_REGION $_s]"}
+place_design -unplace
+place_design -directive ExtraNetDelay_high
