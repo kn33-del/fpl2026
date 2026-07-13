@@ -1077,6 +1077,12 @@ class DCPOptimizer(DCPOptimizerBase):
         self.last_targets: list[str] = []
         self.last_batch_size: Optional[int] = None
         self.last_vivado_runtime_s: float = 0.0
+        # Cumulative vivado_*/rapidwright_* tool time since the last history
+        # record. history.json's per-iteration vivado_runtime_s used to be
+        # just the LAST tool call's elapsed time (~0.5 s for a full
+        # place+route iteration that took minutes), which fed the
+        # time-awareness features garbage.
+        self.iteration_tool_elapsed_s: float = 0.0
         self.last_route_result = None
         self.recorded_iterations: set[int] = set()
         self.last_design_info: dict = {}
@@ -1366,6 +1372,8 @@ class DCPOptimizer(DCPOptimizerBase):
             
             elapsed_time = time.time() - start_time
             self.last_vivado_runtime_s = elapsed_time if tool_name.startswith("vivado_") else self.last_vivado_runtime_s
+            if tool_name.startswith(("vivado_", "rapidwright_")):
+                self.iteration_tool_elapsed_s += elapsed_time
 
             # Cost model: learn what place/route/phys_opt actually cost on
             # THIS design (including the re-place flows issued via run_tcl).
@@ -1685,12 +1693,35 @@ class DCPOptimizer(DCPOptimizerBase):
             )
         before_guard_wns = await self._get_current_wns()
         if before_guard_wns is not None and before_guard_wns < PHYS_OPT_MIN_USEFUL_WNS_NS:
-            message = (
-                f"Skipping phys_opt_design because current WNS {before_guard_wns:.3f} ns is below "
-                f"{PHYS_OPT_MIN_USEFUL_WNS_NS:.3f} ns; use structural placement actions first."
+            # Escape hatches (run 20260713 vexriscv lesson: this guard refused
+            # retime 5x in one run while the diagnosis said the path was
+            # logic-dominated and every structural action had already failed
+            # -- the run then ground out 10 straight stalls with no logic-side
+            # lever left). The "structural first" premise only holds while
+            # structural actions are actually viable AND the delay is
+            # net-dominated; otherwise phys_opt/retime IS the remaining move.
+            logic_pct = (self.path_delay_breakdown or {}).get("logic_pct")
+            logic_heavy = isinstance(logic_pct, (int, float)) and logic_pct >= 0.45
+            stuck = self.consecutive_no_improvement >= STUCK_ITERATION_THRESHOLD
+            active_exhausted = set(self._active_exhausted_actions())
+            structural_remaining = any(
+                action not in active_exhausted for action in RAPIDWRIGHT_STRUCTURAL_ACTIONS
             )
-            logger.info(message)
-            return self._failure_json("phys_opt_below_useful_wns", message, command="phys_opt_design")
+            if logic_heavy or stuck or not structural_remaining:
+                logger.info(
+                    "phys_opt WNS guard bypassed at %.3f ns (logic_pct=%s, "
+                    "consecutive_no_improvement=%d, structural_remaining=%s): "
+                    "phys_opt/retime is the appropriate remaining lever.",
+                    before_guard_wns, logic_pct,
+                    self.consecutive_no_improvement, structural_remaining,
+                )
+            else:
+                message = (
+                    f"Skipping phys_opt_design because current WNS {before_guard_wns:.3f} ns is below "
+                    f"{PHYS_OPT_MIN_USEFUL_WNS_NS:.3f} ns; use structural placement actions first."
+                )
+                logger.info(message)
+                return self._failure_json("phys_opt_below_useful_wns", message, command="phys_opt_design")
         if not await self._check_implementation_license():
             return self._failure_json(
                 "vivado_license_failure",
@@ -2503,10 +2534,11 @@ class DCPOptimizer(DCPOptimizerBase):
             recipe="clock_period_bisection",
             targets=[self.target_clock or "clock"],
             wns_after=wns,
-            vivado_runtime_s=0.0,
+            vivado_runtime_s=self.iteration_tool_elapsed_s,
             checkpoint_path=str(checkpoint_path),
             batch_size=1,
         )
+        self.iteration_tool_elapsed_s = 0.0
         self._annotate_latest_history({
             "target_tier": self.target_tier,
             "path_delay_classification": self.path_delay_classification,
@@ -2588,7 +2620,7 @@ class DCPOptimizer(DCPOptimizerBase):
             "fmax_before": self.checkpoint_manager.best_fmax_mhz,
             "fmax_after": None,
             "delta_fmax": 0.0,
-            "vivado_runtime_s": 0.0,
+            "vivado_runtime_s": self.iteration_tool_elapsed_s,
             "status": "failed",
             "reason": failure.get("message", ""),
             "error_type": failure.get("error_type", "vivado_command_failure"),
@@ -2604,6 +2636,7 @@ class DCPOptimizer(DCPOptimizerBase):
         self.consecutive_no_improvement += 1
         self._note_recipe_outcome("failed", None)
         self.checkpoint_manager.iterations.append(iteration)
+        self.iteration_tool_elapsed_s = 0.0
         persist = getattr(self.checkpoint_manager, "_persist_history", None)
         if callable(persist):
              persist()
@@ -3078,10 +3111,17 @@ class DCPOptimizer(DCPOptimizerBase):
             action in allowed and action not in active_exhausted
             for action in RAPIDWRIGHT_STRUCTURAL_ACTIONS
         )
+        # Logic-heavy paths are exempt: placement/structural actions cannot
+        # reduce logic depth, so demoting retime there points the LLM at
+        # levers that cannot work (and the executor guard now honors the
+        # same exemption).
+        guard_logic_pct = (self.path_delay_breakdown or {}).get("logic_pct")
+        guard_logic_heavy = isinstance(guard_logic_pct, (int, float)) and guard_logic_pct >= 0.45
         if (
             current_wns is not None
             and current_wns < PHYS_OPT_MIN_USEFUL_WNS_NS
             and structural_available
+            and not guard_logic_heavy
         ):
             allowed = self._demote_actions(
                 allowed,
@@ -3589,6 +3629,27 @@ class DCPOptimizer(DCPOptimizerBase):
         target_ff_count = int(params.get("target_ff_count") or estimated_ff_count)
         target_dsp_count = int(params.get("target_dsp_count") or 0)
         target_bram_count = int(params.get("target_bram_count") or 0)
+        # Hard-block demand (boom_soc run 20260713 iter 4): sizing was
+        # LUT/FF-only, so a cluster of BRAM-endpoint paths got a region with
+        # 60 RAMB36 sites for 153 BRAMs and failed DRC. The candidates'
+        # start/endpoints say when BRAM/DSP cells are being clustered --
+        # request sites for them (x2 margin: the server-side cell matching
+        # expands beyond the named candidates).
+        if not target_bram_count or not target_dsp_count:
+            bram_cells: set[str] = set()
+            dsp_cells: set[str] = set()
+            for candidate in self.current_target_candidates:
+                for key in ("startpoint", "endpoint"):
+                    name = str(candidate.get(key) or "").lower()
+                    cell = name.rsplit("/", 1)[0] if "/" in name else name
+                    if any(k in cell for k in ("ram_reg", "_bram", "ramb", "uram")):
+                        bram_cells.add(cell)
+                    if "dsp" in cell:
+                        dsp_cells.add(cell)
+            if bram_cells and not target_bram_count:
+                target_bram_count = 2 * len(bram_cells)
+            if dsp_cells and not target_dsp_count:
+                target_dsp_count = 2 * len(dsp_cells)
 
         # Fix #5 continued: if this sizing (explicit or estimated) still comes
         # back over-utilized, shrink it and retry rather than failing outright
@@ -4354,7 +4415,7 @@ class DCPOptimizer(DCPOptimizerBase):
                 self.active_checkpoint = str(Path(checkpoint).resolve())
 
         if wns_measured is not None:
-            await self._record_iteration_timing(wns_measured, elapsed_time)
+            await self._record_iteration_timing(wns_measured, self.iteration_tool_elapsed_s)
 
     def _publish_best_to_output(self) -> None:
         """Copy the best checkpoint so far to the contest output DCP path.
@@ -4459,6 +4520,9 @@ class DCPOptimizer(DCPOptimizerBase):
 
         if period_for_record is not None:
             self.checkpoint_manager.clock_period_ns = period_for_record
+        # Keep the persisted benchmark_score's beta term current: record()
+        # snapshots llm_cost_usd into history.json.
+        self.checkpoint_manager.llm_cost_usd = max(0.0, float(self.total_cost or 0.0))
         iteration = self.checkpoint_manager.record(
             recipe=self.last_recipe,
             targets=self.last_targets,
@@ -4467,6 +4531,7 @@ class DCPOptimizer(DCPOptimizerBase):
             checkpoint_path=str(checkpoint_path),
             batch_size=self.last_batch_size,
         )
+        self.iteration_tool_elapsed_s = 0.0
         self.no_improvement_count = self.checkpoint_manager.stall_count
         self.consecutive_no_improvement = self.checkpoint_manager.stall_count
         self.last_recorded_wns = wns
@@ -5284,6 +5349,38 @@ class DCPOptimizer(DCPOptimizerBase):
                     "Pblock action completed but assigned zero cells.",
                     command="pblock",
                 )
+            # Abort BEFORE paying for place_design when the apply payload's
+            # DRC already says the region cannot fit the assigned cells
+            # (boom_soc run 20260713 iter 4: 153 RAMB36 assigned to a region
+            # with 60 sites -- resource_validation flagged it, we placed
+            # anyway, and the placer burned budget just to fail on the same
+            # DRC). The region generator sizes by LUT/FF only, so hard-block
+            # (BRAM/DSP/URAM) overflow is exactly the failure it can't see.
+            pblock_validation = payload.get("resource_validation") or {}
+            pblock_validation_errors = list(pblock_validation.get("errors") or [])
+            if pblock_validation_errors:
+                stale_name = params.get("pblock_name")
+                if stale_name:
+                    await self.call_tool(
+                        "vivado_run_tcl",
+                        {"command": f"if {{[llength [get_pblocks -quiet {stale_name}]] > 0}} "
+                                    f"{{delete_pblocks [get_pblocks {stale_name}]}}"},
+                        internal=True,
+                    )
+                logger.error(
+                    "pblock resource validation failed pre-placement: %s",
+                    pblock_validation_errors,
+                )
+                return self._failure_json(
+                    "pblock_region_too_small",
+                    (
+                        "Pblock resource validation failed before placement: "
+                        + "; ".join(str(err)[:200] for err in pblock_validation_errors[:3])
+                        + ". The region cannot fit the assigned cells (typically BRAM/DSP "
+                        "shortage); widen the ranges or exclude hard-block cells."
+                    ),
+                    command="pblock",
+                )
             # Creating/applying the pblock only constrains a region for
             # future placement - it does not move any cells by itself, so
             # WNS cannot change as a result of this call alone. Re-place
@@ -5559,10 +5656,20 @@ class DCPOptimizer(DCPOptimizerBase):
                     command="fanout_split/route_design",
                 )
             if not self.high_fanout_nets:
-                logger.warning("fanout_split selected but no high-fanout nets are available; falling back to phys_opt.")
+                # Fanout is a netlist property: no placement or routing action
+                # can create high-fanout nets, so retrying this action later in
+                # the run is guaranteed to fail again (vexriscv/corescore runs
+                # 20260713 each burned 2 iterations rediscovering this).
+                # Exhaust it for the rest of the run, not just a short cooldown.
+                self.action_structural_cooldown_until_iter["fanout_split"] = 10 ** 9
+                logger.warning(
+                    "fanout_split selected but no high-fanout nets exist in this design; "
+                    "exhausting fanout_split for the remainder of the run."
+                )
                 return self._failure_json(
                     "no_action_target",
-                    "fanout_split selected but no high-fanout nets are available.",
+                    "fanout_split selected but no high-fanout nets are available; "
+                    "action withheld for the rest of the run.",
                     command="fanout_split",
                 )
             net_name, fanout, _ = self.high_fanout_nets[0]
@@ -6258,6 +6365,13 @@ Proceed by selecting exactly one validated action per timing-context turn."""
     def _print_optimization_summary(self, max_iterations_reached: bool = False):
         """Print detailed optimization summary including token usage and costs."""
         self._save_crossrun_priors()
+        # Final benchmark_score persist: pick up the end-of-run wall clock and
+        # the full LLM spend so history.json's score matches contest scoring.
+        if self.checkpoint_manager is not None and self.checkpoint_manager.baseline_fmax_mhz is not None:
+            try:
+                self.checkpoint_manager.set_llm_cost_usd(float(self.total_cost or 0.0))
+            except Exception as exc:
+                logger.warning("Could not persist final benchmark score: %s", exc)
         title = "Optimization Summary (Max Iterations Reached)" if max_iterations_reached else "Optimization Summary"
         print(f"\n{'='*70}")
         print(f"{title}")
@@ -6286,6 +6400,14 @@ Proceed by selecting exactly one validated action per timing-context turn."""
                 print("\n".join(result_lines))
             if cm.best_fmax_mhz is not None:
                 print(f"  {'Best achieved Fmax:':<21s}{cm.best_fmax_mhz:8.2f} MHz")
+            score_block = cm.benchmark_score()
+            if score_block.get("score") is not None:
+                print(
+                    f"\nBENCHMARK SCORE: {score_block['score']:.3f}  "
+                    f"(alpha={score_block['alpha_delta_fmax_mhz']:.2f} MHz, "
+                    f"beta=${score_block['beta_openrouter_cost_usd']:.4f}, "
+                    f"gamma={score_block['gamma_runtime_hours']:.4f} h)"
+                )
             print(f"  {'Best checkpoint:':<21s}{cm.get_best_checkpoint()}")
         else:
             best_wns = self.best_wns if self.best_wns > float('-inf') else None

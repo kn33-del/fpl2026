@@ -4,7 +4,8 @@
       "Bash(python -m py_compile dcp_optimizer.py analysis_layer.py checkpoint_manager.py)",
       "Bash(python -m pytest tests/ -q)",
       "Bash(python -m py_compile dcp_optimizer.py analysis_layer.py)",
-      "Bash(PYTHONPATH=\".venv/lib/python3.12/site-packages\" python -m pytest tests/test_priors_and_search.py tests/test_dcp_optimizer_state_validity.py -q)"
+      "Bash(PYTHONPATH=\".venv/lib/python3.12/site-packages\" python -m pytest tests/test_priors_and_search.py tests/test_dcp_optimizer_state_validity.py -q)",
+      "Bash(python -)"
     ]
   }
 }

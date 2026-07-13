@@ -34,6 +34,7 @@ class CheckpointManager:
         self.cells_blacklisted: list[str] = []
         self.nets_blacklisted: list[str] = []
         self.iterations: list[dict[str, Any]] = []
+        self.llm_cost_usd: float = 0.0
     def start_baseline(self, wns: float, period_ns: float) -> None:
         """Record the baseline timing measurement for the input DCP."""
         if period_ns - wns <= 0.0:
@@ -148,6 +149,44 @@ class CheckpointManager:
                 self._append_unique(next_blacklist, str(target))
         next_state[key] = next_blacklist
         self._persist_state(next_state)
+    def set_llm_cost_usd(self, cost_usd: float) -> None:
+        """Update the cumulative LLM (OpenRouter) cost and re-persist history.
+
+        Called by the optimizer whenever it has a fresher cost total, so the
+        benchmark_score block in history.json stays current."""
+        self.llm_cost_usd = max(0.0, float(cost_usd))
+        self._persist_history()
+    def benchmark_score(self) -> dict[str, Any]:
+        """Contest score for the run so far.
+
+        Benchmark Score = alpha - (0.1*alpha)*beta - (0.1*alpha)*gamma
+          alpha = delta Fmax improvement (MHz), best vs baseline
+          beta  = OpenRouter cost (USD)
+          gamma = wall-clock runtime (s) / 3600
+        """
+        return self._score_for(self.baseline_fmax_mhz, self.best_fmax_mhz, self.llm_cost_usd)
+    def _score_for(
+        self,
+        baseline_fmax_mhz: float | None,
+        best_fmax_mhz: float | None,
+        llm_cost_usd: float,
+    ) -> dict[str, Any]:
+        wall_clock_s = time.time() - self.started_at_epoch_s
+        gamma = wall_clock_s / 3600.0
+        beta = float(llm_cost_usd)
+        alpha = None
+        score = None
+        if baseline_fmax_mhz is not None and best_fmax_mhz is not None:
+            alpha = float(best_fmax_mhz) - float(baseline_fmax_mhz)
+            score = alpha - (0.1 * alpha) * beta - (0.1 * alpha) * gamma
+        return {
+            "formula": "alpha - (0.1*alpha)*beta - (0.1*alpha)*gamma",
+            "alpha_delta_fmax_mhz": alpha,
+            "beta_openrouter_cost_usd": beta,
+            "gamma_runtime_hours": gamma,
+            "wall_clock_runtime_s": wall_clock_s,
+            "score": score,
+        }
     def summary(self) -> str:
         """Return a one-paragraph summary of run progress."""
         if self.baseline_fmax_mhz is None or self.best_fmax_mhz is None:
@@ -217,6 +256,7 @@ class CheckpointManager:
             "nets_blacklisted": list(self.nets_blacklisted),
             "iterations": [self._copy_iteration(iteration) for iteration in self.iterations],
             "started_at_epoch_s": self.started_at_epoch_s,
+            "llm_cost_usd": self.llm_cost_usd,
         }
     def _copy_iteration(self, iteration: dict[str, Any]) -> dict[str, Any]:
         copied = dict(iteration)
@@ -225,6 +265,13 @@ class CheckpointManager:
     def _persist_history(self) -> None:
         self._persist_state(self._snapshot_state())
     def _persist_state(self, state: dict[str, Any]) -> None:
+        # Stamp the contest score from the state being written (not self,
+        # which record() has not applied yet at this point).
+        state["benchmark_score"] = self._score_for(
+            state.get("baseline_fmax_mhz"),
+            state.get("best_fmax_mhz"),
+            float(state.get("llm_cost_usd", self.llm_cost_usd) or 0.0),
+        )
         self._write_history_atomically(state)
         self._apply_state(state)
     def _apply_state(self, state: dict[str, Any]) -> None:
@@ -242,6 +289,7 @@ class CheckpointManager:
         self.nets_blacklisted = list(state.get("nets_blacklisted", []))
         self.iterations = [self._copy_iteration(iteration) for iteration in state.get("iterations", [])]
         self.started_at_epoch_s = float(state.get("started_at_epoch_s", self.started_at_epoch_s))
+        self.llm_cost_usd = float(state.get("llm_cost_usd", self.llm_cost_usd) or 0.0)
     def _write_history_atomically(self, state: dict[str, Any]) -> None:
         temp_path = self.history_path.with_name(f"{self.history_path.name}.tmp")
         payload = json.dumps(state, indent=2)

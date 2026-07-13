@@ -44,6 +44,12 @@ def main(path: str) -> None:
               f"({best_fmax:.1f} MHz, {best_fmax - baseline_fmax:+.1f})")
     print(f"  best ckpt: {history.get('best_checkpoint', '?').rsplit('/', 1)[-1]}")
     print(f"  iterations: {len(iterations)}   stall_count: {history.get('stall_count')}")
+    score_block = history.get("benchmark_score") or {}
+    if score_block.get("score") is not None:
+        print(f"  score    : {score_block['score']:.3f}  "
+              f"(alpha={score_block.get('alpha_delta_fmax_mhz', 0):.2f} MHz, "
+              f"beta=${score_block.get('beta_openrouter_cost_usd', 0):.4f}, "
+              f"gamma={score_block.get('gamma_runtime_hours', 0):.4f} h)")
 
     print("\nTIMELINE")
     print(f"  {'it':>3} {'recipe':<28} {'target/directive':<28} "
