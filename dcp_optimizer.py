@@ -2989,6 +2989,21 @@ class DCPOptimizer(DCPOptimizerBase):
             return "REGISTER"
         return "LUT"
 
+    def _sitting_on_fresh_win(self) -> bool:
+        """True when the last recorded iteration improved (stall_count 0).
+
+        Used by both the exploit-after-win demotion here and the diagnosis
+        layer's promotion block (analysis_layer.actions_for), which must not
+        front-run a fresh win with full re-rolls: runs 20260713_010908 and
+        _155651 each lost ~50 and ~72 MHz to identical iter-2/iter-3 re-rolls
+        because a confident long_interconnect diagnosis re-promoted them and
+        popped their demotion guidance."""
+        return (
+            self.checkpoint_manager is not None
+            and bool(self.checkpoint_manager.iterations)
+            and self.checkpoint_manager.stall_count == 0
+        )
+
     def _demote_actions(
         self,
         allowed: list[str],
@@ -3144,6 +3159,25 @@ class DCPOptimizer(DCPOptimizerBase):
                     [prior_action],
                     f"0 wins / {bad} losses across previous runs on this design",
                 )
+        # Directive-level cross-run record: the action-level prior above can't
+        # catch "place Default wins, place Explore loses" because both count
+        # under place_design_explore. Name the losing directives so the LLM
+        # stops re-trying them (Explore lost identically at iter 2 of two
+        # consecutive runs on logicnets before this was added).
+        losing_directives = [
+            f"{name} ({rec.get('good', 0)}/{int(rec.get('good', 0)) + int(rec.get('bad', 0))})"
+            for name, rec in (((self.crossrun_priors or {}).get("directives")) or {}).items()
+            if int(rec.get("good", 0)) == 0 and int(rec.get("bad", 0)) >= 2
+        ]
+        if losing_directives and "place_design_explore" in allowed:
+            note = (
+                "directives with losing cross-run records on this design "
+                f"(never improved): {', '.join(sorted(losing_directives))} -- do not re-try these"
+            )
+            existing = self.last_action_guidance.get("place_design_explore")
+            self.last_action_guidance["place_design_explore"] = (
+                f"{existing}; {note}" if existing else note
+            )
 
         # Exploit-after-win (run 20260712_051231, measured): from a fresh
         # improvement, full re-place re-rolls went 0/3 (AltSpreadLogic_high
@@ -3152,12 +3186,7 @@ class DCPOptimizer(DCPOptimizerBase):
         # phys_opt +3.9/+1.1 MHz). When the last recorded iteration improved,
         # lead with refinement and demote fresh re-rolls with the reason --
         # polish the win before rolling the dice on it.
-        sitting_on_fresh_win = (
-            self.checkpoint_manager is not None
-            and bool(self.checkpoint_manager.iterations)
-            and self.checkpoint_manager.stall_count == 0
-        )
-        if sitting_on_fresh_win:
+        if self._sitting_on_fresh_win():
             refine_first = [
                 action for action in
                 ("pblock", "phys_opt_design", "route_explore", "phys_opt_design_retime")
@@ -6049,8 +6078,11 @@ class DCPOptimizer(DCPOptimizerBase):
                 "A deterministic warm-start whole-design re-place (unplace + place Default + "
                 "route Default) was executed as iteration 1 -- it is the recipe with the best "
                 "recorded results on net-delay-bound designs. Its outcome is reflected in the "
-                "timing state and place_directives_tried. Build on it: if it improved, try a "
-                "stronger directive next; if it regressed, choose a different strategy family."
+                "timing state and place_directives_tried. Build on it: if it improved, REFINE "
+                "the winning placement first (phys_opt_design, route_explore, incremental "
+                "pblock) -- fresh whole-design re-places from a winning state have regressed "
+                "~50-100 MHz every time they were tried on past runs; if it regressed, choose "
+                "a different strategy family."
             )
         self.messages.append({"role": "user", "content": summary})
         return True

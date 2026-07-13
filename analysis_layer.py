@@ -873,6 +873,20 @@ class AnalysisEngine:
                     )
             if hyp.recommended_actions:
                 preferred = [a for a in hyp.recommended_actions if a in allowed]
+                # Exploit-after-win protection: when the last recorded
+                # iteration IMPROVED, a confident hypothesis must not
+                # re-promote whole-design re-rolls past the optimizer's
+                # "refine the win first" demotion (nor pop its guidance
+                # below). Both 20260713 logicnets runs lost the fresh
+                # +98 MHz win to exactly this: long_interconnect at 0.90
+                # promoted place_design_explore/pblock_full_replace at
+                # iter 2 and the re-roll regressed ~50-70 MHz.
+                fresh_win_check = getattr(opt, "_sitting_on_fresh_win", None)
+                if callable(fresh_win_check) and fresh_win_check():
+                    preferred = [
+                        a for a in preferred
+                        if a not in ("place_design_explore", "pblock_full_replace")
+                    ]
                 if preferred:
                     allowed = preferred + [a for a in allowed if a not in preferred]
                     # A confident hypothesis promoting an action overrides any
