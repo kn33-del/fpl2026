@@ -177,6 +177,31 @@ VIVADO_INCREMENTAL_IMPLEMENTATION_ACTIONS = {
 # exiting early -- every unspent minute is score left on the table only if
 # the passes regress, and regressions roll back.
 ENDGAME_MIN_REMAINING_S = 600
+# --- Convergence early-exit (score item 2) ---
+# The score is alpha - 0.1*alpha*beta - 0.1*alpha*gamma, so every iteration
+# past genuine convergence is pure negative value (more gamma runtime, more
+# beta cost). Two convergence signals stop the run early:
+#  (a) physical ceiling: best Fmax is within LOGIC_CEILING_STOP_FRACTION of the
+#      zero-interconnect logic Fmax ceiling measured in phase-0 diagnostics --
+#      no placement/routing can beat pure logic depth, so there is nothing left
+#      to find.
+#  (b) menu exhaustion: after CONVERGENCE_MIN_STALLS stalls, every base action
+#      family is simultaneously in cooldown/exhausted on the current target --
+#      the LLM has no genuinely-new move, and waiting for cooldowns to lapse
+#      only burns budget re-trying things that already failed.
+LOGIC_CEILING_STOP_FRACTION = 0.97
+CONVERGENCE_MIN_STALLS = 3
+# --- Clock re-constraint focus pass (score item 1) ---
+# On a deeply-unmet design (WNS far below zero against the contest clock), the
+# placer/router/phys_opt see every path as violating and spread timing-driven
+# effort uselessly thin. Re-constraining the clock to a barely-unmet period
+# (RECONSTRAIN_RELAX x the achieved delay) gives the tools an honest target so
+# they concentrate on the genuinely-critical set. The relaxed clock is ONLY an
+# internal guide: the contest period is always restored before any measurement
+# or publish, and keep-best/rollback gates the outcome, so the downside is one
+# phys_opt+route cycle.
+RECONSTRAIN_MIN_UNMET_WNS_NS = -1.0
+RECONSTRAIN_RELAX = 0.95
 # Actions that only make small incremental improvements to an existing
 # placement, and therefore genuinely cannot fix a deeply negative WNS.
 # Deliberately EXCLUDES place_design_explore: a full re-place is not
@@ -333,6 +358,13 @@ ACTION_PARAMETERS_SCHEMA = {
             "(default), 'AggressiveExplore', 'NoTimingRelaxation', 'MoreGlobalIterations', "
             "'HigherDelayCost'"
         ),
+    },
+    "qor_suggestions": {
+        # No tunable parameters: this runs Vivado's own ML QoR advisor
+        # (report_qor_suggestions) on the current placed+routed design, loads
+        # the resulting RQS strategy, and applies it via phys_opt + route.
+        # It degrades gracefully to a plain phys_opt+route if the RQS
+        # directive is unsupported on the design.
     },
     "replicate_register": {},
     "run_recipe": {
@@ -1096,6 +1128,9 @@ class DCPOptimizer(DCPOptimizerBase):
         self.first_failing_period_ns: Optional[float] = None
         self.constraint_audit_done = False
         self.bisection_active = False
+        # Score item 1: the honest-target reconstrain focus pass runs at most
+        # once per run (see _reconstrain_focus_pass).
+        self._reconstrain_focus_done = False
         self.last_spread_info: dict = {}
         self.last_timing_context: dict = {}
         self.last_llm_decision: dict = {}
@@ -3049,6 +3084,7 @@ class DCPOptimizer(DCPOptimizerBase):
             "replicate_register",
             "phys_opt_design",
             "phys_opt_design_retime",
+            "qor_suggestions",
             "fanout_split",
             "lut_opt",
         ]
@@ -5330,6 +5366,8 @@ class DCPOptimizer(DCPOptimizerBase):
                     command="route_explore",
                 )
             return route
+        if action == "qor_suggestions":
+            return await self._execute_qor_suggestions()
         if action == "run_recipe":
             return await self._execute_run_recipe(dict(params), timing_context)
         if action == "pblock_full_replace":
@@ -5750,6 +5788,96 @@ class DCPOptimizer(DCPOptimizerBase):
             command=str(action),
         )
     
+    async def _execute_qor_suggestions(self) -> str:
+        """Run Vivado's own ML QoR advisor and apply its strategy.
+
+        report_qor_suggestions is Vivado's built-in expert: it analyzes the
+        placed+routed design and emits an RQS (Report QoR Suggestions) file of
+        timing/utilization/congestion strategy recommendations. We write it,
+        read it back so the suggestions become active, then apply them with a
+        phys_opt pass using the RQS directive (which selects the recommended
+        strategy) followed by a re-route. If the RQS directive is unsupported
+        on this design (e.g. out-of-context DCPs), phys_opt falls back to a
+        standard directive, so the action degrades gracefully to a bounded
+        phys_opt+route refinement rather than failing. Keep-best/rollback in
+        _record_iteration_timing gates the outcome like any other action.
+        """
+        if not await self._check_implementation_license():
+            return self._failure_json(
+                "vivado_license_failure",
+                "Vivado Implementation license is unavailable; qor_suggestions disabled.",
+                command="qor_suggestions",
+            )
+        if self.design_state != "routed":
+            return self._failure_json(
+                "invalid_design_state",
+                f"qor_suggestions needs a placed+routed design to analyze; state is '{self.design_state}'.",
+                command="qor_suggestions",
+            )
+        self.last_recipe = action = "qor_suggestions"
+        self.last_targets = ["qor_suggestions"]
+        self.last_batch_size = 1
+
+        checkpoint_dir = self.run_dir / "checkpoints"
+        checkpoint_dir.mkdir(parents=True, exist_ok=True)
+        rqs_path = checkpoint_dir / f"qor_iter_{self.iteration:03d}.rqs"
+        rqs_tcl = str(rqs_path).replace("\\", "/")
+
+        # 1. Generate suggestions and write the RQS file.
+        gen = await self.call_tool(
+            "vivado_run_tcl",
+            {"command": f"report_qor_suggestions -max_paths 30 -rqs_files {{{rqs_tcl}}}", "timeout": 300},
+            internal=True,
+        )
+        if self._vivado_output_has_error(gen) and not rqs_path.exists():
+            return self._failure_json(
+                "no_action_target",
+                f"report_qor_suggestions produced no usable suggestions: {gen[:600]}",
+                command="qor_suggestions",
+            )
+
+        # 2. Load the suggestions so the RQS directive can select their strategy.
+        if rqs_path.exists():
+            await self.call_tool(
+                "vivado_run_tcl",
+                {"command": f"read_qor_suggestions {{{rqs_tcl}}}", "timeout": 120},
+                internal=True,
+            )
+
+        # 3. Apply via phys_opt with the RQS strategy directive; fall back to a
+        #    standard aggressive directive if RQS is unsupported here.
+        phys = await self.call_tool(
+            "vivado_phys_opt_design", {"directive": "RQS", "timeout": self._implementation_timeout_s(kind="phys_opt")},
+            internal=True,
+        )
+        if self._action_failure(phys, default_command="vivado_phys_opt_design"):
+            logger.info("qor_suggestions: RQS directive unsupported here; falling back to AggressiveExplore phys_opt.")
+            phys = await self.call_tool(
+                "vivado_phys_opt_design",
+                {"directive": "AggressiveExplore", "timeout": self._implementation_timeout_s(kind="phys_opt")},
+                internal=True,
+            )
+            if self._action_failure(phys, default_command="vivado_phys_opt_design"):
+                return self._failure_json(
+                    "qor_suggestions_failed",
+                    f"phys_opt after QoR suggestions failed (RQS and fallback): {phys[:2000]}",
+                    command="qor_suggestions",
+                )
+
+        # 4. Re-route to realize the phys_opt changes.
+        route = await self.call_tool(
+            "vivado_route_design",
+            {"directive": "Explore", "timeout": self._implementation_timeout_s(kind="route")},
+            internal=True,
+        )
+        if self._action_failure(route, default_command="vivado_route_design"):
+            return self._failure_json(
+                "qor_suggestions_failed",
+                f"route after QoR suggestions failed: {route[:2000]}",
+                command="qor_suggestions",
+            )
+        return "\n\n".join(part for part in (gen, phys, route) if part)
+
     async def _execute_run_recipe(self, params: dict, timing_context: dict) -> str:
         """Item 8 (recipe architecture, tranche 1): execute a whitelisted
         stage pipeline in ONE LLM decision instead of one stage per
@@ -5850,6 +5978,121 @@ class DCPOptimizer(DCPOptimizerBase):
             "stopped_early": stop_reason,
         }, indent=2)
 
+    def _at_logic_ceiling(self) -> Optional[str]:
+        """Score item 2: return a reason string if the best Fmax is within
+        LOGIC_CEILING_STOP_FRACTION of the design's zero-interconnect logic
+        Fmax ceiling (measured in phase-0 diagnostics), else None.
+
+        The logic ceiling is the Fmax with all interconnect delay modeled as
+        zero -- the hard limit no placement or routing can beat, because it is
+        pure logic depth. Once achieved Fmax reaches it, every further
+        iteration is guaranteed to be a stall, so continuing only spends gamma
+        (runtime) and beta (LLM cost) for no possible alpha gain."""
+        ceiling = (self.design_signature or {}).get("logic_fmax_ceiling_mhz")
+        best = self.best_fmax_mhz
+        if self.checkpoint_manager is not None and self.checkpoint_manager.best_fmax_mhz is not None:
+            best = self.checkpoint_manager.best_fmax_mhz
+        if not ceiling or not best or ceiling <= 0:
+            return None
+        if best >= LOGIC_CEILING_STOP_FRACTION * ceiling:
+            return (
+                f"best Fmax {best:.1f} MHz is within {LOGIC_CEILING_STOP_FRACTION:.0%} of the "
+                f"zero-interconnect logic ceiling {ceiling:.1f} MHz -- no placement or routing "
+                f"gain is physically possible, so further iterations only cost runtime/budget"
+            )
+        return None
+
+    async def _finalize_run(self) -> None:
+        """Shared stop sequence: polish the best checkpoint, reopen it as the
+        live design, publish it to the contest output, and print the summary.
+        Callers return True after this."""
+        await self._endgame_polish()
+        if self.checkpoint_manager is not None:
+            best_ckpt = self.checkpoint_manager.get_best_checkpoint()
+            if best_ckpt:
+                await self.call_tool(
+                    "vivado_open_checkpoint", {"dcp_path": best_ckpt}, internal=True
+                )
+        self._publish_best_to_output()
+        self.end_time = time.time()
+        self._print_optimization_summary()
+
+    async def _reconstrain_focus_pass(self) -> bool:
+        """Score item 1: on a deeply-unmet design, re-constrain the clock to a
+        barely-unmet period so place/route/phys_opt get an honest target and
+        concentrate effort on the genuinely-critical paths instead of spreading
+        it across thousands of equally-violating ones.
+
+        Safety invariant: the relaxed clock is ONLY an internal optimization
+        guide. The contest period is captured up front and ALWAYS restored
+        before the timing report that records the result, so best_fmax and the
+        published DCP are only ever measured against the real contest clock
+        (Fmax = 1000/(period-WNS) is period-invariant, but calculate_fmax
+        clamps positive WNS -- restoring the contest period keeps the unmet
+        design's WNS negative and the recorded Fmax honest). Downside is one
+        phys_opt+route cycle, gated by the normal keep-best/rollback path.
+        Runs once per run."""
+        if self._reconstrain_focus_done:
+            return False
+        contest_period = self.clock_period
+        if contest_period is None or not self.target_clock:
+            return False
+        if self.implementation_license_available is False:
+            return False
+        current_wns = await self._get_current_wns()
+        if current_wns is None or current_wns >= RECONSTRAIN_MIN_UNMET_WNS_NS:
+            # Not deeply unmet: the tools already have a workable target and
+            # this maneuver would just add a phys_opt+route cycle for nothing.
+            return False
+        remaining = self._time_remaining_s()
+        if remaining is not None and remaining < ENDGAME_MIN_REMAINING_S:
+            return False
+        self._reconstrain_focus_done = True
+        # Claim a fresh iteration slot: _record_iteration_timing early-returns
+        # if self.iteration is already in recorded_iterations, which would
+        # silently drop this pass's result (and its potential new best).
+        self.iteration += 1
+        self.last_decision_trace = {
+            "llm_chosen_action": "reconstrain_focus",
+            "reconstrain_focus": True,
+            "validation_result": "reconstrain_focus",
+        }
+
+        # Achieved delay against the contest clock, and a barely-unmet target.
+        achieved_delay_ns = contest_period - current_wns
+        relaxed_period = max(MIN_CLOCK_TIGHTEN_STEP_NS, achieved_delay_ns * RECONSTRAIN_RELAX)
+        logger.info(
+            "Reconstrain focus pass: WNS %.3f ns vs contest period %.3f ns (achieved "
+            "delay %.3f ns); re-constraining to %.3f ns to focus timing-driven effort.",
+            current_wns, contest_period, achieved_delay_ns, relaxed_period,
+        )
+        print("=== Reconstrain focus pass: honest clock target for place/route effort ===\n")
+        self.last_recipe = "reconstrain_focus"
+        self.last_targets = [f"period:{relaxed_period:.4f}"]
+        self.last_batch_size = 1
+        try:
+            if not await self._set_clock_period(relaxed_period):
+                return False
+            # phys_opt honors the relaxed target; route realizes it. Both are
+            # internal so the contest period is restored before recording.
+            await self._run_phys_opt_with_policy({"directive": "AggressiveExplore"})
+            route = await self.call_tool(
+                "vivado_route_design",
+                {"directive": "Explore", "timeout": self._implementation_timeout_s(kind="route")},
+                internal=True,
+            )
+            if self._vivado_output_has_error(route):
+                logger.warning("Reconstrain focus pass: route returned errors: %s", route[:300])
+        finally:
+            # ALWAYS restore the contest clock before anything measures timing.
+            await self._set_clock_period(contest_period)
+            self.clock_period = contest_period
+
+        # Now measure/record against the real contest clock. This routes
+        # through _record_iteration_timing (keep-best + rollback on regression).
+        await self.call_tool("vivado_report_timing_summary", {"timeout": 300})
+        return True
+
     async def _endgame_polish(self) -> None:
         """Stall limit reached but wall-clock remains: spend it polishing the
         best checkpoint with cheap incremental passes instead of exiting
@@ -5863,6 +6106,23 @@ class DCPOptimizer(DCPOptimizerBase):
         if remaining is None or remaining < ENDGAME_MIN_REMAINING_S:
             return
         if self.implementation_license_available is False:
+            return
+        # Score item 1: before the cheap polish chain, try one honest-target
+        # re-constrain pass on a deeply-unmet design -- it can unlock gains the
+        # incremental passes below can't, and restores best on regression.
+        await self._restore_best_state("reconstrain focus pass on best checkpoint")
+        try:
+            await self._reconstrain_focus_pass()
+        except Exception as exc:
+            logger.warning("Reconstrain focus pass failed (continuing to polish): %s", exc)
+            await self._set_clock_period(self.clock_period)
+        # Score item 2: if the reconstrain pass (or the run so far) already
+        # reached the physical logic ceiling, the polish chain cannot help --
+        # skip it and save the runtime.
+        ceiling_reason = self._at_logic_ceiling()
+        if ceiling_reason:
+            logger.info("Endgame polish skipped: %s", ceiling_reason)
+            await self._restore_best_state("at logic ceiling; no polish needed")
             return
         logger.info(
             "Endgame polish: stall limit hit with %.0f s of budget left; "
@@ -5878,6 +6138,12 @@ class DCPOptimizer(DCPOptimizerBase):
             ("route_explore", {"directive": "NoTimingRelaxation"}),
             ("phys_opt_design", {"directive": "Default"}),
         ]
+        # Score item 2: stop the chain after two consecutive steps that don't
+        # improve the best -- the later directives are weaker variants of the
+        # earlier ones, so two failures in a row means the remaining steps are
+        # very unlikely to help and only cost runtime.
+        best_before_step = self.checkpoint_manager.best_fmax_mhz
+        consecutive_flat = 0
         for polish_action, polish_params in polish_steps:
             remaining = self._time_remaining_s()
             if remaining is not None and remaining < ENDGAME_MIN_REMAINING_S:
@@ -5898,8 +6164,22 @@ class DCPOptimizer(DCPOptimizerBase):
                 self._record_failed_action(failure)
                 if self.last_action_mutated_design:
                     await self._restore_best_state("endgame polish step failed")
+                consecutive_flat += 1
+                if consecutive_flat >= 2:
+                    logger.info("Endgame polish: 2 consecutive steps without a new best; stopping the chain.")
+                    break
                 continue
             await self.call_tool("vivado_report_timing_summary", {"timeout": 300})
+            best_now = self.checkpoint_manager.best_fmax_mhz
+            improved = best_before_step is None or (best_now is not None and best_now > best_before_step)
+            if improved:
+                consecutive_flat = 0
+                best_before_step = best_now
+            else:
+                consecutive_flat += 1
+                if consecutive_flat >= 2:
+                    logger.info("Endgame polish: 2 consecutive steps without a new best; stopping the chain.")
+                    break
 
     async def _initial_diagnostics(self) -> None:
         """Phase 0 diagnostic battery (item 7): one-time probes run before the
@@ -6257,6 +6537,16 @@ Proceed by selecting exactly one validated action per timing-context turn."""
                 current_wns = await self._get_current_wns()
                 if current_wns is not None and current_wns >= 0 and self.current_period_ns is not None:
                     await self._run_clock_bisection_after_closure(current_wns)
+
+                # Score item 2: stop the moment the design reaches its physical
+                # logic ceiling -- no further alpha is possible, so every extra
+                # iteration is pure gamma/beta cost.
+                ceiling_reason = self._at_logic_ceiling()
+                if ceiling_reason:
+                    logger.info("Convergence early-exit: %s", ceiling_reason)
+                    print(f"\n=== Converged: {ceiling_reason} ===\n")
+                    await self._finalize_run()
+                    return True
 
                 if self.checkpoint_manager is not None and not self.checkpoint_manager.should_continue():
                     logger.info("Optimization workflow completed")

@@ -367,8 +367,10 @@ def test_endgame_polish_spends_remaining_budget(opt, tmp_path):
          patch.object(opt, "call_tool", side_effect=fake_call_tool), \
          patch.object(opt, "_restore_best_state", side_effect=fake_restore):
         asyncio.run(opt._endgame_polish())
-    # Restored to best first, then ran the polish chain.
-    assert restores and "endgame" in restores[0]
+    # Restored to best before the polish chain (a reconstrain-focus restore may
+    # precede it now; what matters is the endgame restore happened and the
+    # chain ran).
+    assert any("endgame" in reason for reason in restores)
     assert "phys_opt_design" in executed and "route_explore" in executed
 
 
@@ -641,3 +643,79 @@ def test_confident_hypothesis_demotes_not_forbids(opt):
     # Recommendations lead the ranking, and promotion clears their guidance.
     assert allowed[0] == "phys_opt_design"
     assert "lut_opt" not in opt.last_action_guidance
+
+
+# --- Score items 1 & 2 (2026-07-13): reconstrain focus pass + convergence exit ---
+
+def test_at_logic_ceiling_fires_only_near_ceiling(opt, tmp_path):
+    opt.checkpoint_manager = CheckpointManager(
+        input_dcp="in.dcp", output_dir=str(tmp_path / "ckpt"), clock_name="clk")
+    opt.checkpoint_manager.start_baseline(wns=-0.45, period_ns=1.5)
+    opt.design_signature = {"logic_fmax_ceiling_mhz": 520.0}
+    # Well below the ceiling -> keep going.
+    opt.checkpoint_manager.best_fmax_mhz = 480.0
+    assert opt._at_logic_ceiling() is None
+    # Within 97% of the ceiling (>= 504.4 MHz) -> converged.
+    opt.checkpoint_manager.best_fmax_mhz = 510.0
+    reason = opt._at_logic_ceiling()
+    assert reason is not None and "ceiling" in reason
+    # No ceiling measured -> never fires (avoids a false early stop).
+    opt.design_signature = {}
+    assert opt._at_logic_ceiling() is None
+
+
+def test_reconstrain_focus_always_restores_contest_period(opt):
+    # The safety invariant: whatever happens inside (even a routing error),
+    # the contest clock period must be restored before recording.
+    opt._reconstrain_focus_done = False
+    opt.clock_period = 1.5
+    opt.target_clock = "clk_fpl26contest"
+    opt.implementation_license_available = True
+    opt.iteration = 3
+
+    periods = []
+
+    async def fake_set_period(p):
+        periods.append(round(p, 4))
+        return True
+
+    async def fake_get_wns():
+        return -9.0  # deeply unmet -> pass should run
+
+    async def fake_phys(_params):
+        return "ok"
+
+    async def fake_call_tool(tool_name, arguments, internal=False):
+        if tool_name == "vivado_route_design":
+            return "ERROR: route blew up"  # force the error branch
+        return "ok"
+
+    with patch.object(opt, "_set_clock_period", side_effect=fake_set_period), \
+         patch.object(opt, "_get_current_wns", side_effect=fake_get_wns), \
+         patch.object(opt, "_run_phys_opt_with_policy", side_effect=fake_phys), \
+         patch.object(opt, "_time_remaining_s", return_value=3000.0), \
+         patch.object(opt, "call_tool", side_effect=fake_call_tool):
+        ran = asyncio.run(opt._reconstrain_focus_pass())
+
+    assert ran is True
+    # Relaxed to 0.95 * achieved delay (1.5 - (-9.0) = 10.5 -> 9.975), then
+    # restored to the contest period 1.5 last.
+    assert periods[0] == pytest.approx(9.975, abs=1e-3)
+    assert periods[-1] == 1.5
+
+
+def test_reconstrain_focus_noop_when_not_deeply_unmet(opt):
+    opt._reconstrain_focus_done = False
+    opt.clock_period = 1.5
+    opt.target_clock = "clk_fpl26contest"
+    opt.implementation_license_available = True
+
+    async def fake_get_wns():
+        return -0.3  # above the -1.0 deeply-unmet threshold
+
+    with patch.object(opt, "_get_current_wns", side_effect=fake_get_wns), \
+         patch.object(opt, "_time_remaining_s", return_value=3000.0):
+        ran = asyncio.run(opt._reconstrain_focus_pass())
+    assert ran is False
+    # A no-op still marks itself as not-yet-run so a later, deeper stall can try.
+    assert opt._reconstrain_focus_done is False
