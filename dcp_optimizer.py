@@ -444,10 +444,15 @@ PRIORS (the reasoning behind the ranking -- use them, and notice when evidence c
   (measured: -92 MHz).
 
 LEARN FROM THIS RUN'S RESULTS:
-- If the PREVIOUS iteration improved, you are holding a fresh win: polish it with
-  incremental moves (phys_opt_design, route_explore, pblock + incremental re-route)
-  before any fresh whole-design re-place -- a re-roll discards the winning placement
-  and has measured 0/3 success from a winning state, while refinement measured 5/6.
+- While this run holds a best above baseline, you are protecting that win: polish it
+  with incremental moves (phys_opt_design, route_explore, pblock + incremental
+  re-route) before any fresh whole-design re-place -- a re-roll discards the winning
+  placement and measured 50-120 MHz losses far more often than wins, while
+  refinement measured 5/6 positive.
+- qor_suggestions runs Vivado's own QoR advisor (report_qor_suggestions -> RQS
+  phys_opt -> re-route) on the current placed+routed design. It is a bounded,
+  keep-best-gated refinement: worth ONE attempt per run once plain
+  phys_opt/route_explore refinement has stalled and before resorting to re-rolls.
 - An action that regressed or failed on the same targets is worth less than its ranking.
 - When choosing a place directive, pick from place_directives_untried (in the timing
   state) rather than inventing one; place_directives_tried shows measured results.
@@ -2965,7 +2970,9 @@ class DCPOptimizer(DCPOptimizerBase):
             "structural_override_active": structural_override,
             "structural_override_age": max(0, structural_override_age),
             "structural_override_max_iters": STRUCTURAL_OVERRIDE_MAX_ITERS,
-            "action_failure_memory": self._serializable_action_failure_memory(),
+            # Compact view for the LLM (score item D): the full-fingerprint
+            # serializer stays on history.json records only.
+            "action_failure_memory": self._llm_action_failure_memory(),
             "action_failure_counts": self._serializable_action_failure_counts(),
             "exhausted_actions": exhausted_actions,
             "allowed_actions": allowed,
@@ -3025,18 +3032,30 @@ class DCPOptimizer(DCPOptimizerBase):
         return "LUT"
 
     def _sitting_on_fresh_win(self) -> bool:
-        """True when the last recorded iteration improved (stall_count 0).
+        """True while the run holds an unbeaten best worth protecting.
+
+        Originally this only covered stall_count == 0 (the iteration
+        immediately after a win), and the moment one refinement stalled the
+        demotion vanished: run 20260714_005251 then re-rolled at iters 5, 9
+        and 16 and lost -100/-120/-22 MHz (keep-best absorbed it, but each
+        burned ~210 s). Score item C: the gamble is against the same unbeaten
+        best whether the last iteration stalled or not, so keep full re-rolls
+        demoted (still rebuttable guidance, and the stuck-override can still
+        force structural actions -- that path won +7.9 MHz at iter 7) for as
+        long as best Fmax sits above baseline.
 
         Used by both the exploit-after-win demotion here and the diagnosis
         layer's promotion block (analysis_layer.actions_for), which must not
-        front-run a fresh win with full re-rolls: runs 20260713_010908 and
-        _155651 each lost ~50 and ~72 MHz to identical iter-2/iter-3 re-rolls
-        because a confident long_interconnect diagnosis re-promoted them and
-        popped their demotion guidance."""
+        re-promote full re-rolls past this demotion."""
+        cm = self.checkpoint_manager
+        if cm is None or not cm.iterations:
+            return False
+        if cm.stall_count == 0:
+            return True
         return (
-            self.checkpoint_manager is not None
-            and bool(self.checkpoint_manager.iterations)
-            and self.checkpoint_manager.stall_count == 0
+            cm.best_fmax_mhz is not None
+            and cm.baseline_fmax_mhz is not None
+            and cm.best_fmax_mhz > cm.baseline_fmax_mhz + 1e-9
         )
 
     def _demote_actions(
@@ -3225,7 +3244,7 @@ class DCPOptimizer(DCPOptimizerBase):
         if self._sitting_on_fresh_win():
             refine_first = [
                 action for action in
-                ("pblock", "phys_opt_design", "route_explore", "phys_opt_design_retime")
+                ("pblock", "phys_opt_design", "qor_suggestions", "route_explore", "phys_opt_design_retime")
                 if action in allowed and action not in self.last_action_guidance
             ]
             if refine_first:
@@ -3233,9 +3252,10 @@ class DCPOptimizer(DCPOptimizerBase):
                 allowed = self._demote_actions(
                     allowed,
                     [a for a in ("place_design_explore", "pblock_full_replace") if a in allowed],
-                    "the previous iteration IMPROVED -- refine the win first (phys_opt, "
-                    "incremental pblock + re-route); fresh whole-design re-places from a "
-                    "winning state regressed 3 out of 3 times this campaign",
+                    "this run holds an unbeaten best above baseline -- refine it "
+                    "(phys_opt, incremental pblock + re-route, qor_suggestions) instead "
+                    "of gambling it on a fresh whole-design re-place: measured re-rolls "
+                    "from a winning state lost 50-120 MHz far more often than they won",
                 )
 
         # Item 4 (expensive-action cap): on a large design, full re-places
@@ -3340,6 +3360,32 @@ class DCPOptimizer(DCPOptimizerBase):
             if cooldown_until >= self.iteration and act not in exhausted:
                 exhausted.append(act)
         return exhausted
+
+    def _llm_action_failure_memory(self) -> dict:
+        """Compact, LLM-facing view of action failure memory (score item D).
+
+        The full serializer below embeds the complete multi-KB
+        target_fingerprint JSON for every remembered action; shipped in the
+        timing context every call, that alone drove per-call prompt cost up
+        ~10x by late iterations (run 20260714_005251: $0.30 for 19 iters).
+        The LLM only needs WHICH actions failed, HOW often, on WHICH targets
+        (a few names), and WHETHER the failure was on the current target set
+        -- a short hash answers that last question just as well as the blob.
+        history.json keeps the full fingerprints for forensics."""
+        current_fp_hash = format(hash(self._target_fingerprint()) & 0xFFFFFFFF, "08x")
+        compact: dict = {}
+        for action, memory in self._serializable_action_failure_memory().items():
+            fp = memory.get("target_fingerprint")
+            fp_hash = format(hash(fp) & 0xFFFFFFFF, "08x") if fp else None
+            compact[action] = {
+                "consecutive_no_action_failures": memory.get("consecutive_no_action_failures"),
+                "failed_targets": list(memory.get("failed_targets") or [])[:3],
+                "last_failed_iter": memory.get("last_failed_iter"),
+                "failed_on_current_targets": fp_hash == current_fp_hash,
+            }
+            if memory.get("cooldown_until_iter", -1) >= self.iteration:
+                compact[action]["cooldown_until_iter"] = memory["cooldown_until_iter"]
+        return compact
 
     def _serializable_action_failure_memory(self) -> dict:
         return {
@@ -5978,6 +6024,61 @@ class DCPOptimizer(DCPOptimizerBase):
             "stopped_early": stop_reason,
         }, indent=2)
 
+    def _known_loser_reason(self, action: str) -> Optional[str]:
+        """Reason string if `action` has a decisively losing record, else None.
+
+        Two independent sources of evidence:
+        - cross-run: 0 wins / >= 3 losses on this design in previous runs;
+        - this run: >= 2 regressions AND more regressions than wins.
+        The second clause matters: an action with stale cross-run losses can
+        still win (measured: pblock_full_replace at 0/3 cross-run gained
+        +7.9 MHz at iter 7 of run 20260714_005251), but one that keeps
+        regressing against THIS run's best has fresh evidence against it
+        (same run, iters 5/9: -100 and -120 MHz)."""
+        record = ((self.crossrun_priors or {}).get("actions") or {}).get(action) or {}
+        if int(record.get("good", 0)) == 0 and int(record.get("bad", 0)) >= 3:
+            return f"0 wins / {int(record['bad'])} losses cross-run"
+        if self.checkpoint_manager is not None:
+            wins = regressions = 0
+            for it in self.checkpoint_manager.iterations:
+                if str(it.get("llm_chosen_action") or it.get("recipe") or "") != action:
+                    continue
+                status = str(it.get("status"))
+                if status in ("improved", "marginal"):
+                    wins += 1
+                elif status == "regression":
+                    regressions += 1
+            if regressions >= 2 and regressions > wins:
+                return f"{regressions} regressions vs {wins} wins this run"
+        return None
+
+    def _menu_collapse_reason(self) -> Optional[str]:
+        """Score item A: reason string when the action menu has collapsed to
+        known losers, else None.
+
+        Run 20260714_005251 iter 16: after exhaustion cooldowns removed every
+        refinement action, the menu was exactly the three actions with
+        decisively losing records, the stuck-override forced one, and it
+        regressed -22 MHz; iters 17-19 then stalled to the wall. When we are
+        already stalled AND every remaining choice is a known loser, the
+        expected value of continuing is negative (gamma + beta cost, no
+        plausible alpha) -- publish the best and stop."""
+        if self.consecutive_no_improvement < CONVERGENCE_MIN_STALLS:
+            return None
+        allowed = list((self.last_timing_context or {}).get("allowed_actions") or [])
+        if not allowed:
+            return None
+        verdicts = []
+        for action in allowed:
+            reason = self._known_loser_reason(action)
+            if reason is None:
+                return None
+            verdicts.append(f"{action}: {reason}")
+        return (
+            f"menu collapsed after {self.consecutive_no_improvement} stalls -- every "
+            f"remaining action has a decisively losing record ({'; '.join(verdicts)})"
+        )
+
     def _at_logic_ceiling(self) -> Optional[str]:
         """Score item 2: return a reason string if the best Fmax is within
         LOGIC_CEILING_STOP_FRACTION of the design's zero-interconnect logic
@@ -6463,6 +6564,15 @@ Proceed by selecting exactly one validated action per timing-context turn."""
 
             try:
                 await self._append_iteration_context()
+                # Score item A: if the menu has collapsed to known losers
+                # while stalled, stop before paying for an LLM call and a
+                # doomed Vivado cycle -- publish the best instead.
+                collapse_reason = self._menu_collapse_reason()
+                if collapse_reason:
+                    logger.info("Convergence early-exit: %s", collapse_reason)
+                    print(f"\n=== Converged: {collapse_reason} ===\n")
+                    await self._finalize_run()
+                    return True
                 decision = await self.get_validated_action_decision(self.last_timing_context)
                 response_text = await self.execute_validated_action(decision, self.last_timing_context)
                 failure = self._action_failure(response_text, default_command=str(decision.get("chosen_action")))

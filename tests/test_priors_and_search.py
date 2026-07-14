@@ -275,7 +275,9 @@ def test_exploit_after_win_promotes_refinement(opt, tmp_path):
     assert allowed[0] == "pblock"
     assert "phys_opt_design" in allowed[:3]
     assert "place_design_explore" in opt.last_action_guidance
-    assert "IMPROVED" in opt.last_action_guidance["place_design_explore"]
+    # Score item C reworded the reason: the guard now protects the unbeaten
+    # best through stalls, not just the iteration right after a win.
+    assert "unbeaten best" in opt.last_action_guidance["place_design_explore"]
 
 
 def test_no_refinement_promotion_after_stall(opt, tmp_path):
@@ -702,6 +704,67 @@ def test_reconstrain_focus_always_restores_contest_period(opt):
     # restored to the contest period 1.5 last.
     assert periods[0] == pytest.approx(9.975, abs=1e-3)
     assert periods[-1] == 1.5
+
+
+def test_menu_collapse_stops_only_on_all_losers(opt, tmp_path):
+    opt.checkpoint_manager = CheckpointManager(
+        input_dcp="in.dcp", output_dir=str(tmp_path / "ckpt"), clock_name="clk")
+    opt.checkpoint_manager.start_baseline(wns=-0.978, period_ns=1.5)
+    opt.consecutive_no_improvement = 3
+    opt.crossrun_priors = {"actions": {
+        "pblock_full_replace": {"good": 0, "bad": 3},
+        "rapidwright_optimize_cell_placement": {"good": 0, "bad": 4},
+    }}
+    # place_design_explore: 1 win but 2 regressions THIS run -> fresh loser.
+    opt.checkpoint_manager.iterations = [
+        {"llm_chosen_action": "place_design_explore", "status": "improved"},
+        {"llm_chosen_action": "place_design_explore", "status": "regression"},
+        {"llm_chosen_action": "place_design_explore", "status": "regression"},
+    ]
+    opt.last_timing_context = {"allowed_actions": [
+        "pblock_full_replace", "place_design_explore",
+        "rapidwright_optimize_cell_placement"]}
+    reason = opt._menu_collapse_reason()
+    assert reason is not None and "menu collapsed" in reason
+    # One healthy action on the menu -> no collapse.
+    opt.last_timing_context["allowed_actions"].append("phys_opt_design")
+    assert opt._menu_collapse_reason() is None
+    # Same losers but not stalled long enough -> no collapse.
+    opt.last_timing_context["allowed_actions"].pop()
+    opt.consecutive_no_improvement = 2
+    assert opt._menu_collapse_reason() is None
+
+
+def test_protecting_best_persists_through_stalls(opt, tmp_path):
+    cm = CheckpointManager(
+        input_dcp="in.dcp", output_dir=str(tmp_path / "ckpt"), clock_name="clk")
+    cm.start_baseline(wns=-0.978, period_ns=1.5)
+    opt.checkpoint_manager = cm
+    assert opt._sitting_on_fresh_win() is False  # nothing recorded yet
+    ck = tmp_path / "iter.dcp"
+    ck.write_text("x")
+    cm.record("place_design_explore", ["directive:Default"], -0.494, 10, str(ck))
+    assert cm.stall_count == 0
+    assert opt._sitting_on_fresh_win() is True   # fresh win
+    cm.record("route_explore", ["directive:Explore"], -0.494, 10, str(ck))
+    assert cm.stall_count == 1
+    # Score item C: the unbeaten best is still at stake after a stall.
+    assert opt._sitting_on_fresh_win() is True
+
+
+def test_llm_failure_memory_drops_fingerprint_blobs(opt):
+    opt.iteration = 8
+    opt.action_failure_memory = {"pblock": {
+        "consecutive_no_action_failures": 2,
+        "failed_targets": ["a", "b", "c", "d", "e"],
+        "target_fingerprint": json.dumps({"candidates": [{"slack": -0.4}] * 5}),
+        "last_failed_iter": 7,
+    }}
+    compact = opt._llm_action_failure_memory()
+    assert "target_fingerprint" not in compact["pblock"]
+    assert compact["pblock"]["failed_targets"] == ["a", "b", "c"]
+    assert compact["pblock"]["last_failed_iter"] == 7
+    assert "failed_on_current_targets" in compact["pblock"]
 
 
 def test_reconstrain_focus_noop_when_not_deeply_unmet(opt):
