@@ -221,10 +221,39 @@ PHYS_OPT_INCREMENTAL_ACTIONS = {
 PLACE_DIRECTIVE_SWEEP = [
     "Explore",
     "ExtraTimingOpt",
-    "AggressiveExplore",
+    # BUG FIX (run 20260714_182751 iter 9): "AggressiveExplore" was in this
+    # sweep but it is a phys_opt/route directive -- place_design rejects it
+    # ("not a recognized directive"), so the slot was a guaranteed cheap
+    # failure that also poisoned the sweep memory. ExtraPostPlacementOpt is
+    # the timing-focused place directive it was standing in for.
+    "ExtraPostPlacementOpt",
     "ExtraNetDelay_high",
     "AltSpreadLogic_high",
 ]
+# The full set of directives place_design actually accepts on UltraScale+
+# (2025.1). Anything else from the LLM is rejected at validation time and
+# reprompted instead of burning an unplace + failed place at dispatch.
+VALID_PLACE_DIRECTIVES = {
+    "Default",
+    "Explore",
+    "WLDrivenBlockPlacement",
+    "EarlyBlockPlacement",
+    "ExtraNetDelay_high",
+    "ExtraNetDelay_low",
+    "AltSpreadLogic_high",
+    "AltSpreadLogic_medium",
+    "AltSpreadLogic_low",
+    "ExtraPostPlacementOpt",
+    "ExtraTimingOpt",
+    "SSI_SpreadLogic_high",
+    "SSI_SpreadLogic_low",
+    "SSI_SpreadSLLs",
+    "SSI_BalanceSLLs",
+    "SSI_BalanceSLRs",
+    "SSI_HighUtilSLRs",
+    "RuntimeOptimized",
+    "Quick",
+}
 # Item 3b: when the most recent pblock attempt executed cleanly but REGRESSED
 # timing (or changed nothing), the region was likely too tight; grow the next
 # auto-sized request instead of retrying the identical size.
@@ -1136,6 +1165,12 @@ class DCPOptimizer(DCPOptimizerBase):
         # Score item 1: the honest-target reconstrain focus pass runs at most
         # once per run (see _reconstrain_focus_pass).
         self._reconstrain_focus_done = False
+        # Measured hard-block demand from a failed pblock's own DRC (run
+        # 20260714_182751: candidate-based estimate said ~14 BRAMs, the
+        # server-side cell expansion actually needed 160). Once a pblock
+        # aborts on resource validation, the validation's `required` counts
+        # become the demand floor for every later sizing this run.
+        self.pblock_hard_block_demand: dict[str, int] = {}
         self.last_spread_info: dict = {}
         self.last_timing_context: dict = {}
         self.last_llm_decision: dict = {}
@@ -2430,11 +2465,18 @@ class DCPOptimizer(DCPOptimizerBase):
         known (measured this run or from a prior run), size the timeout to
         2.5x that instead -- a large design whose place legitimately takes
         15 minutes must not be killed at 20 while budget remains, and the
-        remaining-budget clamp still applies."""
+        remaining-budget clamp still applies.
+
+        The floor for a KNOWN duration is 600 s, not 1200: run
+        20260714_182751 iter 11 had place measured at ~250 s on this design,
+        yet the old max(1200, 2.5x) floor let a hung ExtraNetDelay_high
+        place burn the full 20 minutes (46% of that run's gamma). With a
+        measured baseline, 2.5x it (min 10 min) is already generous; only
+        the unmeasured case keeps the conservative 20-minute cap."""
         remaining = self._time_remaining_s()
         known = self._estimated_duration(kind) if kind != "generic" else None
         if known is not None:
-            budgeted = max(1200.0, 2.5 * known)
+            budgeted = max(600.0, 2.5 * known)
             if remaining is not None:
                 budgeted = min(budgeted, remaining)
             return int(max(300, budgeted))
@@ -3761,6 +3803,11 @@ class DCPOptimizer(DCPOptimizerBase):
                 target_bram_count = 2 * len(bram_cells)
             if dsp_cells and not target_dsp_count:
                 target_dsp_count = 2 * len(dsp_cells)
+        # A previous pblock abort's DRC measured the REAL hard-block demand
+        # (server-side cell expansion included); it always outranks the
+        # candidate-name estimate above.
+        target_bram_count = max(target_bram_count, self.pblock_hard_block_demand.get("bram", 0))
+        target_dsp_count = max(target_dsp_count, self.pblock_hard_block_demand.get("dsp", 0))
 
         # Fix #5 continued: if this sizing (explicit or estimated) still comes
         # back over-utilized, shrink it and retry rather than failing outright
@@ -5275,6 +5322,25 @@ class DCPOptimizer(DCPOptimizerBase):
         if acknowledged_class != actual_class:
             logger.warning(f"LLM acknowledged wrong delay class: {acknowledged_class} vs {actual_class}.")
             return False, "delay_class_mismatch"
+        # Place directives are a closed set: an invalid one (run
+        # 20260714_182751 iter 9: "AggressiveExplore", a phys_opt directive)
+        # costs an unplace + failed place + restore at dispatch. Reject it
+        # here so the reprompt can pick a real one.
+        params = response.get("action_parameters") or {}
+        place_directive = None
+        if chosen == "place_design_explore":
+            place_directive = params.get("directive")
+        elif chosen in ("pblock_full_replace", "run_recipe"):
+            place_directive = params.get("place_directive")
+        if place_directive and str(place_directive) not in VALID_PLACE_DIRECTIVES:
+            logger.warning(
+                "LLM chose invalid place directive %r for %s. Re-prompting.",
+                place_directive, chosen,
+            )
+            return False, (
+                f"invalid_place_directive: {place_directive!r} is not a place_design "
+                f"directive; choose one of {sorted(VALID_PLACE_DIRECTIVES)}"
+            )
         return True, "ok"
 
     async def execute_validated_action(self, decision: dict, timing_context: dict) -> str:
@@ -5472,6 +5538,27 @@ class DCPOptimizer(DCPOptimizerBase):
             pblock_validation = payload.get("resource_validation") or {}
             pblock_validation_errors = list(pblock_validation.get("errors") or [])
             if pblock_validation_errors:
+                # Harvest the DRC's own `required` counts as the demand floor
+                # for every later pblock sizing this run -- the candidate-based
+                # estimate has no visibility into the server-side cell
+                # expansion that produced them.
+                for issue_key, issue in (pblock_validation.get("resource_issues") or {}).items():
+                    required = int((issue or {}).get("required") or 0)
+                    if required <= 0:
+                        continue
+                    key_upper = str(issue_key).upper()
+                    if any(k in key_upper for k in ("RAMB", "FIFO", "URAM")):
+                        kind = "bram"
+                    elif "DSP" in key_upper:
+                        kind = "dsp"
+                    else:
+                        continue
+                    if required > self.pblock_hard_block_demand.get(kind, 0):
+                        self.pblock_hard_block_demand[kind] = required
+                        logger.info(
+                            "pblock demand floor learned from DRC: %s requires %d sites.",
+                            kind, required,
+                        )
                 stale_name = params.get("pblock_name")
                 if stale_name:
                     await self.call_tool(
@@ -5869,21 +5956,33 @@ class DCPOptimizer(DCPOptimizerBase):
         rqs_path = checkpoint_dir / f"qor_iter_{self.iteration:03d}.rqs"
         rqs_tcl = str(rqs_path).replace("\\", "/")
 
-        # 1. Generate suggestions and write the RQS file.
+        # 1. Generate suggestions in memory. (Vivado 2025.1's
+        # report_qor_suggestions has NO -rqs_files option -- run
+        # 20260714_182751 iter 6 failed on exactly that; the file is written
+        # separately by write_qor_suggestions.)
         gen = await self.call_tool(
             "vivado_run_tcl",
-            {"command": f"report_qor_suggestions -max_paths 30 -rqs_files {{{rqs_tcl}}}", "timeout": 300},
+            {"command": "report_qor_suggestions -max_paths 30", "timeout": 300},
             internal=True,
         )
-        if self._vivado_output_has_error(gen) and not rqs_path.exists():
+        if self._vivado_output_has_error(gen):
             return self._failure_json(
                 "no_action_target",
                 f"report_qor_suggestions produced no usable suggestions: {gen[:600]}",
                 command="qor_suggestions",
             )
 
-        # 2. Load the suggestions so the RQS directive can select their strategy.
-        if rqs_path.exists():
+        # 2. Persist + reload them so the RQS phys_opt directive can select
+        #    their strategy (best-effort: the suggestions are already active
+        #    in memory, so a write/read hiccup should not abort the action).
+        write = await self.call_tool(
+            "vivado_run_tcl",
+            {"command": f"write_qor_suggestions -force {{{rqs_tcl}}}", "timeout": 120},
+            internal=True,
+        )
+        if self._vivado_output_has_error(write):
+            logger.warning("qor_suggestions: write_qor_suggestions failed (continuing): %s", write[:300])
+        elif rqs_path.exists():
             await self.call_tool(
                 "vivado_run_tcl",
                 {"command": f"read_qor_suggestions {{{rqs_tcl}}}", "timeout": 120},

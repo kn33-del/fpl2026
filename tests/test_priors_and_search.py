@@ -706,6 +706,50 @@ def test_reconstrain_focus_always_restores_contest_period(opt):
     assert periods[-1] == 1.5
 
 
+def test_timeout_floor_drops_when_duration_known(opt):
+    # Run 20260714_182751 iter 11: place measured ~250 s but the old
+    # max(1200, 2.5x) floor let a hang burn 20 minutes.
+    with patch.object(opt, "_time_remaining_s", return_value=3000.0), \
+         patch.object(opt, "_estimated_duration", return_value=250.0):
+        assert opt._implementation_timeout_s(kind="place") == 625
+    with patch.object(opt, "_time_remaining_s", return_value=3000.0), \
+         patch.object(opt, "_estimated_duration", return_value=100.0):
+        assert opt._implementation_timeout_s(kind="place") == 600
+    # Unmeasured kind keeps the conservative default.
+    with patch.object(opt, "_time_remaining_s", return_value=3000.0), \
+         patch.object(opt, "_estimated_duration", return_value=None):
+        assert opt._implementation_timeout_s(kind="place") == 1200
+
+
+def test_invalid_place_directive_rejected_at_validation(opt):
+    context = {
+        "allowed_actions": ["place_design_explore", "pblock_full_replace"],
+        "forbidden_actions": [],
+        "delay_class": "net_delay_bound",
+    }
+    bad = {
+        "chosen_action": "place_design_explore",
+        "delay_class_acknowledged": "net_delay_bound",
+        "action_parameters": {"directive": "AggressiveExplore"},  # phys_opt-only
+    }
+    ok_flag, reason = opt.validate_llm_action(bad, context)
+    assert ok_flag is False and "invalid_place_directive" in reason
+    good = {
+        "chosen_action": "place_design_explore",
+        "delay_class_acknowledged": "net_delay_bound",
+        "action_parameters": {"directive": "ExtraNetDelay_high"},
+    }
+    assert opt.validate_llm_action(good, context) == (True, "ok")
+    # pblock_full_replace's place_directive is validated too.
+    bad_full = {
+        "chosen_action": "pblock_full_replace",
+        "delay_class_acknowledged": "net_delay_bound",
+        "action_parameters": {"place_directive": "NoSuchDirective"},
+    }
+    ok_flag, reason = opt.validate_llm_action(bad_full, context)
+    assert ok_flag is False and "invalid_place_directive" in reason
+
+
 def test_menu_collapse_stops_only_on_all_losers(opt, tmp_path):
     opt.checkpoint_manager = CheckpointManager(
         input_dcp="in.dcp", output_dir=str(tmp_path / "ckpt"), clock_name="clk")

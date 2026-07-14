@@ -322,9 +322,11 @@ def test_timeout_scales_with_known_duration(opt):
         # 2.5x the measured 900 s route -- a legitimate 15-minute route must
         # not be killed at the flat 20-minute default's remaining-clamp.
         assert opt._implementation_timeout_s(kind="route") == 2250
-        # Short known durations keep the 1200 s floor.
+        # Short known durations now floor at 600 s, not 1200: run
+        # 20260714_182751 iter 11 measured place at ~250 s yet a hang
+        # burned the full 20-minute floor (46% of that run's gamma).
         opt.action_durations = {"route": [200.0]}
-        assert opt._implementation_timeout_s(kind="route") == 1200
+        assert opt._implementation_timeout_s(kind="route") == 600
     # The remaining budget still clamps everything.
     opt.action_durations = {"route": [900.0]}
     with patch.object(opt, "_time_remaining_s", return_value=2000.0):
