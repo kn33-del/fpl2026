@@ -338,7 +338,11 @@ RUN_RECIPE_STAGE_WHITELIST = {
     "phys_opt_design",
     "phys_opt_design_retime",
     "pblock",
-    "fanout_split",
+    # fanout_split removed (pipeline audit 2026-07-28): _execute_run_recipe
+    # dispatches stages straight to execute_validated_action without
+    # re-checking allowed_actions, so leaving it whitelisted here let the
+    # LLM reach the same 0-for-11 action through run_recipe even after it
+    # was removed from the normal menu in _allowed_forbidden_actions.
 }
 DEFAULT_PBLOCK_TARGET_LUT_COUNT = 20000
 DEFAULT_PBLOCK_TARGET_FF_COUNT = 40000
@@ -412,7 +416,7 @@ ACTION_PARAMETERS_SCHEMA = {
             "sequentially with a per-stage budget check (the recipe stops cleanly "
             "when the next stage no longer fits) and per-stage keep-best/rollback. "
             "Allowed stage actions: place_design_explore, route_explore, "
-            "phys_opt_design, phys_opt_design_retime, pblock, fanout_split"
+            "phys_opt_design, phys_opt_design_retime, pblock"
         ),
     },
 }
@@ -468,10 +472,10 @@ HOW THE ACTION MENU WORKS:
 
 PRIORS (the reasoning behind the ranking -- use them, and notice when evidence contradicts them):
 - net_delay_bound (net_pct > 0.70): routing-bound paths usually need cell movement or
-  placement constraints (rapidwright_optimize_cell_placement, pblock, pblock_full_replace,
-  place_design_explore), not logic restructuring. lut_opt/fanout_split are discouraged.
+  placement constraints (pblock, pblock_full_replace, place_design_explore), not logic
+  restructuring. lut_opt is discouraged.
 - logic_delay_bound (logic_pct > 0.70): placement changes do not reduce logic depth;
-  prefer lut_opt, phys_opt_design_retime, fanout_split. Pblock/placement actions are discouraged.
+  prefer lut_opt, phys_opt_design_retime. Pblock/placement actions are discouraged.
 - mixed: phys_opt_design with -retime is a sensible first probe.
 - BRAM_CONTROL/DSP_CONTROL endpoints: routing to a hard-block control pin needs physical
   proximity (pblock, replicate_register, place_design_explore); net splitting rarely helps.
@@ -505,7 +509,7 @@ BUDGET AWARENESS:
   and prefer refinements that fit over expensive re-rolls that will be refused.
 - run_recipe executes a full pipeline in one decision -- prefer it over issuing the
   same stages one iteration at a time. Stages are whitelisted (place_design_explore,
-  route_explore, phys_opt_design, phys_opt_design_retime, pblock, fanout_split), max 6;
+  route_explore, phys_opt_design, phys_opt_design_retime, pblock), max 6;
   each stage is measured and kept-or-rolled-back individually, and the recipe stops
   cleanly when the next stage no longer fits the remaining budget.
 """
