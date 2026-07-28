@@ -1,0 +1,151 @@
+{
+  "input_dcp": "/home/fpl2026/fpl26_contest_benchmarks/ispd16_example2_2025.1.dcp",
+  "clock_name": "clk_fpl26contest",
+  "clock_period_ns": 1.538,
+  "baseline_wns": -7.752,
+  "baseline_fmax_mhz": 107.64262648008612,
+  "best_wns": -7.752,
+  "best_fmax_mhz": 107.64262648008612,
+  "best_checkpoint": "/home/fpl2026/fpl26_contest_benchmarks/ispd16_example2_2025.1.dcp",
+  "current_iter": 2,
+  "stall_count": 2,
+  "cells_blacklisted": [],
+  "nets_blacklisted": [],
+  "iterations": [
+    {
+      "iter": 1,
+      "recipe": "place_design_explore",
+      "batch_size": 1,
+      "targets": [
+        "directive:Default"
+      ],
+      "wns_before": -7.752,
+      "wns_after": null,
+      "fmax_before": 107.64262648008612,
+      "fmax_after": null,
+      "delta_fmax": 0.0,
+      "vivado_runtime_s": 1420.6814692020416,
+      "status": "failed",
+      "reason": "place_design -directive Default failed after unplace: Error: Command timed out. Vivado may be stuck. Use restart_vivado to recover.",
+      "error_type": "replace_place_failed",
+      "checkpoint": null,
+      "rapidwright_edit_summary": null,
+      "action_failure_memory": {
+        "place_design_explore": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "directive:Default"
+          ],
+          "target_fingerprint": "{\"candidates\": [{\"endpoint\": \"inst_82688/CE\", \"slack\": -7.752, \"startpoint\": \"inst_672/C\"}, {\"endpoint\": \"inst_119021/CE\", \"slack\": -7.752, \"startpoint\": \"inst_672/C\"}, {\"endpoint\": \"inst_123511/CE\", \"slack\": -7.744, \"startpoint\": \"inst_672/C\"}, {\"endpoint\": \"inst_45170/CE\", \"slack\": -7.736, \"startpoint\": \"inst_672/C\"}, {\"endpoint\": \"inst_216809/D\", \"slack\": -7.719, \"startpoint\": \"inst_209277/C\"}], \"delay_class\": \"net_delay_bound\", \"tier\": \"tier1_violating_paths\"}",
+          "last_failed_iter": 1
+        }
+      },
+      "action_failure_counts": {
+        "place_design_explore": 1
+      },
+      "llm_chosen_action": "place_design_explore",
+      "warm_start": true,
+      "validation_result": "warm_start"
+    },
+    {
+      "iter": 2,
+      "recipe": "place_design_explore",
+      "batch_size": 1,
+      "targets": [
+        "directive:Default"
+      ],
+      "wns_before": -7.752,
+      "wns_after": null,
+      "fmax_before": 107.64262648008612,
+      "fmax_after": null,
+      "delta_fmax": 0.0,
+      "vivado_runtime_s": 239.3395631313324,
+      "status": "failed",
+      "reason": "pblock_full_replace is estimated to cost ~60 min but only 32 min of budget remain; choose a cheaper refinement action that fits.",
+      "error_type": "insufficient_budget",
+      "checkpoint": null,
+      "rapidwright_edit_summary": null,
+      "action_failure_memory": {
+        "place_design_explore": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "directive:Default"
+          ],
+          "last_failed_iter": 1,
+          "failed_on_current_targets": true
+        }
+      },
+      "action_failure_counts": {
+        "place_design_explore": 1
+      },
+      "delay_class": "net_delay_bound",
+      "endpoint_type": "LUT",
+      "allowed_actions": [
+        "place_design_explore",
+        "pblock_full_replace",
+        "rapidwright_optimize_cell_placement",
+        "pblock",
+        "run_recipe",
+        "qor_suggestions",
+        "fanout_split",
+        "lut_opt",
+        "replicate_register",
+        "phys_opt_design",
+        "phys_opt_design_retime",
+        "route_explore"
+      ],
+      "forbidden_actions": [
+        "logic_restructure"
+      ],
+      "action_guidance": {
+        "fanout_split": "delay class is net_delay_bound (net_pct=0.9790800000000001); logic-side changes rarely fix routing-bound paths",
+        "lut_opt": "delay class is net_delay_bound (net_pct=0.9790800000000001); logic-side changes rarely fix routing-bound paths",
+        "replicate_register": "WNS -7.752 ns is below -0.500 ns; incremental phys_opt cannot close that gap while structural actions remain",
+        "phys_opt_design": "WNS -7.752 ns is below -0.500 ns; incremental phys_opt cannot close that gap while structural actions remain",
+        "phys_opt_design_retime": "WNS -7.752 ns is below -0.500 ns; incremental phys_opt cannot close that gap while structural actions remain",
+        "route_explore": "costs ~40 min, 33 min remain -- pick a refinement that fits"
+      },
+      "congestion_level": null,
+      "cluster_clock_regions": [
+        "X0Y0",
+        "X0Y1",
+        "X0Y2",
+        "X0Y3",
+        "X1Y0",
+        "X1Y1",
+        "X1Y2"
+      ],
+      "llm_chosen_action": "pblock_full_replace",
+      "structural_override_active": false,
+      "stuck_iterations": 1,
+      "consecutive_no_improvement": 1,
+      "exhausted_actions": [],
+      "validation_result": "ok",
+      "reprompt_count": 0,
+      "why_not_top_forbidden_action": "place_design_explore (top of allowed) already timed out on Default and the high-spread net-bound paths need region constraints rather than another whole-design re-place attempt.",
+      "raw_response": "{\n  \"delay_class_acknowledged\": \"net_delay_bound\",\n  \"endpoint_type_acknowledged\": \"LUT\",\n  \"chosen_action\": \"pblock_full_replace\",\n  \"action_parameters\": {\n    \"ranges\": \"CLOCKREGION_X0Y0:CLOCKREGION_X1Y3\",\n    \"place_directive\": \"Explore\",\n    \"route_directive\": \"Explore\"\n  },\n  \"why_this_fits_delay_class\": \"net_pct=0.979 confirms routing distance is dominant; pblock directly bounds placement to shrink the 660-tile spread.\",\n  \"why_not_top_forbidden_action\": \"place_design_explore (top of allowed) already timed out on Default and the high-spread net-bound paths need region constraints rather than another whole-design re-place attempt.\",\n  \"confidence\": 4\n}",
+      "cluster_count": 2,
+      "primary_diagnosis": "long_interconnect",
+      "diagnosis_reasoning_trace": [
+        "normalized 20 timing-path candidate(s) from current_target_candidates",
+        "clustered into 2 cluster(s) via shared start/end cell name",
+        "primary cluster 'cluster_0' contains the current worst path (19 member(s), 1 cell(s) shared across all members)",
+        "scored hypotheses: long_interconnect=0.90, excessive_fanout=0.80, localized_congestion=0.30, placement_already_compact=0.25",
+        "primary hypothesis: long_interconnect (confidence 0.90)",
+        "  + avg spread 234.0 tiles exceeds 30 on a net-delay-bound cluster (98% net delay) -- cells are genuinely far apart, not just congested.",
+        "  + cluster cells span 7 clock regions (['X0Y0', 'X0Y1', 'X0Y2', 'X0Y3', 'X1Y0', 'X1Y1', 'X1Y2']) -- crossings confirm real physical distance."
+      ],
+      "diagnosis_action_adjustment": "long_interconnect (confidence 0.90) prioritized ['place_design_explore', 'pblock_full_replace', 'rapidwright_optimize_cell_placement']"
+    }
+  ],
+  "started_at_epoch_s": 1784519725.3904247,
+  "llm_cost_usd": 0.0,
+  "benchmark_score": {
+    "formula": "alpha - (0.1*alpha)*beta - (0.1*alpha)*gamma",
+    "alpha_delta_fmax_mhz": 0.0,
+    "beta_openrouter_cost_usd": 0.0,
+    "gamma_runtime_hours": 0.4316668849521213,
+    "wall_clock_runtime_s": 1554.0007858276367,
+    "score": 0.0
+  }
+}

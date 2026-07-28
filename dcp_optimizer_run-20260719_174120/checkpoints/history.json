@@ -1,0 +1,1433 @@
+{
+  "input_dcp": "/home/fpl2026/fpl26_contest_benchmarks/boom_soc_2025.1.dcp",
+  "clock_name": "clk_fpl26contest",
+  "clock_period_ns": 1.569,
+  "baseline_wns": -19.162,
+  "baseline_fmax_mhz": 48.23693984853601,
+  "best_wns": -10.256,
+  "best_fmax_mhz": 84.56659619450318,
+  "best_checkpoint": "/home/fpl2026/dcp_optimizer_run-20260719_174120/checkpoints/iter_001.dcp",
+  "current_iter": 11,
+  "stall_count": 10,
+  "cells_blacklisted": [
+    "system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_0/components_4/data/data_ext/mem_0_0/ram_reg_bram_0",
+    "system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_1/components_0/s1_update_bits_is_repair_update_reg",
+    "system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/icache/dataArrayB0Way_6/dataArrayB0Way_0_ext/mem_0_0/ram_reg"
+  ],
+  "nets_blacklisted": [],
+  "iterations": [
+    {
+      "iter": 1,
+      "recipe": "place_design_explore",
+      "batch_size": 1,
+      "targets": [
+        "directive:Explore"
+      ],
+      "wns_before": -19.162,
+      "wns_after": -10.256,
+      "fmax_before": 48.23693984853601,
+      "fmax_after": 84.56659619450318,
+      "delta_fmax": 36.329656345967166,
+      "vivado_runtime_s": 1772.8420088291168,
+      "status": "improved",
+      "checkpoint": "/home/fpl2026/dcp_optimizer_run-20260719_174120/checkpoints/iter_001.dcp",
+      "target_tier": "tier1_violating_paths",
+      "target_candidate_count": 20,
+      "path_delay_classification": "net_delay_bound",
+      "path_delay_breakdown": {
+        "logic_pct": 0.09774,
+        "net_pct": 0.90226,
+        "logic_delay_ns": 2.001,
+        "net_delay_ns": 18.471
+      },
+      "clock_period_ns": 1.569,
+      "achieved_fmax_mhz": 84.56659619450318,
+      "no_improvement_count": 0,
+      "consecutive_no_improvement": 0,
+      "action_failure_memory": {},
+      "action_failure_counts": {},
+      "llm_chosen_action": "place_design_explore",
+      "warm_start": true,
+      "validation_result": "warm_start"
+    },
+    {
+      "iter": 2,
+      "recipe": "rapidwright_cell_placement",
+      "batch_size": 10,
+      "targets": [
+        "system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_1/components_0/s1_update_bits_is_repair_update_reg",
+        "system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_0/components_4/data/data_ext/mem_0_3",
+        "system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_0/components_4/data/data_ext/mem_0_3/ram_reg_bram_0",
+        "system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/icache/dataArrayB0Way_1/dataArrayB0Way_0_ext/mem_0_0/ram_reg",
+        "system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_0/components_4/data/data_ext/mem_0_0/ram_reg_bram_0",
+        "system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_0/components_4/data/data_ext/mem_0_2/ram_reg_bram_0",
+        "system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/ras/io_read_addr_REG_2_reg[34]",
+        "system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/icache/dataArrayB0Way_6/dataArrayB0Way_0_ext/mem_0_0/ram_reg",
+        "system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/icache/dataArrayB1Way_3/dataArrayB0Way_0_ext/mem_0_0/ram_reg",
+        "system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/icache/dataArrayB0Way_3/dataArrayB0Way_0_ext/mem_0_0/ram_reg"
+      ],
+      "wns_before": -10.256,
+      "wns_after": null,
+      "fmax_before": 84.56659619450318,
+      "fmax_after": null,
+      "delta_fmax": 0.0,
+      "vivado_runtime_s": 101.425368309021,
+      "status": "failed",
+      "reason": "rapidwright_optimize_cell_placement produced a candidate with 1531 unplaced primitive cell(s) (tolerance 1045); refusing to route or measure it.",
+      "error_type": "invalid_design_state",
+      "checkpoint": null,
+      "rapidwright_edit_summary": {
+        "action": "rapidwright_optimize_cell_placement",
+        "requested_cells": [
+          "system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_1/components_0/s1_update_bits_is_repair_update_reg",
+          "system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_0/components_4/data/data_ext/mem_0_3",
+          "system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_0/components_4/data/data_ext/mem_0_3/ram_reg_bram_0",
+          "system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/icache/dataArrayB0Way_1/dataArrayB0Way_0_ext/mem_0_0/ram_reg",
+          "system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_0/components_4/data/data_ext/mem_0_0/ram_reg_bram_0",
+          "system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_0/components_4/data/data_ext/mem_0_2/ram_reg_bram_0",
+          "system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/ras/io_read_addr_REG_2_reg[34]",
+          "system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/icache/dataArrayB0Way_6/dataArrayB0Way_0_ext/mem_0_0/ram_reg",
+          "system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/icache/dataArrayB1Way_3/dataArrayB0Way_0_ext/mem_0_0/ram_reg",
+          "system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/icache/dataArrayB0Way_3/dataArrayB0Way_0_ext/mem_0_0/ram_reg"
+        ],
+        "cells_processed": 10,
+        "cells_moved": 1,
+        "moved_cells": [
+          "system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/ras/io_read_addr_REG_2_reg[34]"
+        ],
+        "nets_affected": 1,
+        "results": [
+          {
+            "cell": "system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_1/components_0/s1_update_bits_is_repair_update_reg",
+            "status": "error",
+            "message": "No available site near centroid"
+          },
+          {
+            "cell": "system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_0/components_4/data/data_ext/mem_0_3",
+            "status": "error",
+            "message": "Cell 'system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_0/components_4/data/data_ext/mem_0_3' not found"
+          },
+          {
+            "cell": "system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_0/components_4/data/data_ext/mem_0_3/ram_reg_bram_0",
+            "status": "error",
+            "message": "No available site near centroid"
+          },
+          {
+            "cell": "system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/icache/dataArrayB0Way_1/dataArrayB0Way_0_ext/mem_0_0/ram_reg",
+            "status": "error",
+            "message": "No available site near centroid"
+          },
+          {
+            "cell": "system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_0/components_4/data/data_ext/mem_0_0/ram_reg_bram_0",
+            "status": "error",
+            "message": "No available site near centroid"
+          },
+          {
+            "cell": "system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_0/components_4/data/data_ext/mem_0_2/ram_reg_bram_0",
+            "status": "error",
+            "message": "No available site near centroid"
+          },
+          {
+            "cell": "system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/ras/io_read_addr_REG_2_reg[34]",
+            "status": "success",
+            "old_site": "SLICE_X157Y117",
+            "new_site": "SLICE_X159Y113",
+            "distance_moved": 5,
+            "affected_nets": 1,
+            "message": "Moved from SLICE_X157Y117 to SLICE_X159Y113"
+          },
+          {
+            "cell": "system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/icache/dataArrayB0Way_6/dataArrayB0Way_0_ext/mem_0_0/ram_reg",
+            "status": "error",
+            "message": "No available site near centroid"
+          },
+          {
+            "cell": "system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/icache/dataArrayB1Way_3/dataArrayB0Way_0_ext/mem_0_0/ram_reg",
+            "status": "error",
+            "message": "No available site near centroid"
+          },
+          {
+            "cell": "system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/icache/dataArrayB0Way_3/dataArrayB0Way_0_ext/mem_0_0/ram_reg",
+            "status": "error",
+            "message": "No available site near centroid"
+          }
+        ]
+      },
+      "action_failure_memory": {},
+      "action_failure_counts": {},
+      "delay_class": "net_delay_bound",
+      "endpoint_type": "BRAM_CONTROL",
+      "allowed_actions": [
+        "rapidwright_optimize_cell_placement",
+        "pblock",
+        "qor_suggestions",
+        "route_explore",
+        "run_recipe",
+        "lut_opt",
+        "fanout_split",
+        "replicate_register",
+        "phys_opt_design",
+        "phys_opt_design_retime",
+        "pblock_full_replace",
+        "place_design_explore"
+      ],
+      "forbidden_actions": [
+        "logic_restructure"
+      ],
+      "action_guidance": {
+        "fanout_split": "delay class is net_delay_bound (net_pct=0.71292); logic-side changes rarely fix routing-bound paths; endpoint is a BRAM_CONTROL pin; routing to a hard-block control pin needs physical proximity, not net splitting",
+        "lut_opt": "delay class is net_delay_bound (net_pct=0.71292); logic-side changes rarely fix routing-bound paths",
+        "replicate_register": "WNS -10.256 ns is below -0.500 ns; incremental phys_opt cannot close that gap while structural actions remain",
+        "phys_opt_design": "WNS -10.256 ns is below -0.500 ns; incremental phys_opt cannot close that gap while structural actions remain",
+        "phys_opt_design_retime": "WNS -10.256 ns is below -0.500 ns; incremental phys_opt cannot close that gap while structural actions remain",
+        "pblock_full_replace": "this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won; costs ~26 min, 30 min remain -- pick a refinement that fits",
+        "place_design_explore": "this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won; costs ~26 min, 30 min remain -- pick a refinement that fits"
+      },
+      "congestion_level": 1,
+      "cluster_clock_regions": [
+        "X4Y1",
+        "X4Y2",
+        "X5Y1",
+        "X5Y4"
+      ],
+      "llm_chosen_action": "rapidwright_optimize_cell_placement",
+      "structural_override_active": false,
+      "stuck_iterations": 0,
+      "consecutive_no_improvement": 0,
+      "exhausted_actions": [],
+      "validation_result": "ok",
+      "reprompt_count": 0,
+      "why_not_top_forbidden_action": "pblock was not chosen because rapidwright_optimize_cell_placement is ranked first, matches the long_interconnect diagnosis on the current placement, and is lower-risk refinement than a new pblock region.",
+      "raw_response": "{\n  \"delay_class_acknowledged\": \"net_delay_bound\",\n  \"endpoint_type_acknowledged\": \"BRAM_CONTROL\",\n  \"chosen_action\": \"rapidwright_optimize_cell_placement\",\n  \"action_parameters\": {\n    \"max_candidates\": 50,\n    \"num_paths\": 20,\n    \"detour_threshold\": 1.3\n  },\n  \"why_this_fits_delay_class\": \"net_pct=0.71292 on paths with 302-tile spread to BRAM pin; cell nudges directly shorten long nets without touching logic.\",\n  \"why_not_top_forbidden_action\": \"pblock was not chosen because rapidwright_optimize_cell_placement is ranked first, matches the long_interconnect diagnosis on the current placement, and is lower-risk refinement than a new pblock region.\",\n  \"confidence\": 4\n}",
+      "cluster_count": 2,
+      "primary_diagnosis": "long_interconnect",
+      "diagnosis_reasoning_trace": [
+        "normalized 20 timing-path candidate(s) from current_target_candidates",
+        "clustered into 2 cluster(s) via shared start/end cell name",
+        "primary cluster 'cluster_0' contains the current worst path (19 member(s), 1 cell(s) shared across all members)",
+        "scored hypotheses: long_interconnect=0.90, excessive_fanout=0.80, placement_already_compact=0.25, localized_congestion=0.10",
+        "primary hypothesis: long_interconnect (confidence 0.90)",
+        "  + avg spread 222.0 tiles exceeds 30 on a net-delay-bound cluster (71% net delay) -- cells are genuinely far apart, not just congested.",
+        "  + cluster cells span 4 clock regions (['X4Y1', 'X4Y2', 'X5Y1', 'X5Y4']) -- crossings confirm real physical distance."
+      ],
+      "diagnosis_action_adjustment": "long_interconnect (confidence 0.90) prioritized ['rapidwright_optimize_cell_placement']"
+    },
+    {
+      "iter": 3,
+      "recipe": "pblock",
+      "batch_size": 1,
+      "targets": [
+        "pblock_net_delay_003",
+        "SLICE_X76Y122:SLICE_X83Y175 DSP48E2_X9Y50:DSP48E2_X9Y71 RAMB18_X5Y50:RAMB18_X5Y71 RAMB36_X5Y25:RAMB36_X5Y35"
+      ],
+      "wns_before": -10.256,
+      "wns_after": null,
+      "fmax_before": 84.56659619450318,
+      "fmax_after": null,
+      "delta_fmax": 0.0,
+      "vivado_runtime_s": 142.74666380882263,
+      "status": "failed",
+      "reason": "Pblock resource validation failed before placement: FIFO: requires 322, only 120 available (shortage: 202); FIFO: requires 153, only 60 available (shortage: 93); pblock_net_delay_003\nRAMB36E2: requires 153, only 60 available (shortage: 93). The region cannot fit the assigned cells (typically BRAM/DSP shortage); widen the ranges or exclude hard-block cells.",
+      "error_type": "pblock_region_too_small",
+      "checkpoint": null,
+      "rapidwright_edit_summary": {
+        "action": "pblock",
+        "cells_moved": 262,
+        "nets_affected": 0,
+        "pblock_ranges": "SLICE_X0Y0:SLICE_X2405Y16110 DSP48E2_X9Y0:DSP48E2_X9Y6390 RAMB18_X5Y0:RAMB18_X5Y6390 RAMB36_X5Y0:RAMB36_X5Y3048",
+        "fabric_region": {
+          "col_min": 315,
+          "col_max": 335,
+          "row_min": 129,
+          "row_max": 183,
+          "center_col": 334,
+          "center_row": 155,
+          "center_of_mass_col": 325,
+          "center_of_mass_row": 156,
+          "contiguous_columns": 21,
+          "contiguous_rows": 55
+        },
+        "target_lut_count": 2500,
+        "target_ff_count": 3000,
+        "site_counts": {
+          "SLICE": 432,
+          "DSP48E2": 22,
+          "RAMB18": 22,
+          "RAMB36": 11,
+          "URAM288": 0
+        },
+        "changed_design": true,
+        "pblock_name": "pblock_net_delay_003",
+        "apply_to": "current_design",
+        "is_soft": false,
+        "cells_matched": 262,
+        "cells_assigned": 262,
+        "resource_validation": {
+          "is_valid": false,
+          "primitive_count": 369161,
+          "cell_count": 262,
+          "resource_issues": {
+            "FIFO": {
+              "required": 153,
+              "available": 60,
+              "margin": 0.39215686274509803,
+              "shortage": 93
+            },
+            "pblock_net_delay_003\nRAMB36E2": {
+              "required": 153,
+              "available": 60,
+              "margin": 0.39215686274509803,
+              "shortage": 93
+            }
+          },
+          "errors": [
+            "FIFO: requires 322, only 120 available (shortage: 202)",
+            "FIFO: requires 153, only 60 available (shortage: 93)",
+            "pblock_net_delay_003\nRAMB36E2: requires 153, only 60 available (shortage: 93)"
+          ],
+          "drc_output": "Copyright 1986-2022 Xilinx, Inc. All Rights Reserved. Copyright 2022-2025 Advanced Micro Devices, Inc. All Rights Reserved.\n---------------------------------------------------------------------------------------------------------------------------------------------\n| Tool Version : Vivado v.2025.1 (lin64) Build 6140274 Wed May 21 22:58:25 MDT 2025\n| Date         : Sun Jul 19 18:15:37 2026\n| Host         : 35ns7cfvpwajp9e9nht0kyrsvp running 64-bit Ubuntu 24.04.4 LTS\n| Command      : report_drc -checks {UTLZ-1 UTLZ-2} -file /home/fpl2026/VivadoMCP/drc_check_pblock_net_delay_003.rpt\n| Design       : ChipTop\n| Device       : xcvu3p-ffvc1517-2-e\n| Speed File   : -2\n| Design State : ignored\n---------------------------------------------------------------------------------------------------------------------------------------------\n\nReport DRC\n\nTable of Contents\n-----------------\n1. REPORT SUMMARY\n2. REPORT DETAILS\n\n1. REPORT SUMMARY\n-----------------\n            Netlist: netlist\n          Flo"
+        }
+      },
+      "action_failure_memory": {
+        "rapidwright_optimize_cell_placement": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_1/components_0/s1_update_bits_is_repair_update_reg",
+            "system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_0/components_4/data/data_ext/mem_0_3",
+            "system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_0/components_4/data/data_ext/mem_0_3/ram_reg_bram_0"
+          ],
+          "last_failed_iter": 2,
+          "failed_on_current_targets": true
+        }
+      },
+      "action_failure_counts": {
+        "rapidwright_optimize_cell_placement": 1
+      },
+      "delay_class": "net_delay_bound",
+      "endpoint_type": "BRAM_CONTROL",
+      "allowed_actions": [
+        "rapidwright_optimize_cell_placement",
+        "pblock",
+        "qor_suggestions",
+        "route_explore",
+        "run_recipe",
+        "lut_opt",
+        "fanout_split",
+        "replicate_register",
+        "phys_opt_design",
+        "phys_opt_design_retime",
+        "place_design_explore",
+        "pblock_full_replace"
+      ],
+      "forbidden_actions": [
+        "logic_restructure"
+      ],
+      "action_guidance": {
+        "fanout_split": "delay class is net_delay_bound (net_pct=0.71292); logic-side changes rarely fix routing-bound paths; endpoint is a BRAM_CONTROL pin; routing to a hard-block control pin needs physical proximity, not net splitting",
+        "lut_opt": "delay class is net_delay_bound (net_pct=0.71292); logic-side changes rarely fix routing-bound paths",
+        "replicate_register": "WNS -10.256 ns is below -0.500 ns; incremental phys_opt cannot close that gap while structural actions remain",
+        "phys_opt_design": "WNS -10.256 ns is below -0.500 ns; incremental phys_opt cannot close that gap while structural actions remain",
+        "phys_opt_design_retime": "WNS -10.256 ns is below -0.500 ns; incremental phys_opt cannot close that gap while structural actions remain",
+        "pblock_full_replace": "this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won; large design, 32 of 58 budget minutes elapsed (past the 50% cutoff) with 1 full re-place(s) already spent; no further full re-places this run -- refine the best result instead; costs ~26 min, 26 min remain -- pick a refinement that fits",
+        "place_design_explore": "this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won; large design, 32 of 58 budget minutes elapsed (past the 50% cutoff) with 1 full re-place(s) already spent; no further full re-places this run -- refine the best result instead; costs ~26 min, 26 min remain -- pick a refinement that fits"
+      },
+      "congestion_level": 1,
+      "cluster_clock_regions": [
+        "X4Y1",
+        "X4Y2",
+        "X5Y1",
+        "X5Y4"
+      ],
+      "llm_chosen_action": "pblock",
+      "structural_override_active": false,
+      "stuck_iterations": 1,
+      "consecutive_no_improvement": 1,
+      "exhausted_actions": [],
+      "validation_result": "ok",
+      "reprompt_count": 0,
+      "why_not_top_forbidden_action": "rapidwright_optimize_cell_placement was skipped because it already failed on these exact targets with 1531 unplaced cells, leaving pblock as the next-ranked structural move for the spread.",
+      "raw_response": "{\n  \"delay_class_acknowledged\": \"net_delay_bound\",\n  \"endpoint_type_acknowledged\": \"BRAM_CONTROL\",\n  \"chosen_action\": \"pblock\",\n  \"action_parameters\": {\n    \"target_lut_count\": 2500,\n    \"target_ff_count\": 3000,\n    \"use_clock_regions\": false\n  },\n  \"why_this_fits_delay_class\": \"net_pct=0.71292 with 302-tile avg spread to BRAM pin requires physical clustering that pblock enforces on the long-interconnect cluster.\",\n  \"why_not_top_forbidden_action\": \"rapidwright_optimize_cell_placement was skipped because it already failed on these exact targets with 1531 unplaced cells, leaving pblock as the next-ranked structural move for the spread.\",\n  \"confidence\": 4\n}",
+      "cluster_count": 2,
+      "primary_diagnosis": "long_interconnect",
+      "diagnosis_reasoning_trace": [
+        "normalized 20 timing-path candidate(s) from current_target_candidates",
+        "clustered into 2 cluster(s) via shared start/end cell name",
+        "primary cluster 'cluster_0' contains the current worst path (19 member(s), 1 cell(s) shared across all members)",
+        "outcome history: long_interconnect's own prescriptions scored 0 win(s) / 1 loss(es) this run -> confidence -0.08",
+        "scored hypotheses: long_interconnect=0.82, excessive_fanout=0.80, placement_already_compact=0.25, localized_congestion=0.10",
+        "primary hypothesis: long_interconnect (confidence 0.82)",
+        "  + avg spread 178.0 tiles exceeds 30 on a net-delay-bound cluster (71% net delay) -- cells are genuinely far apart, not just congested.",
+        "  + cluster cells span 4 clock regions (['X4Y1', 'X4Y2', 'X5Y1', 'X5Y4']) -- crossings confirm real physical distance.",
+        "  - outcome history: long_interconnect's own prescriptions scored 0 win(s) / 1 loss(es) this run -> confidence -0.08"
+      ],
+      "diagnosis_action_adjustment": "long_interconnect (confidence 0.82) prioritized ['rapidwright_optimize_cell_placement']"
+    },
+    {
+      "iter": 4,
+      "recipe": "qor_suggestions",
+      "batch_size": 1,
+      "targets": [
+        "qor_suggestions"
+      ],
+      "wns_before": -10.256,
+      "wns_after": null,
+      "fmax_before": 84.56659619450318,
+      "fmax_after": null,
+      "delta_fmax": 0.0,
+      "vivado_runtime_s": 97.17338466644287,
+      "status": "failed",
+      "reason": "report_qor_suggestions produced no usable suggestions: Error: Vivado process terminated unexpectedly. Use restart_vivado to restart.",
+      "error_type": "no_action_target",
+      "checkpoint": null,
+      "rapidwright_edit_summary": null,
+      "action_failure_memory": {
+        "rapidwright_optimize_cell_placement": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_1/components_0/s1_update_bits_is_repair_update_reg",
+            "system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_0/components_4/data/data_ext/mem_0_3",
+            "system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_0/components_4/data/data_ext/mem_0_3/ram_reg_bram_0"
+          ],
+          "last_failed_iter": 2,
+          "failed_on_current_targets": true
+        },
+        "rapidwright_convert_fabric_region_to_pblock": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "pblock_net_delay_003",
+            "SLICE_X76Y122:SLICE_X83Y175 DSP48E2_X9Y50:DSP48E2_X9Y71 RAMB18_X5Y50:RAMB18_X5Y71 RAMB36_X5Y25:RAMB36_X5Y35"
+          ],
+          "last_failed_iter": 3,
+          "failed_on_current_targets": true
+        },
+        "pblock": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "pblock_net_delay_003",
+            "SLICE_X76Y122:SLICE_X83Y175 DSP48E2_X9Y50:DSP48E2_X9Y71 RAMB18_X5Y50:RAMB18_X5Y71 RAMB36_X5Y25:RAMB36_X5Y35"
+          ],
+          "last_failed_iter": 3,
+          "failed_on_current_targets": true
+        },
+        "rapidwright_analyze_fabric_for_pblock": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "pblock_net_delay_003",
+            "SLICE_X76Y122:SLICE_X83Y175 DSP48E2_X9Y50:DSP48E2_X9Y71 RAMB18_X5Y50:RAMB18_X5Y71 RAMB36_X5Y25:RAMB36_X5Y35"
+          ],
+          "last_failed_iter": 3,
+          "failed_on_current_targets": true
+        }
+      },
+      "action_failure_counts": {
+        "rapidwright_optimize_cell_placement": 1,
+        "rapidwright_convert_fabric_region_to_pblock": 1,
+        "pblock": 1,
+        "rapidwright_analyze_fabric_for_pblock": 1
+      },
+      "delay_class": "net_delay_bound",
+      "endpoint_type": "BRAM_CONTROL",
+      "allowed_actions": [
+        "rapidwright_optimize_cell_placement",
+        "pblock",
+        "qor_suggestions",
+        "route_explore",
+        "run_recipe",
+        "lut_opt",
+        "fanout_split",
+        "replicate_register",
+        "phys_opt_design",
+        "phys_opt_design_retime",
+        "place_design_explore",
+        "pblock_full_replace"
+      ],
+      "forbidden_actions": [
+        "logic_restructure"
+      ],
+      "action_guidance": {
+        "fanout_split": "delay class is net_delay_bound (net_pct=0.71292); logic-side changes rarely fix routing-bound paths; endpoint is a BRAM_CONTROL pin; routing to a hard-block control pin needs physical proximity, not net splitting",
+        "lut_opt": "delay class is net_delay_bound (net_pct=0.71292); logic-side changes rarely fix routing-bound paths",
+        "replicate_register": "WNS -10.256 ns is below -0.500 ns; incremental phys_opt cannot close that gap while structural actions remain",
+        "phys_opt_design": "WNS -10.256 ns is below -0.500 ns; incremental phys_opt cannot close that gap while structural actions remain",
+        "phys_opt_design_retime": "WNS -10.256 ns is below -0.500 ns; incremental phys_opt cannot close that gap while structural actions remain",
+        "pblock_full_replace": "this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won; large design, 34 of 58 budget minutes elapsed (past the 50% cutoff) with 1 full re-place(s) already spent; no further full re-places this run -- refine the best result instead; costs ~26 min, 24 min remain -- pick a refinement that fits",
+        "place_design_explore": "this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won; large design, 34 of 58 budget minutes elapsed (past the 50% cutoff) with 1 full re-place(s) already spent; no further full re-places this run -- refine the best result instead; costs ~26 min, 24 min remain -- pick a refinement that fits"
+      },
+      "congestion_level": 1,
+      "cluster_clock_regions": [
+        "X4Y1",
+        "X4Y2",
+        "X5Y1",
+        "X5Y4"
+      ],
+      "llm_chosen_action": "qor_suggestions",
+      "structural_override_active": false,
+      "stuck_iterations": 2,
+      "consecutive_no_improvement": 2,
+      "exhausted_actions": [],
+      "validation_result": "ok",
+      "reprompt_count": 0,
+      "why_not_top_forbidden_action": "rapidwright_optimize_cell_placement was skipped because it already produced 1531 unplaced cells on the same targets in iteration 2 and is reported as failed on current targets.",
+      "raw_response": "{\n  \"delay_class_acknowledged\": \"net_delay_bound\",\n  \"endpoint_type_acknowledged\": \"BRAM_CONTROL\",\n  \"chosen_action\": \"qor_suggestions\",\n  \"action_parameters\": {},\n  \"why_this_fits_delay_class\": \"net_pct=0.71292 with 302-tile spread; qor_suggestions performs bounded placement/routing refinement on the placed&routed net-delay paths without risking further region-size failures.\",\n  \"why_not_top_forbidden_action\": \"rapidwright_optimize_cell_placement was skipped because it already produced 1531 unplaced cells on the same targets in iteration 2 and is reported as failed on current targets.\",\n  \"confidence\": 4\n}",
+      "cluster_count": 2,
+      "primary_diagnosis": "long_interconnect",
+      "diagnosis_reasoning_trace": [
+        "normalized 20 timing-path candidate(s) from current_target_candidates",
+        "clustered into 2 cluster(s) via shared start/end cell name",
+        "primary cluster 'cluster_0' contains the current worst path (19 member(s), 1 cell(s) shared across all members)",
+        "outcome history: long_interconnect's own prescriptions scored 0 win(s) / 1 loss(es) this run -> confidence -0.08",
+        "scored hypotheses: long_interconnect=0.82, excessive_fanout=0.80, placement_already_compact=0.25, localized_congestion=0.10",
+        "primary hypothesis: long_interconnect (confidence 0.82)",
+        "  + avg spread 178.0 tiles exceeds 30 on a net-delay-bound cluster (71% net delay) -- cells are genuinely far apart, not just congested.",
+        "  + cluster cells span 4 clock regions (['X4Y1', 'X4Y2', 'X5Y1', 'X5Y4']) -- crossings confirm real physical distance.",
+        "  - outcome history: long_interconnect's own prescriptions scored 0 win(s) / 1 loss(es) this run -> confidence -0.08"
+      ],
+      "diagnosis_action_adjustment": "long_interconnect (confidence 0.82) prioritized ['rapidwright_optimize_cell_placement']"
+    },
+    {
+      "iter": 5,
+      "recipe": "qor_suggestions",
+      "batch_size": 1,
+      "targets": [
+        "qor_suggestions"
+      ],
+      "wns_before": -10.256,
+      "wns_after": null,
+      "fmax_before": 84.56659619450318,
+      "fmax_after": null,
+      "delta_fmax": 0.0,
+      "vivado_runtime_s": 3.136993408203125,
+      "status": "failed",
+      "reason": "large design, 35 of 58 budget minutes elapsed (past the 50% cutoff) with 1 full re-place(s) already spent; no further full re-places this run -- refine the best result instead",
+      "error_type": "full_replace_cap_reached",
+      "checkpoint": null,
+      "rapidwright_edit_summary": null,
+      "action_failure_memory": {
+        "rapidwright_optimize_cell_placement": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_1/components_0/s1_update_bits_is_repair_update_reg",
+            "system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_0/components_4/data/data_ext/mem_0_3",
+            "system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_0/components_4/data/data_ext/mem_0_3/ram_reg_bram_0"
+          ],
+          "last_failed_iter": 2,
+          "failed_on_current_targets": false
+        },
+        "rapidwright_convert_fabric_region_to_pblock": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "pblock_net_delay_003",
+            "SLICE_X76Y122:SLICE_X83Y175 DSP48E2_X9Y50:DSP48E2_X9Y71 RAMB18_X5Y50:RAMB18_X5Y71 RAMB36_X5Y25:RAMB36_X5Y35"
+          ],
+          "last_failed_iter": 3,
+          "failed_on_current_targets": false
+        },
+        "pblock": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "pblock_net_delay_003",
+            "SLICE_X76Y122:SLICE_X83Y175 DSP48E2_X9Y50:DSP48E2_X9Y71 RAMB18_X5Y50:RAMB18_X5Y71 RAMB36_X5Y25:RAMB36_X5Y35"
+          ],
+          "last_failed_iter": 3,
+          "failed_on_current_targets": false
+        },
+        "rapidwright_analyze_fabric_for_pblock": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "pblock_net_delay_003",
+            "SLICE_X76Y122:SLICE_X83Y175 DSP48E2_X9Y50:DSP48E2_X9Y71 RAMB18_X5Y50:RAMB18_X5Y71 RAMB36_X5Y25:RAMB36_X5Y35"
+          ],
+          "last_failed_iter": 3,
+          "failed_on_current_targets": false
+        },
+        "qor_suggestions": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "qor_suggestions"
+          ],
+          "last_failed_iter": 4,
+          "failed_on_current_targets": false
+        }
+      },
+      "action_failure_counts": {
+        "rapidwright_optimize_cell_placement": 1,
+        "rapidwright_convert_fabric_region_to_pblock": 1,
+        "pblock": 1,
+        "rapidwright_analyze_fabric_for_pblock": 1,
+        "qor_suggestions": 1
+      },
+      "delay_class": "mixed",
+      "endpoint_type": "BRAM_CONTROL",
+      "allowed_actions": [
+        "rapidwright_optimize_cell_placement",
+        "pblock",
+        "pblock_full_replace",
+        "place_design_explore"
+      ],
+      "forbidden_actions": [
+        "logic_restructure"
+      ],
+      "action_guidance": {
+        "pblock_full_replace": "this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won; large design, 34 of 58 budget minutes elapsed (past the 50% cutoff) with 1 full re-place(s) already spent; no further full re-places this run -- refine the best result instead; costs ~26 min, 24 min remain -- pick a refinement that fits",
+        "place_design_explore": "this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won; large design, 34 of 58 budget minutes elapsed (past the 50% cutoff) with 1 full re-place(s) already spent; no further full re-places this run -- refine the best result instead; costs ~26 min, 24 min remain -- pick a refinement that fits",
+        "pblock": "excessive_fanout (confidence 0.80) argues against this action: 3 cell(s) (['system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_0/components_4/data/data_ext/mem_0_0/ram_reg_bram_0', 'system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_1/components_0/s1_update_bits_is_repair_update_reg', 'system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/icache/dataArrayB0Way_6/dataArrayB0Way_0_ext/mem_0_0/ram_reg']) recur across 19/20 extracted candidates (95%) -- consistent with a shared high-fanout driver rather than independent placement issues.",
+        "rapidwright_optimize_cell_placement": "excessive_fanout (confidence 0.80) argues against this action: 3 cell(s) (['system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_0/components_4/data/data_ext/mem_0_0/ram_reg_bram_0', 'system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_1/components_0/s1_update_bits_is_repair_update_reg', 'system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/icache/dataArrayB0Way_6/dataArrayB0Way_0_ext/mem_0_0/ram_reg']) recur across 19/20 extracted candidates (95%) -- consistent with a shared high-fanout driver rather than independent placement issues."
+      },
+      "congestion_level": 1,
+      "cluster_clock_regions": [],
+      "llm_chosen_action": "place_design_explore",
+      "structural_override_active": true,
+      "stuck_iterations": 3,
+      "consecutive_no_improvement": 3,
+      "exhausted_actions": [],
+      "validation_result": "ok",
+      "reprompt_count": 0,
+      "why_not_top_forbidden_action": "rapidwright_optimize_cell_placement was skipped because it already failed on the identical targets with excess unplaced cells; place_design_explore is the first allowed action that has not yet been attempted with an untried directive.",
+      "raw_response": "{\n  \"delay_class_acknowledged\": \"mixed\",\n  \"endpoint_type_acknowledged\": \"BRAM_CONTROL\",\n  \"chosen_action\": \"place_design_explore\",\n  \"action_parameters\": {\n    \"directive\": \"ExtraTimingOpt\",\n    \"route_directive\": \"Explore\"\n  },\n  \"why_this_fits_delay_class\": \"mixed delay (net_pct ~0.71 observed earlier) with excessive_fanout diagnosis now dominant; new place directive on untried ExtraTimingOpt gives fresh physical locations for high-fanout drivers to BRAM pins.\",\n  \"why_not_top_forbidden_action\": \"rapidwright_optimize_cell_placement was skipped because it already failed on the identical targets with excess unplaced cells; place_design_explore is the first allowed action that has not yet been attempted with an untried directive.\",\n  \"confidence\": 3\n}",
+      "cluster_count": 2,
+      "primary_diagnosis": "excessive_fanout",
+      "diagnosis_reasoning_trace": [
+        "normalized 20 timing-path candidate(s) from current_target_candidates",
+        "clustered into 2 cluster(s) via shared start/end cell name",
+        "primary cluster 'cluster_0' contains the current worst path (19 member(s), 1 cell(s) shared across all members)",
+        "outcome history: long_interconnect's own prescriptions scored 0 win(s) / 1 loss(es) this run -> confidence -0.08",
+        "scored hypotheses: excessive_fanout=0.80, placement_already_compact=0.50, long_interconnect=0.42, localized_congestion=0.30",
+        "primary hypothesis: excessive_fanout (confidence 0.80)",
+        "  + 3 cell(s) (['system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_0/components_4/data/data_ext/mem_0_0/ram_reg_bram_0', 'system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_1/components_0/s1_update_bits_is_repair_update_reg', 'system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/icache/dataArrayB0Way_6/dataArrayB0Way_0_ext/mem_0_0/ram_reg']) recur across 19/20 extracted candidates (95%) -- consistent with a shared high-fanout driver rather than independent placement issues."
+      ],
+      "diagnosis_action_adjustment": "excessive_fanout (confidence 0.80) demoted ['pblock', 'rapidwright_optimize_cell_placement']; excessive_fanout (confidence 0.80) prioritized ['fanout_split', 'replicate_register']"
+    },
+    {
+      "iter": 6,
+      "recipe": "pblock",
+      "batch_size": 1,
+      "targets": [
+        "qor_suggestions"
+      ],
+      "wns_before": -10.256,
+      "wns_after": null,
+      "fmax_before": 84.56659619450318,
+      "fmax_after": null,
+      "delta_fmax": 0.0,
+      "vivado_runtime_s": 25.591431140899658,
+      "status": "failed",
+      "reason": "Rejected pblock region: projected BRAM utilization 464% exceeds the 85% congestion-safety limit (153 requested vs 33 available). Retry with a larger region or lower target_bram_count. (gave up after 4 sizing attempts and 0 overlap-avoidance attempts, starting from an estimate of 20 candidate paths)",
+      "error_type": "pblock_range_computation_failed",
+      "checkpoint": null,
+      "rapidwright_edit_summary": null,
+      "action_failure_memory": {
+        "rapidwright_optimize_cell_placement": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_1/components_0/s1_update_bits_is_repair_update_reg",
+            "system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_0/components_4/data/data_ext/mem_0_3",
+            "system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_0/components_4/data/data_ext/mem_0_3/ram_reg_bram_0"
+          ],
+          "last_failed_iter": 2,
+          "failed_on_current_targets": false
+        },
+        "rapidwright_convert_fabric_region_to_pblock": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "pblock_net_delay_003",
+            "SLICE_X76Y122:SLICE_X83Y175 DSP48E2_X9Y50:DSP48E2_X9Y71 RAMB18_X5Y50:RAMB18_X5Y71 RAMB36_X5Y25:RAMB36_X5Y35"
+          ],
+          "last_failed_iter": 3,
+          "failed_on_current_targets": false
+        },
+        "pblock": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "pblock_net_delay_003",
+            "SLICE_X76Y122:SLICE_X83Y175 DSP48E2_X9Y50:DSP48E2_X9Y71 RAMB18_X5Y50:RAMB18_X5Y71 RAMB36_X5Y25:RAMB36_X5Y35"
+          ],
+          "last_failed_iter": 3,
+          "failed_on_current_targets": false
+        },
+        "rapidwright_analyze_fabric_for_pblock": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "pblock_net_delay_003",
+            "SLICE_X76Y122:SLICE_X83Y175 DSP48E2_X9Y50:DSP48E2_X9Y71 RAMB18_X5Y50:RAMB18_X5Y71 RAMB36_X5Y25:RAMB36_X5Y35"
+          ],
+          "last_failed_iter": 3,
+          "failed_on_current_targets": false
+        },
+        "qor_suggestions": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "qor_suggestions"
+          ],
+          "last_failed_iter": 4,
+          "failed_on_current_targets": false
+        },
+        "place_design_explore": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "qor_suggestions"
+          ],
+          "last_failed_iter": 5,
+          "failed_on_current_targets": true
+        }
+      },
+      "action_failure_counts": {
+        "place_design_explore": 1,
+        "rapidwright_optimize_cell_placement": 1,
+        "rapidwright_convert_fabric_region_to_pblock": 1,
+        "pblock": 1,
+        "rapidwright_analyze_fabric_for_pblock": 1,
+        "qor_suggestions": 1
+      },
+      "delay_class": "mixed",
+      "endpoint_type": "BRAM_CONTROL",
+      "allowed_actions": [
+        "rapidwright_optimize_cell_placement",
+        "pblock",
+        "pblock_full_replace",
+        "place_design_explore"
+      ],
+      "forbidden_actions": [
+        "logic_restructure"
+      ],
+      "action_guidance": {
+        "pblock_full_replace": "this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won; large design, 35 of 58 budget minutes elapsed (past the 50% cutoff) with 1 full re-place(s) already spent; no further full re-places this run -- refine the best result instead; costs ~26 min, 24 min remain -- pick a refinement that fits",
+        "place_design_explore": "this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won; large design, 35 of 58 budget minutes elapsed (past the 50% cutoff) with 1 full re-place(s) already spent; no further full re-places this run -- refine the best result instead; costs ~26 min, 24 min remain -- pick a refinement that fits",
+        "pblock": "excessive_fanout (confidence 0.80) argues against this action: 3 cell(s) (['system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_0/components_4/data/data_ext/mem_0_0/ram_reg_bram_0', 'system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_1/components_0/s1_update_bits_is_repair_update_reg', 'system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/icache/dataArrayB0Way_6/dataArrayB0Way_0_ext/mem_0_0/ram_reg']) recur across 19/20 extracted candidates (95%) -- consistent with a shared high-fanout driver rather than independent placement issues.",
+        "rapidwright_optimize_cell_placement": "excessive_fanout (confidence 0.80) argues against this action: 3 cell(s) (['system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_0/components_4/data/data_ext/mem_0_0/ram_reg_bram_0', 'system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_1/components_0/s1_update_bits_is_repair_update_reg', 'system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/icache/dataArrayB0Way_6/dataArrayB0Way_0_ext/mem_0_0/ram_reg']) recur across 19/20 extracted candidates (95%) -- consistent with a shared high-fanout driver rather than independent placement issues."
+      },
+      "congestion_level": 1,
+      "cluster_clock_regions": [],
+      "llm_chosen_action": "pblock",
+      "structural_override_active": true,
+      "stuck_iterations": 4,
+      "consecutive_no_improvement": 4,
+      "exhausted_actions": [],
+      "validation_result": "ok",
+      "reprompt_count": 0,
+      "why_not_top_forbidden_action": "rapidwright_optimize_cell_placement was not chosen because its sole prior attempt left 1531 cells unplaced on overlapping targets and the current fanout diagnosis demotes cell-by-cell nudges.",
+      "raw_response": "{\n  \"delay_class_acknowledged\": \"mixed\",\n  \"endpoint_type_acknowledged\": \"BRAM_CONTROL\",\n  \"chosen_action\": \"pblock\",\n  \"action_parameters\": {\n    \"target_lut_count\": 1800,\n    \"target_ff_count\": 2200,\n    \"use_clock_regions\": false\n  },\n  \"why_this_fits_delay_class\": \"mixed delay class with observed net_pct 0.71 on paths terminating at BRAM_CONTROL pins; a tighter, correctly-resourced pblock supplies the physical proximity required by the endpoint type without relying on net splitting.\",\n  \"why_not_top_forbidden_action\": \"rapidwright_optimize_cell_placement was not chosen because its sole prior attempt left 1531 cells unplaced on overlapping targets and the current fanout diagnosis demotes cell-by-cell nudges.\",\n  \"confidence\": 3\n}",
+      "cluster_count": 2,
+      "primary_diagnosis": "excessive_fanout",
+      "diagnosis_reasoning_trace": [
+        "normalized 20 timing-path candidate(s) from current_target_candidates",
+        "clustered into 2 cluster(s) via shared start/end cell name",
+        "primary cluster 'cluster_0' contains the current worst path (19 member(s), 1 cell(s) shared across all members)",
+        "outcome history: long_interconnect's own prescriptions scored 0 win(s) / 1 loss(es) this run -> confidence -0.08",
+        "scored hypotheses: excessive_fanout=0.80, placement_already_compact=0.50, long_interconnect=0.42, localized_congestion=0.30",
+        "primary hypothesis: excessive_fanout (confidence 0.80)",
+        "  + 3 cell(s) (['system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_0/components_4/data/data_ext/mem_0_0/ram_reg_bram_0', 'system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_1/components_0/s1_update_bits_is_repair_update_reg', 'system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/icache/dataArrayB0Way_6/dataArrayB0Way_0_ext/mem_0_0/ram_reg']) recur across 19/20 extracted candidates (95%) -- consistent with a shared high-fanout driver rather than independent placement issues."
+      ],
+      "diagnosis_action_adjustment": "excessive_fanout (confidence 0.80) demoted ['pblock', 'rapidwright_optimize_cell_placement']; excessive_fanout (confidence 0.80) prioritized ['fanout_split', 'replicate_register']"
+    },
+    {
+      "iter": 7,
+      "recipe": "pblock",
+      "batch_size": 1,
+      "targets": [
+        "qor_suggestions"
+      ],
+      "wns_before": -10.256,
+      "wns_after": null,
+      "fmax_before": 84.56659619450318,
+      "fmax_after": null,
+      "delta_fmax": 0.0,
+      "vivado_runtime_s": 0.21936893463134766,
+      "status": "failed",
+      "reason": "large design, 35 of 58 budget minutes elapsed (past the 50% cutoff) with 1 full re-place(s) already spent; no further full re-places this run -- refine the best result instead",
+      "error_type": "full_replace_cap_reached",
+      "checkpoint": null,
+      "rapidwright_edit_summary": null,
+      "action_failure_memory": {
+        "rapidwright_optimize_cell_placement": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_1/components_0/s1_update_bits_is_repair_update_reg",
+            "system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_0/components_4/data/data_ext/mem_0_3",
+            "system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_0/components_4/data/data_ext/mem_0_3/ram_reg_bram_0"
+          ],
+          "last_failed_iter": 2,
+          "failed_on_current_targets": false
+        },
+        "rapidwright_convert_fabric_region_to_pblock": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "qor_suggestions"
+          ],
+          "last_failed_iter": 6,
+          "failed_on_current_targets": true
+        },
+        "pblock": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "qor_suggestions"
+          ],
+          "last_failed_iter": 6,
+          "failed_on_current_targets": true
+        },
+        "rapidwright_analyze_fabric_for_pblock": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "qor_suggestions"
+          ],
+          "last_failed_iter": 6,
+          "failed_on_current_targets": true
+        },
+        "qor_suggestions": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "qor_suggestions"
+          ],
+          "last_failed_iter": 4,
+          "failed_on_current_targets": false
+        },
+        "place_design_explore": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "qor_suggestions"
+          ],
+          "last_failed_iter": 5,
+          "failed_on_current_targets": true
+        }
+      },
+      "action_failure_counts": {
+        "place_design_explore": 1,
+        "rapidwright_optimize_cell_placement": 1,
+        "rapidwright_convert_fabric_region_to_pblock": 2,
+        "pblock": 2,
+        "rapidwright_analyze_fabric_for_pblock": 2,
+        "qor_suggestions": 1
+      },
+      "delay_class": "mixed",
+      "endpoint_type": "BRAM_CONTROL",
+      "allowed_actions": [
+        "rapidwright_optimize_cell_placement",
+        "pblock",
+        "pblock_full_replace",
+        "place_design_explore"
+      ],
+      "forbidden_actions": [
+        "logic_restructure"
+      ],
+      "action_guidance": {
+        "pblock_full_replace": "this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won; large design, 35 of 58 budget minutes elapsed (past the 50% cutoff) with 1 full re-place(s) already spent; no further full re-places this run -- refine the best result instead; costs ~26 min, 23 min remain -- pick a refinement that fits",
+        "place_design_explore": "this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won; large design, 35 of 58 budget minutes elapsed (past the 50% cutoff) with 1 full re-place(s) already spent; no further full re-places this run -- refine the best result instead; costs ~26 min, 23 min remain -- pick a refinement that fits",
+        "pblock": "excessive_fanout (confidence 0.80) argues against this action: 3 cell(s) (['system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_0/components_4/data/data_ext/mem_0_0/ram_reg_bram_0', 'system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_1/components_0/s1_update_bits_is_repair_update_reg', 'system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/icache/dataArrayB0Way_6/dataArrayB0Way_0_ext/mem_0_0/ram_reg']) recur across 19/20 extracted candidates (95%) -- consistent with a shared high-fanout driver rather than independent placement issues.",
+        "rapidwright_optimize_cell_placement": "excessive_fanout (confidence 0.80) argues against this action: 3 cell(s) (['system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_0/components_4/data/data_ext/mem_0_0/ram_reg_bram_0', 'system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_1/components_0/s1_update_bits_is_repair_update_reg', 'system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/icache/dataArrayB0Way_6/dataArrayB0Way_0_ext/mem_0_0/ram_reg']) recur across 19/20 extracted candidates (95%) -- consistent with a shared high-fanout driver rather than independent placement issues."
+      },
+      "congestion_level": 1,
+      "cluster_clock_regions": [],
+      "llm_chosen_action": "pblock_full_replace",
+      "structural_override_active": true,
+      "stuck_iterations": 5,
+      "consecutive_no_improvement": 5,
+      "exhausted_actions": [],
+      "validation_result": "ok",
+      "reprompt_count": 0,
+      "why_not_top_forbidden_action": "rapidwright_optimize_cell_placement is the highest-ranked allowed action not chosen because its prior run on these exact targets produced 1531 unplaced cells and was rejected before routing.",
+      "raw_response": "{\n  \"delay_class_acknowledged\": \"mixed\",\n  \"endpoint_type_acknowledged\": \"BRAM_CONTROL\",\n  \"chosen_action\": \"pblock_full_replace\",\n  \"action_parameters\": {\n    \"target_lut_count\": 400000,\n    \"target_ff_count\": 800000,\n    \"place_directive\": \"Explore\",\n    \"route_directive\": \"Explore\"\n  },\n  \"why_this_fits_delay_class\": \"mixed delay (net_pct=0.90 on initial critical paths) to BRAM_CONTROL pins requires wholesale relocation of the high-fanout cluster because every incremental pblock/rapidwright attempt on the same targets has already failed.\",\n  \"why_not_top_forbidden_action\": \"rapidwright_optimize_cell_placement is the highest-ranked allowed action not chosen because its prior run on these exact targets produced 1531 unplaced cells and was rejected before routing.\",\n  \"confidence\": 3\n}",
+      "cluster_count": 2,
+      "primary_diagnosis": "excessive_fanout",
+      "diagnosis_reasoning_trace": [
+        "normalized 20 timing-path candidate(s) from current_target_candidates",
+        "clustered into 2 cluster(s) via shared start/end cell name",
+        "primary cluster 'cluster_0' contains the current worst path (19 member(s), 1 cell(s) shared across all members)",
+        "outcome history: long_interconnect's own prescriptions scored 0 win(s) / 1 loss(es) this run -> confidence -0.08",
+        "scored hypotheses: excessive_fanout=0.80, placement_already_compact=0.50, long_interconnect=0.42, localized_congestion=0.30",
+        "primary hypothesis: excessive_fanout (confidence 0.80)",
+        "  + 3 cell(s) (['system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_0/components_4/data/data_ext/mem_0_0/ram_reg_bram_0', 'system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_1/components_0/s1_update_bits_is_repair_update_reg', 'system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/icache/dataArrayB0Way_6/dataArrayB0Way_0_ext/mem_0_0/ram_reg']) recur across 19/20 extracted candidates (95%) -- consistent with a shared high-fanout driver rather than independent placement issues."
+      ],
+      "diagnosis_action_adjustment": "excessive_fanout (confidence 0.80) demoted ['pblock', 'rapidwright_optimize_cell_placement']; excessive_fanout (confidence 0.80) prioritized ['fanout_split', 'replicate_register']"
+    },
+    {
+      "iter": 8,
+      "recipe": "pblock",
+      "batch_size": 1,
+      "targets": [
+        "qor_suggestions"
+      ],
+      "wns_before": -10.256,
+      "wns_after": null,
+      "fmax_before": 84.56659619450318,
+      "fmax_after": null,
+      "delta_fmax": 0.0,
+      "vivado_runtime_s": 0.2216966152191162,
+      "status": "failed",
+      "reason": "large design, 35 of 58 budget minutes elapsed (past the 50% cutoff) with 1 full re-place(s) already spent; no further full re-places this run -- refine the best result instead",
+      "error_type": "full_replace_cap_reached",
+      "checkpoint": null,
+      "rapidwright_edit_summary": null,
+      "action_failure_memory": {
+        "rapidwright_optimize_cell_placement": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_1/components_0/s1_update_bits_is_repair_update_reg",
+            "system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_0/components_4/data/data_ext/mem_0_3",
+            "system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_0/components_4/data/data_ext/mem_0_3/ram_reg_bram_0"
+          ],
+          "last_failed_iter": 2,
+          "failed_on_current_targets": false
+        },
+        "rapidwright_convert_fabric_region_to_pblock": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "qor_suggestions"
+          ],
+          "last_failed_iter": 6,
+          "failed_on_current_targets": true
+        },
+        "pblock": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "qor_suggestions"
+          ],
+          "last_failed_iter": 6,
+          "failed_on_current_targets": true
+        },
+        "rapidwright_analyze_fabric_for_pblock": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "qor_suggestions"
+          ],
+          "last_failed_iter": 6,
+          "failed_on_current_targets": true
+        },
+        "qor_suggestions": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "qor_suggestions"
+          ],
+          "last_failed_iter": 4,
+          "failed_on_current_targets": false
+        },
+        "place_design_explore": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "qor_suggestions"
+          ],
+          "last_failed_iter": 5,
+          "failed_on_current_targets": true
+        },
+        "pblock_full_replace": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "qor_suggestions"
+          ],
+          "last_failed_iter": 7,
+          "failed_on_current_targets": true
+        }
+      },
+      "action_failure_counts": {
+        "place_design_explore": 1,
+        "rapidwright_optimize_cell_placement": 1,
+        "rapidwright_convert_fabric_region_to_pblock": 2,
+        "pblock": 2,
+        "rapidwright_analyze_fabric_for_pblock": 2,
+        "qor_suggestions": 1,
+        "pblock_full_replace": 1
+      },
+      "delay_class": "mixed",
+      "endpoint_type": "BRAM_CONTROL",
+      "allowed_actions": [
+        "rapidwright_optimize_cell_placement",
+        "pblock",
+        "pblock_full_replace",
+        "place_design_explore"
+      ],
+      "forbidden_actions": [
+        "logic_restructure"
+      ],
+      "action_guidance": {
+        "pblock_full_replace": "this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won; large design, 35 of 58 budget minutes elapsed (past the 50% cutoff) with 1 full re-place(s) already spent; no further full re-places this run -- refine the best result instead; costs ~26 min, 23 min remain -- pick a refinement that fits",
+        "place_design_explore": "this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won; large design, 35 of 58 budget minutes elapsed (past the 50% cutoff) with 1 full re-place(s) already spent; no further full re-places this run -- refine the best result instead; costs ~26 min, 23 min remain -- pick a refinement that fits",
+        "pblock": "excessive_fanout (confidence 0.80) argues against this action: 3 cell(s) (['system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_0/components_4/data/data_ext/mem_0_0/ram_reg_bram_0', 'system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_1/components_0/s1_update_bits_is_repair_update_reg', 'system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/icache/dataArrayB0Way_6/dataArrayB0Way_0_ext/mem_0_0/ram_reg']) recur across 19/20 extracted candidates (95%) -- consistent with a shared high-fanout driver rather than independent placement issues.",
+        "rapidwright_optimize_cell_placement": "excessive_fanout (confidence 0.80) argues against this action: 3 cell(s) (['system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_0/components_4/data/data_ext/mem_0_0/ram_reg_bram_0', 'system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_1/components_0/s1_update_bits_is_repair_update_reg', 'system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/icache/dataArrayB0Way_6/dataArrayB0Way_0_ext/mem_0_0/ram_reg']) recur across 19/20 extracted candidates (95%) -- consistent with a shared high-fanout driver rather than independent placement issues."
+      },
+      "congestion_level": 1,
+      "cluster_clock_regions": [],
+      "llm_chosen_action": "place_design_explore",
+      "structural_override_active": true,
+      "stuck_iterations": 6,
+      "consecutive_no_improvement": 6,
+      "exhausted_actions": [],
+      "validation_result": "ok",
+      "reprompt_count": 0,
+      "why_not_top_forbidden_action": "rapidwright_optimize_cell_placement is the highest-ranked allowed action not chosen because its only prior execution on these targets produced 1531 unplaced primitives and was rejected.",
+      "raw_response": "{\n  \"delay_class_acknowledged\": \"mixed\",\n  \"endpoint_type_acknowledged\": \"BRAM_CONTROL\",\n  \"chosen_action\": \"place_design_explore\",\n  \"action_parameters\": {\n    \"directive\": \"ExtraTimingOpt\",\n    \"route_directive\": \"Explore\"\n  },\n  \"why_this_fits_delay_class\": \"mixed delay class (initial net_pct 0.90) with BRAM_CONTROL endpoints and all pblock variants already exhausted on current targets, so a placement re-probe with untried directive is required to reduce net delay.\",\n  \"why_not_top_forbidden_action\": \"rapidwright_optimize_cell_placement is the highest-ranked allowed action not chosen because its only prior execution on these targets produced 1531 unplaced primitives and was rejected.\",\n  \"confidence\": 3\n}",
+      "cluster_count": 2,
+      "primary_diagnosis": "excessive_fanout",
+      "diagnosis_reasoning_trace": [
+        "normalized 20 timing-path candidate(s) from current_target_candidates",
+        "clustered into 2 cluster(s) via shared start/end cell name",
+        "primary cluster 'cluster_0' contains the current worst path (19 member(s), 1 cell(s) shared across all members)",
+        "outcome history: long_interconnect's own prescriptions scored 0 win(s) / 1 loss(es) this run -> confidence -0.08",
+        "scored hypotheses: excessive_fanout=0.80, placement_already_compact=0.50, long_interconnect=0.42, localized_congestion=0.30",
+        "primary hypothesis: excessive_fanout (confidence 0.80)",
+        "  + 3 cell(s) (['system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_0/components_4/data/data_ext/mem_0_0/ram_reg_bram_0', 'system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_1/components_0/s1_update_bits_is_repair_update_reg', 'system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/icache/dataArrayB0Way_6/dataArrayB0Way_0_ext/mem_0_0/ram_reg']) recur across 19/20 extracted candidates (95%) -- consistent with a shared high-fanout driver rather than independent placement issues."
+      ],
+      "diagnosis_action_adjustment": "excessive_fanout (confidence 0.80) demoted ['pblock', 'rapidwright_optimize_cell_placement']; excessive_fanout (confidence 0.80) prioritized ['fanout_split', 'replicate_register']"
+    },
+    {
+      "iter": 9,
+      "recipe": "rapidwright_cell_placement",
+      "batch_size": 3,
+      "targets": [
+        "system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_0/components_4/data/data_ext/mem_0_0/ram_reg_bram_0",
+        "system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_1/components_0/s1_update_bits_is_repair_update_reg",
+        "system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/icache/dataArrayB0Way_6/dataArrayB0Way_0_ext/mem_0_0/ram_reg"
+      ],
+      "wns_before": -10.256,
+      "wns_after": null,
+      "fmax_before": 84.56659619450318,
+      "fmax_after": null,
+      "delta_fmax": 0.0,
+      "vivado_runtime_s": 5.1128692626953125,
+      "status": "failed",
+      "reason": "rapidwright_optimize_cell_placement completed but moved zero cells.",
+      "error_type": "no_action_target",
+      "checkpoint": null,
+      "rapidwright_edit_summary": {
+        "action": "rapidwright_optimize_cell_placement",
+        "requested_cells": [
+          "system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_0/components_4/data/data_ext/mem_0_0/ram_reg_bram_0",
+          "system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_1/components_0/s1_update_bits_is_repair_update_reg",
+          "system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/icache/dataArrayB0Way_6/dataArrayB0Way_0_ext/mem_0_0/ram_reg"
+        ],
+        "cells_processed": 3,
+        "cells_moved": 0,
+        "moved_cells": [],
+        "nets_affected": 0,
+        "results": [
+          {
+            "cell": "system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_0/components_4/data/data_ext/mem_0_0/ram_reg_bram_0",
+            "status": "error",
+            "message": "No available site near centroid"
+          },
+          {
+            "cell": "system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_1/components_0/s1_update_bits_is_repair_update_reg",
+            "status": "error",
+            "message": "No available site near centroid"
+          },
+          {
+            "cell": "system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/icache/dataArrayB0Way_6/dataArrayB0Way_0_ext/mem_0_0/ram_reg",
+            "status": "error",
+            "message": "No available site near centroid"
+          }
+        ]
+      },
+      "action_failure_memory": {
+        "rapidwright_optimize_cell_placement": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_1/components_0/s1_update_bits_is_repair_update_reg",
+            "system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_0/components_4/data/data_ext/mem_0_3",
+            "system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_0/components_4/data/data_ext/mem_0_3/ram_reg_bram_0"
+          ],
+          "last_failed_iter": 2,
+          "failed_on_current_targets": false
+        },
+        "rapidwright_convert_fabric_region_to_pblock": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "qor_suggestions"
+          ],
+          "last_failed_iter": 6,
+          "failed_on_current_targets": true
+        },
+        "pblock": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "qor_suggestions"
+          ],
+          "last_failed_iter": 6,
+          "failed_on_current_targets": true
+        },
+        "rapidwright_analyze_fabric_for_pblock": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "qor_suggestions"
+          ],
+          "last_failed_iter": 6,
+          "failed_on_current_targets": true
+        },
+        "qor_suggestions": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "qor_suggestions"
+          ],
+          "last_failed_iter": 4,
+          "failed_on_current_targets": false
+        },
+        "place_design_explore": {
+          "consecutive_no_action_failures": 2,
+          "failed_targets": [
+            "qor_suggestions"
+          ],
+          "last_failed_iter": 8,
+          "failed_on_current_targets": true
+        },
+        "pblock_full_replace": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "qor_suggestions"
+          ],
+          "last_failed_iter": 7,
+          "failed_on_current_targets": true
+        }
+      },
+      "action_failure_counts": {
+        "place_design_explore": 2,
+        "rapidwright_optimize_cell_placement": 1,
+        "rapidwright_convert_fabric_region_to_pblock": 2,
+        "pblock": 2,
+        "rapidwright_analyze_fabric_for_pblock": 2,
+        "qor_suggestions": 1,
+        "pblock_full_replace": 1
+      },
+      "delay_class": "mixed",
+      "endpoint_type": "BRAM_CONTROL",
+      "allowed_actions": [
+        "rapidwright_optimize_cell_placement",
+        "pblock",
+        "pblock_full_replace",
+        "place_design_explore"
+      ],
+      "forbidden_actions": [
+        "logic_restructure"
+      ],
+      "action_guidance": {
+        "pblock_full_replace": "this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won; large design, 35 of 58 budget minutes elapsed (past the 50% cutoff) with 1 full re-place(s) already spent; no further full re-places this run -- refine the best result instead; costs ~26 min, 23 min remain -- pick a refinement that fits",
+        "place_design_explore": "this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won; large design, 35 of 58 budget minutes elapsed (past the 50% cutoff) with 1 full re-place(s) already spent; no further full re-places this run -- refine the best result instead; costs ~26 min, 23 min remain -- pick a refinement that fits",
+        "pblock": "excessive_fanout (confidence 0.80) argues against this action: 3 cell(s) (['system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_0/components_4/data/data_ext/mem_0_0/ram_reg_bram_0', 'system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_1/components_0/s1_update_bits_is_repair_update_reg', 'system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/icache/dataArrayB0Way_6/dataArrayB0Way_0_ext/mem_0_0/ram_reg']) recur across 19/20 extracted candidates (95%) -- consistent with a shared high-fanout driver rather than independent placement issues.",
+        "rapidwright_optimize_cell_placement": "excessive_fanout (confidence 0.80) argues against this action: 3 cell(s) (['system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_0/components_4/data/data_ext/mem_0_0/ram_reg_bram_0', 'system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_1/components_0/s1_update_bits_is_repair_update_reg', 'system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/icache/dataArrayB0Way_6/dataArrayB0Way_0_ext/mem_0_0/ram_reg']) recur across 19/20 extracted candidates (95%) -- consistent with a shared high-fanout driver rather than independent placement issues."
+      },
+      "congestion_level": 1,
+      "cluster_clock_regions": [],
+      "llm_chosen_action": "rapidwright_optimize_cell_placement",
+      "structural_override_active": true,
+      "stuck_iterations": 7,
+      "consecutive_no_improvement": 7,
+      "exhausted_actions": [],
+      "validation_result": "ok",
+      "reprompt_count": 0,
+      "why_not_top_forbidden_action": "pblock is the next highest-ranked allowed action not chosen because its two prior attempts on these targets failed with BRAM over-utilization (464%) or FIFO shortages.",
+      "raw_response": "{\n  \"delay_class_acknowledged\": \"mixed\",\n  \"endpoint_type_acknowledged\": \"BRAM_CONTROL\",\n  \"chosen_action\": \"rapidwright_optimize_cell_placement\",\n  \"action_parameters\": {\n    \"cell_names\": [\n      \"system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_0/components_4/data/data_ext/mem_0_0/ram_reg_bram_0\",\n      \"system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_1/components_0/s1_update_bits_is_repair_update_reg\",\n      \"system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/icache/dataArrayB0Way_6/dataArrayB0Way_0_ext/mem_0_0/ram_reg\"\n    ],\n    \"max_candidates\": 20,\n    \"num_paths\": 10,\n    \"detour_threshold\": 1.8\n  },\n  \"why_this_fits_delay_class\": \"mixed delay with net_pct 0.90 on BRAM_CONTROL paths requires targeted cell movement on the recurring high-fanout cells that placement directives could not resolve.\",\n  \"why_not_top_forbidden_action\": \"pblock is the next highest-ranked allowed action not chosen because its two prior attempts on these targets failed with BRAM over-utilization (464%) or FIFO shortages.\",\n  \"confidence\": 3\n}",
+      "cluster_count": 2,
+      "primary_diagnosis": "excessive_fanout",
+      "diagnosis_reasoning_trace": [
+        "normalized 20 timing-path candidate(s) from current_target_candidates",
+        "clustered into 2 cluster(s) via shared start/end cell name",
+        "primary cluster 'cluster_0' contains the current worst path (19 member(s), 1 cell(s) shared across all members)",
+        "outcome history: long_interconnect's own prescriptions scored 0 win(s) / 1 loss(es) this run -> confidence -0.08",
+        "scored hypotheses: excessive_fanout=0.80, placement_already_compact=0.50, long_interconnect=0.42, localized_congestion=0.30",
+        "primary hypothesis: excessive_fanout (confidence 0.80)",
+        "  + 3 cell(s) (['system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_0/components_4/data/data_ext/mem_0_0/ram_reg_bram_0', 'system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_1/components_0/s1_update_bits_is_repair_update_reg', 'system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/icache/dataArrayB0Way_6/dataArrayB0Way_0_ext/mem_0_0/ram_reg']) recur across 19/20 extracted candidates (95%) -- consistent with a shared high-fanout driver rather than independent placement issues."
+      ],
+      "diagnosis_action_adjustment": "excessive_fanout (confidence 0.80) demoted ['pblock', 'rapidwright_optimize_cell_placement']; excessive_fanout (confidence 0.80) prioritized ['fanout_split', 'replicate_register']"
+    },
+    {
+      "iter": 10,
+      "recipe": "pblock",
+      "batch_size": 3,
+      "targets": [
+        "system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_0/components_4/data/data_ext/mem_0_0/ram_reg_bram_0",
+        "system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_1/components_0/s1_update_bits_is_repair_update_reg",
+        "system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/icache/dataArrayB0Way_6/dataArrayB0Way_0_ext/mem_0_0/ram_reg"
+      ],
+      "wns_before": -10.256,
+      "wns_after": null,
+      "fmax_before": 84.56659619450318,
+      "fmax_after": null,
+      "delta_fmax": 0.0,
+      "vivado_runtime_s": 92.45525979995728,
+      "status": "failed",
+      "reason": "Rejected pblock region: projected BRAM utilization 464% exceeds the 85% congestion-safety limit (153 requested vs 33 available). Retry with a larger region or lower target_bram_count. (gave up after 4 sizing attempts and 0 overlap-avoidance attempts, starting from an estimate of 20 candidate paths)",
+      "error_type": "pblock_range_computation_failed",
+      "checkpoint": null,
+      "rapidwright_edit_summary": null,
+      "action_failure_memory": {
+        "rapidwright_optimize_cell_placement": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_0/components_4/data/data_ext/mem_0_0/ram_reg_bram_0",
+            "system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_1/components_0/s1_update_bits_is_repair_update_reg",
+            "system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/icache/dataArrayB0Way_6/dataArrayB0Way_0_ext/mem_0_0/ram_reg"
+          ],
+          "last_failed_iter": 9,
+          "failed_on_current_targets": false
+        },
+        "rapidwright_convert_fabric_region_to_pblock": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "qor_suggestions"
+          ],
+          "last_failed_iter": 6,
+          "failed_on_current_targets": false
+        },
+        "pblock": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "qor_suggestions"
+          ],
+          "last_failed_iter": 6,
+          "failed_on_current_targets": false
+        },
+        "rapidwright_analyze_fabric_for_pblock": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "qor_suggestions"
+          ],
+          "last_failed_iter": 6,
+          "failed_on_current_targets": false
+        },
+        "qor_suggestions": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "qor_suggestions"
+          ],
+          "last_failed_iter": 4,
+          "failed_on_current_targets": true
+        },
+        "place_design_explore": {
+          "consecutive_no_action_failures": 2,
+          "failed_targets": [
+            "qor_suggestions"
+          ],
+          "last_failed_iter": 8,
+          "failed_on_current_targets": false
+        },
+        "pblock_full_replace": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "qor_suggestions"
+          ],
+          "last_failed_iter": 7,
+          "failed_on_current_targets": false
+        }
+      },
+      "action_failure_counts": {
+        "place_design_explore": 2,
+        "rapidwright_optimize_cell_placement": 2,
+        "rapidwright_convert_fabric_region_to_pblock": 2,
+        "pblock": 2,
+        "rapidwright_analyze_fabric_for_pblock": 2,
+        "qor_suggestions": 1,
+        "pblock_full_replace": 1
+      },
+      "delay_class": "net_delay_bound",
+      "endpoint_type": "BRAM_CONTROL",
+      "allowed_actions": [
+        "pblock_full_replace",
+        "place_design_explore",
+        "pblock",
+        "rapidwright_optimize_cell_placement"
+      ],
+      "forbidden_actions": [
+        "logic_restructure"
+      ],
+      "action_guidance": {
+        "fanout_split": "delay class is net_delay_bound (net_pct=0.71292); logic-side changes rarely fix routing-bound paths; endpoint is a BRAM_CONTROL pin; routing to a hard-block control pin needs physical proximity, not net splitting",
+        "lut_opt": "delay class is net_delay_bound (net_pct=0.71292); logic-side changes rarely fix routing-bound paths",
+        "replicate_register": "WNS -10.256 ns is below -0.500 ns; incremental phys_opt cannot close that gap while structural actions remain",
+        "phys_opt_design": "WNS -10.256 ns is below -0.500 ns; incremental phys_opt cannot close that gap while structural actions remain",
+        "phys_opt_design_retime": "WNS -10.256 ns is below -0.500 ns; incremental phys_opt cannot close that gap while structural actions remain",
+        "pblock_full_replace": "this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won; large design, 37 of 58 budget minutes elapsed (past the 50% cutoff) with 1 full re-place(s) already spent; no further full re-places this run -- refine the best result instead; costs ~26 min, 22 min remain -- pick a refinement that fits",
+        "place_design_explore": "this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won; large design, 37 of 58 budget minutes elapsed (past the 50% cutoff) with 1 full re-place(s) already spent; no further full re-places this run -- refine the best result instead; costs ~26 min, 22 min remain -- pick a refinement that fits"
+      },
+      "congestion_level": 1,
+      "cluster_clock_regions": [
+        "X4Y1",
+        "X4Y2",
+        "X5Y1",
+        "X5Y4"
+      ],
+      "llm_chosen_action": "pblock",
+      "structural_override_active": true,
+      "stuck_iterations": 8,
+      "consecutive_no_improvement": 8,
+      "exhausted_actions": [],
+      "validation_result": "ok",
+      "reprompt_count": 0,
+      "why_not_top_forbidden_action": "pblock_full_replace is the highest-ranked allowed action not chosen because the run has already spent its one full-replace attempt and any new whole-design placement would discard the measured best result.",
+      "raw_response": "{\n  \"delay_class_acknowledged\": \"net_delay_bound\",\n  \"endpoint_type_acknowledged\": \"BRAM_CONTROL\",\n  \"chosen_action\": \"pblock\",\n  \"action_parameters\": {\n    \"target_lut_count\": 2500,\n    \"target_ff_count\": 3000,\n    \"use_clock_regions\": true\n  },\n  \"why_this_fits_delay_class\": \"net_delay_bound (net_pct=0.71292) with avg_tile_spread 302 and 4 clock-region crossings on BRAM_CONTROL paths needs a clustered pblock to reduce physical distance.\",\n  \"why_not_top_forbidden_action\": \"pblock_full_replace is the highest-ranked allowed action not chosen because the run has already spent its one full-replace attempt and any new whole-design placement would discard the measured best result.\",\n  \"confidence\": 3\n}",
+      "cluster_count": 2,
+      "primary_diagnosis": "long_interconnect",
+      "diagnosis_reasoning_trace": [
+        "normalized 20 timing-path candidate(s) from current_target_candidates",
+        "clustered into 2 cluster(s) via shared start/end cell name",
+        "primary cluster 'cluster_0' contains the current worst path (19 member(s), 1 cell(s) shared across all members)",
+        "outcome history: long_interconnect's own prescriptions scored 0 win(s) / 1 loss(es) this run -> confidence -0.08",
+        "scored hypotheses: long_interconnect=0.82, excessive_fanout=0.80, placement_already_compact=0.25, localized_congestion=0.10",
+        "primary hypothesis: long_interconnect (confidence 0.82)",
+        "  + avg spread 178.0 tiles exceeds 30 on a net-delay-bound cluster (71% net delay) -- cells are genuinely far apart, not just congested.",
+        "  + cluster cells span 4 clock regions (['X4Y1', 'X4Y2', 'X5Y1', 'X5Y4']) -- crossings confirm real physical distance.",
+        "  - outcome history: long_interconnect's own prescriptions scored 0 win(s) / 1 loss(es) this run -> confidence -0.08"
+      ],
+      "diagnosis_action_adjustment": "long_interconnect (confidence 0.82) prioritized ['rapidwright_optimize_cell_placement']"
+    },
+    {
+      "iter": 11,
+      "recipe": "route_explore",
+      "batch_size": 1,
+      "targets": [
+        "directive:AggressiveExplore"
+      ],
+      "wns_before": -10.256,
+      "wns_after": null,
+      "fmax_before": 84.56659619450318,
+      "fmax_after": null,
+      "delta_fmax": 0.0,
+      "vivado_runtime_s": 1261.6507263183594,
+      "status": "failed",
+      "reason": "route_design -directive AggressiveExplore failed: Error: Command timed out. Vivado may be stuck. Use restart_vivado to recover.",
+      "error_type": "route_explore_failed",
+      "checkpoint": null,
+      "rapidwright_edit_summary": null,
+      "action_failure_memory": {
+        "rapidwright_optimize_cell_placement": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_0/components_4/data/data_ext/mem_0_0/ram_reg_bram_0",
+            "system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_1/components_0/s1_update_bits_is_repair_update_reg",
+            "system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/icache/dataArrayB0Way_6/dataArrayB0Way_0_ext/mem_0_0/ram_reg"
+          ],
+          "last_failed_iter": 9,
+          "failed_on_current_targets": false
+        },
+        "rapidwright_convert_fabric_region_to_pblock": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_0/components_4/data/data_ext/mem_0_0/ram_reg_bram_0",
+            "system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_1/components_0/s1_update_bits_is_repair_update_reg",
+            "system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/icache/dataArrayB0Way_6/dataArrayB0Way_0_ext/mem_0_0/ram_reg"
+          ],
+          "last_failed_iter": 10,
+          "failed_on_current_targets": true
+        },
+        "pblock": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_0/components_4/data/data_ext/mem_0_0/ram_reg_bram_0",
+            "system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_1/components_0/s1_update_bits_is_repair_update_reg",
+            "system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/icache/dataArrayB0Way_6/dataArrayB0Way_0_ext/mem_0_0/ram_reg"
+          ],
+          "last_failed_iter": 10,
+          "failed_on_current_targets": true
+        },
+        "rapidwright_analyze_fabric_for_pblock": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_0/components_4/data/data_ext/mem_0_0/ram_reg_bram_0",
+            "system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/bpd/banked_predictors_1/components_0/s1_update_bits_is_repair_update_reg",
+            "system/tile_prci_domain/tile_reset_domain_boom_tile/frontend/icache/dataArrayB0Way_6/dataArrayB0Way_0_ext/mem_0_0/ram_reg"
+          ],
+          "last_failed_iter": 10,
+          "failed_on_current_targets": true
+        },
+        "qor_suggestions": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "qor_suggestions"
+          ],
+          "last_failed_iter": 4,
+          "failed_on_current_targets": true
+        },
+        "place_design_explore": {
+          "consecutive_no_action_failures": 2,
+          "failed_targets": [
+            "qor_suggestions"
+          ],
+          "last_failed_iter": 8,
+          "failed_on_current_targets": false
+        },
+        "pblock_full_replace": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "qor_suggestions"
+          ],
+          "last_failed_iter": 7,
+          "failed_on_current_targets": false
+        }
+      },
+      "action_failure_counts": {
+        "place_design_explore": 2,
+        "rapidwright_optimize_cell_placement": 2,
+        "rapidwright_convert_fabric_region_to_pblock": 3,
+        "pblock": 3,
+        "rapidwright_analyze_fabric_for_pblock": 3,
+        "qor_suggestions": 1,
+        "pblock_full_replace": 1
+      },
+      "delay_class": "net_delay_bound",
+      "endpoint_type": "BRAM_CONTROL",
+      "allowed_actions": [
+        "rapidwright_optimize_cell_placement",
+        "qor_suggestions",
+        "route_explore",
+        "run_recipe",
+        "lut_opt",
+        "fanout_split",
+        "replicate_register",
+        "phys_opt_design",
+        "phys_opt_design_retime",
+        "place_design_explore",
+        "pblock_full_replace"
+      ],
+      "forbidden_actions": [
+        "logic_restructure"
+      ],
+      "action_guidance": {
+        "fanout_split": "delay class is net_delay_bound (net_pct=0.71292); logic-side changes rarely fix routing-bound paths; endpoint is a BRAM_CONTROL pin; routing to a hard-block control pin needs physical proximity, not net splitting",
+        "lut_opt": "delay class is net_delay_bound (net_pct=0.71292); logic-side changes rarely fix routing-bound paths",
+        "replicate_register": "WNS -10.256 ns is below -0.500 ns; incremental phys_opt cannot close that gap while structural actions remain",
+        "phys_opt_design": "WNS -10.256 ns is below -0.500 ns; incremental phys_opt cannot close that gap while structural actions remain",
+        "phys_opt_design_retime": "WNS -10.256 ns is below -0.500 ns; incremental phys_opt cannot close that gap while structural actions remain",
+        "pblock_full_replace": "this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won; large design, 37 of 58 budget minutes elapsed (past the 50% cutoff) with 1 full re-place(s) already spent; no further full re-places this run -- refine the best result instead; costs ~26 min, 21 min remain -- pick a refinement that fits",
+        "place_design_explore": "this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won; large design, 37 of 58 budget minutes elapsed (past the 50% cutoff) with 1 full re-place(s) already spent; no further full re-places this run -- refine the best result instead; costs ~26 min, 21 min remain -- pick a refinement that fits"
+      },
+      "congestion_level": 1,
+      "cluster_clock_regions": [
+        "X4Y1",
+        "X4Y2",
+        "X5Y1",
+        "X5Y4"
+      ],
+      "llm_chosen_action": "route_explore",
+      "structural_override_active": false,
+      "stuck_iterations": 9,
+      "consecutive_no_improvement": 9,
+      "exhausted_actions": [
+        "rapidwright_convert_fabric_region_to_pblock",
+        "pblock",
+        "rapidwright_analyze_fabric_for_pblock"
+      ],
+      "validation_result": "ok",
+      "reprompt_count": 0,
+      "why_not_top_forbidden_action": "rapidwright_optimize_cell_placement is the highest-ranked allowed action but was already attempted twice and returned zero cells moved on the identical target set.",
+      "raw_response": "{\n  \"delay_class_acknowledged\": \"net_delay_bound\",\n  \"endpoint_type_acknowledged\": \"BRAM_CONTROL\",\n  \"chosen_action\": \"route_explore\",\n  \"action_parameters\": {\n    \"directive\": \"AggressiveExplore\"\n  },\n  \"why_this_fits_delay_class\": \"net_delay_bound (net_pct=0.71292) on long-interconnect paths with exhausted pblock options is best addressed by routing-focused refinement rather than placement or logic changes.\",\n  \"why_not_top_forbidden_action\": \"rapidwright_optimize_cell_placement is the highest-ranked allowed action but was already attempted twice and returned zero cells moved on the identical target set.\",\n  \"confidence\": 4\n}",
+      "cluster_count": 2,
+      "primary_diagnosis": "long_interconnect",
+      "diagnosis_reasoning_trace": [
+        "normalized 20 timing-path candidate(s) from current_target_candidates",
+        "clustered into 2 cluster(s) via shared start/end cell name",
+        "primary cluster 'cluster_0' contains the current worst path (19 member(s), 1 cell(s) shared across all members)",
+        "outcome history: long_interconnect's own prescriptions scored 0 win(s) / 1 loss(es) this run -> confidence -0.08",
+        "scored hypotheses: long_interconnect=0.82, excessive_fanout=0.80, placement_already_compact=0.25, localized_congestion=0.10",
+        "primary hypothesis: long_interconnect (confidence 0.82)",
+        "  + avg spread 178.0 tiles exceeds 30 on a net-delay-bound cluster (71% net delay) -- cells are genuinely far apart, not just congested.",
+        "  + cluster cells span 4 clock regions (['X4Y1', 'X4Y2', 'X5Y1', 'X5Y4']) -- crossings confirm real physical distance.",
+        "  - outcome history: long_interconnect's own prescriptions scored 0 win(s) / 1 loss(es) this run -> confidence -0.08"
+      ],
+      "diagnosis_action_adjustment": "long_interconnect (confidence 0.82) prioritized ['rapidwright_optimize_cell_placement']"
+    }
+  ],
+  "started_at_epoch_s": 1784482975.6261282,
+  "llm_cost_usd": 0.1399588,
+  "benchmark_score": {
+    "formula": "alpha - (0.1*alpha)*beta - (0.1*alpha)*gamma",
+    "alpha_delta_fmax_mhz": 36.329656345967166,
+    "beta_openrouter_cost_usd": 0.1399588,
+    "gamma_runtime_hours": 1.0282411109076606,
+    "wall_clock_runtime_s": 3701.667999267578,
+    "score": 32.08562621530069
+  }
+}

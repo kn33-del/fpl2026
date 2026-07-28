@@ -1,0 +1,645 @@
+{
+  "input_dcp": "/home/fpl2026/fpl26_contest_benchmarks/rosetta_optical-flow_2025.1.dcp",
+  "clock_name": "clk_fpl26contest",
+  "clock_period_ns": 2.0,
+  "baseline_wns": -1.078,
+  "baseline_fmax_mhz": 324.8862897985705,
+  "best_wns": -1.013,
+  "best_fmax_mhz": 331.89512114171924,
+  "best_checkpoint": "/home/fpl2026/dcp_optimizer_run-20260721_151659/checkpoints/iter_005.dcp",
+  "current_iter": 5,
+  "stall_count": 0,
+  "cells_blacklisted": [],
+  "nets_blacklisted": [],
+  "iterations": [
+    {
+      "iter": 1,
+      "recipe": "initial",
+      "batch_size": null,
+      "targets": [],
+      "wns_before": -1.078,
+      "wns_after": null,
+      "fmax_before": 324.8862897985705,
+      "fmax_after": null,
+      "delta_fmax": 0.0,
+      "vivado_runtime_s": 84.31185150146484,
+      "status": "failed",
+      "reason": "fanout_split selected but no high-fanout nets are available; action withheld for the rest of the run.",
+      "error_type": "no_action_target",
+      "checkpoint": null,
+      "rapidwright_edit_summary": null,
+      "action_failure_memory": {},
+      "action_failure_counts": {},
+      "delay_class": "mixed",
+      "endpoint_type": "REGISTER",
+      "allowed_actions": [
+        "fanout_split",
+        "replicate_register",
+        "pblock_full_replace",
+        "place_design_explore",
+        "phys_opt_design_retime",
+        "phys_opt_design",
+        "route_explore",
+        "run_recipe",
+        "lut_opt",
+        "rapidwright_optimize_cell_placement",
+        "pblock"
+      ],
+      "forbidden_actions": [
+        "logic_restructure"
+      ],
+      "action_guidance": {
+        "rapidwright_optimize_cell_placement": "excessive_fanout (confidence 0.80) argues against this action: 1 cell(s) (['tensor_weight_y_U0/grp_tensor_weight_y_Pipeline_TENSOR_WEIGHT_Y_OUTER_TENSOR_WEIGHT_Y_INNER_fu_96/tmp_15_reg_3251_pp0_iter4_reg_reg[12]']) recur across 8/20 extracted candidates (40%) -- consistent with a shared high-fanout driver rather than independent placement issues.",
+        "pblock": "excessive_fanout (confidence 0.80) argues against this action: 1 cell(s) (['tensor_weight_y_U0/grp_tensor_weight_y_Pipeline_TENSOR_WEIGHT_Y_OUTER_TENSOR_WEIGHT_Y_INNER_fu_96/tmp_15_reg_3251_pp0_iter4_reg_reg[12]']) recur across 8/20 extracted candidates (40%) -- consistent with a shared high-fanout driver rather than independent placement issues."
+      },
+      "congestion_level": null,
+      "cluster_clock_regions": [
+        "X2Y2"
+      ],
+      "llm_chosen_action": "fanout_split",
+      "structural_override_active": false,
+      "stuck_iterations": 0,
+      "consecutive_no_improvement": 0,
+      "exhausted_actions": [],
+      "validation_result": "ok",
+      "reprompt_count": 0,
+      "why_not_top_forbidden_action": "replicate_register is second in allowed_actions; fanout_split is the higher-ranked action matching the excessive_fanout diagnosis.",
+      "raw_response": "{\n  \"delay_class_acknowledged\": \"mixed\",\n  \"endpoint_type_acknowledged\": \"REGISTER\",\n  \"chosen_action\": \"fanout_split\",\n  \"action_parameters\": {},\n  \"why_this_fits_delay_class\": \"Mixed delay (net_pct=0.519) but primary diagnosis of excessive_fanout plus top-ranked prior both select fanout_split first.\",\n  \"why_not_top_forbidden_action\": \"replicate_register is second in allowed_actions; fanout_split is the higher-ranked action matching the excessive_fanout diagnosis.\",\n  \"confidence\": 4\n}",
+      "cluster_count": 4,
+      "primary_diagnosis": "excessive_fanout",
+      "diagnosis_reasoning_trace": [
+        "normalized 20 timing-path candidate(s) from current_target_candidates",
+        "clustered into 4 cluster(s) via shared start/end cell name",
+        "primary cluster 'cluster_0' contains the current worst path (8 member(s), 1 cell(s) shared across all members)",
+        "scored hypotheses: excessive_fanout=0.80, localized_congestion=0.50, placement_already_compact=0.45, long_interconnect=0.25",
+        "primary hypothesis: excessive_fanout (confidence 0.80)",
+        "  + 1 cell(s) (['tensor_weight_y_U0/grp_tensor_weight_y_Pipeline_TENSOR_WEIGHT_Y_OUTER_TENSOR_WEIGHT_Y_INNER_fu_96/tmp_15_reg_3251_pp0_iter4_reg_reg[12]']) recur across 8/20 extracted candidates (40%) -- consistent with a shared high-fanout driver rather than independent placement issues."
+      ],
+      "diagnosis_action_adjustment": "excessive_fanout (confidence 0.80) demoted ['rapidwright_optimize_cell_placement', 'pblock']; excessive_fanout (confidence 0.80) prioritized ['fanout_split', 'replicate_register']"
+    },
+    {
+      "iter": 2,
+      "recipe": "rapidwright_cell_placement",
+      "batch_size": 10,
+      "targets": [
+        "tensor_weight_y_U0/grp_tensor_weight_y_Pipeline_TENSOR_WEIGHT_Y_OUTER_TENSOR_WEIGHT_Y_INNER_fu_96/tmp_15_reg_3251_pp0_iter4_reg_reg[12]",
+        "tensor_weight_y_U0/grp_tensor_weight_y_Pipeline_TENSOR_WEIGHT_Y_OUTER_TENSOR_WEIGHT_Y_INNER_fu_96",
+        "tensor_weight_y_U0/grp_tensor_weight_y_Pipeline_TENSOR_WEIGHT_Y_OUTER_TENSOR_WEIGHT_Y_INNER_fu_96/tmp_31_reg_3485_reg[30]",
+        "tensor_weight_y_U0/grp_tensor_weight_y_Pipeline_TENSOR_WEIGHT_Y_OUTER_TENSOR_WEIGHT_Y_INNER_fu_96/tmp_31_reg_3485_reg[28]",
+        "gradient_weight_y_U0/grp_gradient_weight_y_Pipeline_GRAD_WEIGHT_Y_OUTER_GRAD_WEIGHT_Y_INNER_fu_140/add_ln210_8_reg_3490_reg[12]",
+        "gradient_weight_y_U0/grp_gradient_weight_y_Pipeline_GRAD_WEIGHT_Y_OUTER_GRAD_WEIGHT_Y_INNER_fu_140/tmp_347_reg_3565_reg[30]",
+        "tensor_weight_y_U0/grp_tensor_weight_y_Pipeline_TENSOR_WEIGHT_Y_OUTER_TENSOR_WEIGHT_Y_INNER_fu_96/tmp_31_reg_3485_reg[29]",
+        "gradient_weight_y_U0/grp_gradient_weight_y_Pipeline_GRAD_WEIGHT_Y_OUTER_GRAD_WEIGHT_Y_INNER_fu_140/tmp_347_reg_3565_reg[29]",
+        "tensor_weight_y_U0/grp_tensor_weight_y_Pipeline_TENSOR_WEIGHT_Y_OUTER_TENSOR_WEIGHT_Y_INNER_fu_96/tmp_31_reg_3485_reg[31]",
+        "gradient_weight_y_U0/grp_gradient_weight_y_Pipeline_GRAD_WEIGHT_Y_OUTER_GRAD_WEIGHT_Y_INNER_fu_140/tmp_347_reg_3565_reg[25]"
+      ],
+      "wns_before": -1.078,
+      "wns_after": null,
+      "fmax_before": 324.8862897985705,
+      "fmax_after": null,
+      "delta_fmax": 0.0,
+      "vivado_runtime_s": 17.541338205337524,
+      "status": "failed",
+      "reason": "rapidwright_optimize_cell_placement produced a candidate with 699 unplaced primitive cell(s) (tolerance 368); refusing to route or measure it.",
+      "error_type": "invalid_design_state",
+      "checkpoint": null,
+      "rapidwright_edit_summary": {
+        "action": "rapidwright_optimize_cell_placement",
+        "requested_cells": [
+          "tensor_weight_y_U0/grp_tensor_weight_y_Pipeline_TENSOR_WEIGHT_Y_OUTER_TENSOR_WEIGHT_Y_INNER_fu_96/tmp_15_reg_3251_pp0_iter4_reg_reg[12]",
+          "tensor_weight_y_U0/grp_tensor_weight_y_Pipeline_TENSOR_WEIGHT_Y_OUTER_TENSOR_WEIGHT_Y_INNER_fu_96",
+          "tensor_weight_y_U0/grp_tensor_weight_y_Pipeline_TENSOR_WEIGHT_Y_OUTER_TENSOR_WEIGHT_Y_INNER_fu_96/tmp_31_reg_3485_reg[30]",
+          "tensor_weight_y_U0/grp_tensor_weight_y_Pipeline_TENSOR_WEIGHT_Y_OUTER_TENSOR_WEIGHT_Y_INNER_fu_96/tmp_31_reg_3485_reg[28]",
+          "gradient_weight_y_U0/grp_gradient_weight_y_Pipeline_GRAD_WEIGHT_Y_OUTER_GRAD_WEIGHT_Y_INNER_fu_140/add_ln210_8_reg_3490_reg[12]",
+          "gradient_weight_y_U0/grp_gradient_weight_y_Pipeline_GRAD_WEIGHT_Y_OUTER_GRAD_WEIGHT_Y_INNER_fu_140/tmp_347_reg_3565_reg[30]",
+          "tensor_weight_y_U0/grp_tensor_weight_y_Pipeline_TENSOR_WEIGHT_Y_OUTER_TENSOR_WEIGHT_Y_INNER_fu_96/tmp_31_reg_3485_reg[29]",
+          "gradient_weight_y_U0/grp_gradient_weight_y_Pipeline_GRAD_WEIGHT_Y_OUTER_GRAD_WEIGHT_Y_INNER_fu_140/tmp_347_reg_3565_reg[29]",
+          "tensor_weight_y_U0/grp_tensor_weight_y_Pipeline_TENSOR_WEIGHT_Y_OUTER_TENSOR_WEIGHT_Y_INNER_fu_96/tmp_31_reg_3485_reg[31]",
+          "gradient_weight_y_U0/grp_gradient_weight_y_Pipeline_GRAD_WEIGHT_Y_OUTER_GRAD_WEIGHT_Y_INNER_fu_140/tmp_347_reg_3565_reg[25]"
+        ],
+        "cells_processed": 10,
+        "cells_moved": 4,
+        "moved_cells": [
+          "gradient_weight_y_U0/grp_gradient_weight_y_Pipeline_GRAD_WEIGHT_Y_OUTER_GRAD_WEIGHT_Y_INNER_fu_140/add_ln210_8_reg_3490_reg[12]",
+          "gradient_weight_y_U0/grp_gradient_weight_y_Pipeline_GRAD_WEIGHT_Y_OUTER_GRAD_WEIGHT_Y_INNER_fu_140/tmp_347_reg_3565_reg[30]",
+          "gradient_weight_y_U0/grp_gradient_weight_y_Pipeline_GRAD_WEIGHT_Y_OUTER_GRAD_WEIGHT_Y_INNER_fu_140/tmp_347_reg_3565_reg[29]",
+          "gradient_weight_y_U0/grp_gradient_weight_y_Pipeline_GRAD_WEIGHT_Y_OUTER_GRAD_WEIGHT_Y_INNER_fu_140/tmp_347_reg_3565_reg[25]"
+        ],
+        "nets_affected": 8,
+        "results": [
+          {
+            "cell": "tensor_weight_y_U0/grp_tensor_weight_y_Pipeline_TENSOR_WEIGHT_Y_OUTER_TENSOR_WEIGHT_Y_INNER_fu_96/tmp_15_reg_3251_pp0_iter4_reg_reg[12]",
+            "status": "error",
+            "message": "No available site near centroid"
+          },
+          {
+            "cell": "tensor_weight_y_U0/grp_tensor_weight_y_Pipeline_TENSOR_WEIGHT_Y_OUTER_TENSOR_WEIGHT_Y_INNER_fu_96",
+            "status": "error",
+            "message": "Cell 'tensor_weight_y_U0/grp_tensor_weight_y_Pipeline_TENSOR_WEIGHT_Y_OUTER_TENSOR_WEIGHT_Y_INNER_fu_96' not found"
+          },
+          {
+            "cell": "tensor_weight_y_U0/grp_tensor_weight_y_Pipeline_TENSOR_WEIGHT_Y_OUTER_TENSOR_WEIGHT_Y_INNER_fu_96/tmp_31_reg_3485_reg[30]",
+            "status": "error",
+            "message": "No available site near centroid"
+          },
+          {
+            "cell": "tensor_weight_y_U0/grp_tensor_weight_y_Pipeline_TENSOR_WEIGHT_Y_OUTER_TENSOR_WEIGHT_Y_INNER_fu_96/tmp_31_reg_3485_reg[28]",
+            "status": "error",
+            "message": "No available site near centroid"
+          },
+          {
+            "cell": "gradient_weight_y_U0/grp_gradient_weight_y_Pipeline_GRAD_WEIGHT_Y_OUTER_GRAD_WEIGHT_Y_INNER_fu_140/add_ln210_8_reg_3490_reg[12]",
+            "status": "success",
+            "old_site": "SLICE_X64Y70",
+            "new_site": "SLICE_X71Y77",
+            "distance_moved": 11,
+            "affected_nets": 2,
+            "message": "Moved from SLICE_X64Y70 to SLICE_X71Y77"
+          },
+          {
+            "cell": "gradient_weight_y_U0/grp_gradient_weight_y_Pipeline_GRAD_WEIGHT_Y_OUTER_GRAD_WEIGHT_Y_INNER_fu_140/tmp_347_reg_3565_reg[30]",
+            "status": "success",
+            "old_site": "SLICE_X61Y74",
+            "new_site": "SLICE_X70Y77",
+            "distance_moved": 9,
+            "affected_nets": 2,
+            "message": "Moved from SLICE_X61Y74 to SLICE_X70Y77"
+          },
+          {
+            "cell": "tensor_weight_y_U0/grp_tensor_weight_y_Pipeline_TENSOR_WEIGHT_Y_OUTER_TENSOR_WEIGHT_Y_INNER_fu_96/tmp_31_reg_3485_reg[29]",
+            "status": "error",
+            "message": "No available site near centroid"
+          },
+          {
+            "cell": "gradient_weight_y_U0/grp_gradient_weight_y_Pipeline_GRAD_WEIGHT_Y_OUTER_GRAD_WEIGHT_Y_INNER_fu_140/tmp_347_reg_3565_reg[29]",
+            "status": "success",
+            "old_site": "SLICE_X61Y74",
+            "new_site": "SLICE_X70Y76",
+            "distance_moved": 8,
+            "affected_nets": 2,
+            "message": "Moved from SLICE_X61Y74 to SLICE_X70Y76"
+          },
+          {
+            "cell": "tensor_weight_y_U0/grp_tensor_weight_y_Pipeline_TENSOR_WEIGHT_Y_OUTER_TENSOR_WEIGHT_Y_INNER_fu_96/tmp_31_reg_3485_reg[31]",
+            "status": "error",
+            "message": "No available site near centroid"
+          },
+          {
+            "cell": "gradient_weight_y_U0/grp_gradient_weight_y_Pipeline_GRAD_WEIGHT_Y_OUTER_GRAD_WEIGHT_Y_INNER_fu_140/tmp_347_reg_3565_reg[25]",
+            "status": "success",
+            "old_site": "SLICE_X61Y73",
+            "new_site": "SLICE_X71Y76",
+            "distance_moved": 9,
+            "affected_nets": 2,
+            "message": "Moved from SLICE_X61Y73 to SLICE_X71Y76"
+          }
+        ]
+      },
+      "action_failure_memory": {
+        "fanout_split": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [],
+          "last_failed_iter": 1,
+          "failed_on_current_targets": true
+        }
+      },
+      "action_failure_counts": {
+        "fanout_split": 1
+      },
+      "delay_class": "mixed",
+      "endpoint_type": "REGISTER",
+      "allowed_actions": [
+        "rapidwright_optimize_cell_placement",
+        "pblock",
+        "pblock_full_replace",
+        "place_design_explore",
+        "phys_opt_design_retime",
+        "phys_opt_design",
+        "route_explore",
+        "run_recipe",
+        "replicate_register",
+        "lut_opt"
+      ],
+      "forbidden_actions": [
+        "logic_restructure"
+      ],
+      "action_guidance": {},
+      "congestion_level": null,
+      "cluster_clock_regions": [
+        "X2Y2"
+      ],
+      "llm_chosen_action": "rapidwright_optimize_cell_placement",
+      "structural_override_active": false,
+      "stuck_iterations": 1,
+      "consecutive_no_improvement": 1,
+      "exhausted_actions": [
+        "fanout_split"
+      ],
+      "validation_result": "ok",
+      "reprompt_count": 0,
+      "why_not_top_forbidden_action": "pblock is second-ranked but more disruptive; rapidwright_optimize_cell_placement is the precise top-ranked move targeting shared cells on critical paths.",
+      "raw_response": "{\n  \"delay_class_acknowledged\": \"mixed\",\n  \"endpoint_type_acknowledged\": \"REGISTER\",\n  \"chosen_action\": \"rapidwright_optimize_cell_placement\",\n  \"action_parameters\": {},\n  \"why_this_fits_delay_class\": \"net_pct=0.519 indicates placement/routing issues best addressed by cell movement before logic changes.\",\n  \"why_not_top_forbidden_action\": \"pblock is second-ranked but more disruptive; rapidwright_optimize_cell_placement is the precise top-ranked move targeting shared cells on critical paths.\",\n  \"confidence\": 4\n}",
+      "cluster_count": 4,
+      "primary_diagnosis": "excessive_fanout",
+      "diagnosis_reasoning_trace": [
+        "normalized 20 timing-path candidate(s) from current_target_candidates",
+        "clustered into 4 cluster(s) via shared start/end cell name",
+        "primary cluster 'cluster_0' contains the current worst path (8 member(s), 1 cell(s) shared across all members)",
+        "outcome history: excessive_fanout's own prescriptions scored 0 win(s) / 1 loss(es) this run -> confidence -0.08",
+        "scored hypotheses: excessive_fanout=0.72, localized_congestion=0.50, placement_already_compact=0.45, long_interconnect=0.25",
+        "primary hypothesis: excessive_fanout (confidence 0.72)",
+        "  + 1 cell(s) (['tensor_weight_y_U0/grp_tensor_weight_y_Pipeline_TENSOR_WEIGHT_Y_OUTER_TENSOR_WEIGHT_Y_INNER_fu_96/tmp_15_reg_3251_pp0_iter4_reg_reg[12]']) recur across 8/20 extracted candidates (40%) -- consistent with a shared high-fanout driver rather than independent placement issues.",
+        "  - outcome history: excessive_fanout's own prescriptions scored 0 win(s) / 1 loss(es) this run -> confidence -0.08"
+      ],
+      "diagnosis_action_adjustment": null
+    },
+    {
+      "iter": 3,
+      "recipe": "pblock",
+      "batch_size": 1,
+      "targets": [
+        "pblock_net_delay_003",
+        "SLICE_X73Y115:SLICE_X81Y167 DSP48E2_X9Y46:DSP48E2_X9Y67"
+      ],
+      "wns_before": -1.078,
+      "wns_after": -1.078,
+      "fmax_before": 324.8862897985705,
+      "fmax_after": 324.8862897985705,
+      "delta_fmax": 0.0,
+      "vivado_runtime_s": 99.1219310760498,
+      "status": "no_improvement",
+      "checkpoint": "/home/fpl2026/dcp_optimizer_run-20260721_151659/checkpoints/iter_003.dcp",
+      "target_tier": "tier1_violating_paths",
+      "target_candidate_count": 20,
+      "path_delay_classification": "mixed",
+      "path_delay_breakdown": {
+        "logic_pct": 0.48103,
+        "net_pct": 0.5189699999999999,
+        "logic_delay_ns": 1.471,
+        "net_delay_ns": 1.587
+      },
+      "clock_period_ns": 2.0,
+      "achieved_fmax_mhz": 324.8862897985705,
+      "no_improvement_count": 3,
+      "consecutive_no_improvement": 2,
+      "action_failure_memory": {
+        "fanout_split": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [],
+          "last_failed_iter": 1,
+          "failed_on_current_targets": true
+        },
+        "rapidwright_optimize_cell_placement": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "tensor_weight_y_U0/grp_tensor_weight_y_Pipeline_TENSOR_WEIGHT_Y_OUTER_TENSOR_WEIGHT_Y_INNER_fu_96/tmp_15_reg_3251_pp0_iter4_reg_reg[12]",
+            "tensor_weight_y_U0/grp_tensor_weight_y_Pipeline_TENSOR_WEIGHT_Y_OUTER_TENSOR_WEIGHT_Y_INNER_fu_96",
+            "tensor_weight_y_U0/grp_tensor_weight_y_Pipeline_TENSOR_WEIGHT_Y_OUTER_TENSOR_WEIGHT_Y_INNER_fu_96/tmp_31_reg_3485_reg[30]"
+          ],
+          "last_failed_iter": 2,
+          "failed_on_current_targets": true
+        }
+      },
+      "action_failure_counts": {
+        "fanout_split": 1,
+        "rapidwright_optimize_cell_placement": 1
+      },
+      "delay_class": "mixed",
+      "endpoint_type": "REGISTER",
+      "allowed_actions": [
+        "rapidwright_optimize_cell_placement",
+        "pblock",
+        "pblock_full_replace",
+        "place_design_explore",
+        "phys_opt_design_retime",
+        "phys_opt_design",
+        "route_explore",
+        "run_recipe",
+        "replicate_register",
+        "lut_opt"
+      ],
+      "forbidden_actions": [
+        "logic_restructure"
+      ],
+      "action_guidance": {},
+      "congestion_level": null,
+      "cluster_clock_regions": [
+        "X2Y2"
+      ],
+      "llm_chosen_action": "pblock",
+      "structural_override_active": false,
+      "stuck_iterations": 2,
+      "exhausted_actions": [
+        "fanout_split"
+      ],
+      "validation_result": "ok",
+      "reprompt_count": 0,
+      "why_not_top_forbidden_action": "rapidwright_optimize_cell_placement was top-ranked but already produced an invalid unplaced state on the same targets.",
+      "raw_response": "{\n  \"delay_class_acknowledged\": \"mixed\",\n  \"endpoint_type_acknowledged\": \"REGISTER\",\n  \"chosen_action\": \"pblock\",\n  \"action_parameters\": {},\n  \"why_this_fits_delay_class\": \"net_pct=0.519 indicates placement/routing issues; pblock directly constrains the 4 shared clusters on critical paths.\",\n  \"why_not_top_forbidden_action\": \"rapidwright_optimize_cell_placement was top-ranked but already produced an invalid unplaced state on the same targets.\",\n  \"confidence\": 3\n}",
+      "cluster_count": 4,
+      "primary_diagnosis": "excessive_fanout",
+      "diagnosis_reasoning_trace": [
+        "normalized 20 timing-path candidate(s) from current_target_candidates",
+        "clustered into 4 cluster(s) via shared start/end cell name",
+        "primary cluster 'cluster_0' contains the current worst path (8 member(s), 1 cell(s) shared across all members)",
+        "outcome history: excessive_fanout's own prescriptions scored 0 win(s) / 1 loss(es) this run -> confidence -0.08",
+        "scored hypotheses: excessive_fanout=0.72, localized_congestion=0.50, placement_already_compact=0.45, long_interconnect=0.25",
+        "primary hypothesis: excessive_fanout (confidence 0.72)",
+        "  + 1 cell(s) (['tensor_weight_y_U0/grp_tensor_weight_y_Pipeline_TENSOR_WEIGHT_Y_OUTER_TENSOR_WEIGHT_Y_INNER_fu_96/tmp_15_reg_3251_pp0_iter4_reg_reg[12]']) recur across 8/20 extracted candidates (40%) -- consistent with a shared high-fanout driver rather than independent placement issues.",
+        "  - outcome history: excessive_fanout's own prescriptions scored 0 win(s) / 1 loss(es) this run -> confidence -0.08"
+      ],
+      "diagnosis_action_adjustment": null,
+      "rapidwright_edit_summary": {
+        "action": "pblock",
+        "cells_moved": 49,
+        "nets_affected": 0,
+        "pblock_ranges": "SLICE_X9Y0:SLICE_X144Y581 DSP48E2_X9Y0:DSP48E2_X9Y234",
+        "fabric_region": {
+          "col_min": 308,
+          "col_max": 328,
+          "row_min": 137,
+          "row_max": 191,
+          "center_col": 334,
+          "center_row": 155,
+          "center_of_mass_col": 318,
+          "center_of_mass_row": 164,
+          "contiguous_columns": 21,
+          "contiguous_rows": 55
+        },
+        "target_lut_count": 800,
+        "target_ff_count": 1600,
+        "site_counts": {
+          "SLICE": 477,
+          "DSP48E2": 22,
+          "RAMB18": 0,
+          "RAMB36": 0,
+          "URAM288": 0
+        },
+        "changed_design": true,
+        "pblock_name": "pblock_net_delay_003",
+        "apply_to": "current_design",
+        "is_soft": false,
+        "cells_matched": 49,
+        "cells_assigned": 49,
+        "resource_validation": {
+          "is_valid": true,
+          "primitive_count": 84086,
+          "cell_count": 49,
+          "resource_issues": {},
+          "errors": [],
+          "drc_output": "Copyright 1986-2022 Xilinx, Inc. All Rights Reserved. Copyright 2022-2025 Advanced Micro Devices, Inc. All Rights Reserved.\n---------------------------------------------------------------------------------------------------------------------------------------------\n| Tool Version : Vivado v.2025.1 (lin64) Build 6140274 Wed May 21 22:58:25 MDT 2025\n| Date         : Tue Jul 21 15:19:58 2026\n| Host         : 35ns7cfvpwajp9e9nht0kyrsvp running 64-bit Ubuntu 24.04.4 LTS\n| Command      : report_drc -checks {UTLZ-1 UTLZ-2} -file /home/fpl2026/VivadoMCP/drc_check_pblock_net_delay_003.rpt\n| Design       : xil_internal_svlib_optical_flow\n| Device       : xcvu3p-ffvc1517-2-e\n| Speed File   : -2\n| Design State : ignored\n---------------------------------------------------------------------------------------------------------------------------------------------\n\nReport DRC\n\nTable of Contents\n-----------------\n1. REPORT SUMMARY\n2. REPORT DETAILS\n\n1. REPORT SUMMARY\n-----------------\n            Netlis"
+        }
+      }
+    },
+    {
+      "iter": 4,
+      "recipe": "place_design_explore",
+      "batch_size": 1,
+      "targets": [
+        "directive:Explore"
+      ],
+      "wns_before": -1.078,
+      "wns_after": null,
+      "fmax_before": 324.8862897985705,
+      "fmax_after": null,
+      "delta_fmax": 0.0,
+      "vivado_runtime_s": 122.96433734893799,
+      "status": "failed",
+      "reason": "Action completed but left the design in an invalid state (66962 unrouted net(s), 0 net(s) with routing errors); timing observation -1.177 ns rejected.",
+      "error_type": "invalid_design_state",
+      "checkpoint": null,
+      "rapidwright_edit_summary": null,
+      "action_failure_memory": {
+        "fanout_split": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [],
+          "last_failed_iter": 1,
+          "failed_on_current_targets": true
+        },
+        "rapidwright_optimize_cell_placement": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "tensor_weight_y_U0/grp_tensor_weight_y_Pipeline_TENSOR_WEIGHT_Y_OUTER_TENSOR_WEIGHT_Y_INNER_fu_96/tmp_15_reg_3251_pp0_iter4_reg_reg[12]",
+            "tensor_weight_y_U0/grp_tensor_weight_y_Pipeline_TENSOR_WEIGHT_Y_OUTER_TENSOR_WEIGHT_Y_INNER_fu_96",
+            "tensor_weight_y_U0/grp_tensor_weight_y_Pipeline_TENSOR_WEIGHT_Y_OUTER_TENSOR_WEIGHT_Y_INNER_fu_96/tmp_31_reg_3485_reg[30]"
+          ],
+          "last_failed_iter": 2,
+          "failed_on_current_targets": true
+        },
+        "rapidwright_analyze_fabric_for_pblock": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "pblock_net_delay_003",
+            "SLICE_X73Y115:SLICE_X81Y167 DSP48E2_X9Y46:DSP48E2_X9Y67"
+          ],
+          "last_failed_iter": 3,
+          "failed_on_current_targets": true
+        },
+        "rapidwright_convert_fabric_region_to_pblock": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "pblock_net_delay_003",
+            "SLICE_X73Y115:SLICE_X81Y167 DSP48E2_X9Y46:DSP48E2_X9Y67"
+          ],
+          "last_failed_iter": 3,
+          "failed_on_current_targets": true
+        },
+        "pblock": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "pblock_net_delay_003",
+            "SLICE_X73Y115:SLICE_X81Y167 DSP48E2_X9Y46:DSP48E2_X9Y67"
+          ],
+          "last_failed_iter": 3,
+          "failed_on_current_targets": true
+        }
+      },
+      "action_failure_counts": {
+        "fanout_split": 1,
+        "rapidwright_optimize_cell_placement": 1,
+        "rapidwright_analyze_fabric_for_pblock": 1,
+        "rapidwright_convert_fabric_region_to_pblock": 1,
+        "pblock": 1
+      },
+      "delay_class": "mixed",
+      "endpoint_type": "REGISTER",
+      "allowed_actions": [
+        "rapidwright_optimize_cell_placement",
+        "pblock",
+        "pblock_full_replace",
+        "place_design_explore"
+      ],
+      "forbidden_actions": [
+        "logic_restructure"
+      ],
+      "action_guidance": {},
+      "congestion_level": 0,
+      "cluster_clock_regions": [
+        "X2Y2"
+      ],
+      "llm_chosen_action": "place_design_explore",
+      "structural_override_active": true,
+      "stuck_iterations": 3,
+      "consecutive_no_improvement": 3,
+      "exhausted_actions": [
+        "fanout_split"
+      ],
+      "validation_result": "ok",
+      "reprompt_count": 0,
+      "why_not_top_forbidden_action": "rapidwright_optimize_cell_placement remains top-ranked but already failed with 699 unplaced cells on the same targets.",
+      "raw_response": "{\n  \"delay_class_acknowledged\": \"mixed\",\n  \"endpoint_type_acknowledged\": \"REGISTER\",\n  \"chosen_action\": \"place_design_explore\",\n  \"action_parameters\": {\n    \"directive\": \"Explore\",\n    \"route_directive\": \"Explore\"\n  },\n  \"why_this_fits_delay_class\": \"net_pct=0.519 with repeated failures on fanout/pblock actions; Explore placement directly retargets the mixed delay paths on this small design.\",\n  \"why_not_top_forbidden_action\": \"rapidwright_optimize_cell_placement remains top-ranked but already failed with 699 unplaced cells on the same targets.\",\n  \"confidence\": 4\n}",
+      "cluster_count": 4,
+      "primary_diagnosis": "excessive_fanout",
+      "diagnosis_reasoning_trace": [
+        "normalized 20 timing-path candidate(s) from current_target_candidates",
+        "clustered into 4 cluster(s) via shared start/end cell name",
+        "primary cluster 'cluster_0' contains the current worst path (8 member(s), 1 cell(s) shared across all members)",
+        "outcome history: excessive_fanout's own prescriptions scored 0 win(s) / 1 loss(es) this run -> confidence -0.08",
+        "scored hypotheses: excessive_fanout=0.72, placement_already_compact=0.45, localized_congestion=0.30, long_interconnect=0.25",
+        "primary hypothesis: excessive_fanout (confidence 0.72)",
+        "  + 1 cell(s) (['tensor_weight_y_U0/grp_tensor_weight_y_Pipeline_TENSOR_WEIGHT_Y_OUTER_TENSOR_WEIGHT_Y_INNER_fu_96/tmp_15_reg_3251_pp0_iter4_reg_reg[12]']) recur across 8/20 extracted candidates (40%) -- consistent with a shared high-fanout driver rather than independent placement issues.",
+        "  - outcome history: excessive_fanout's own prescriptions scored 0 win(s) / 1 loss(es) this run -> confidence -0.08"
+      ],
+      "diagnosis_action_adjustment": null
+    },
+    {
+      "iter": 5,
+      "recipe": "place_design_explore",
+      "batch_size": 1,
+      "targets": [
+        "directive:ExtraTimingOpt"
+      ],
+      "wns_before": -1.078,
+      "wns_after": -1.013,
+      "fmax_before": 324.8862897985705,
+      "fmax_after": 331.89512114171924,
+      "delta_fmax": 7.008831343148756,
+      "vivado_runtime_s": 241.6426272392273,
+      "status": "improved",
+      "checkpoint": "/home/fpl2026/dcp_optimizer_run-20260721_151659/checkpoints/iter_005.dcp",
+      "target_tier": "tier1_violating_paths",
+      "target_candidate_count": 20,
+      "path_delay_classification": "mixed",
+      "path_delay_breakdown": {
+        "logic_pct": 0.48103,
+        "net_pct": 0.5189699999999999,
+        "logic_delay_ns": 1.471,
+        "net_delay_ns": 1.587
+      },
+      "clock_period_ns": 2.0,
+      "achieved_fmax_mhz": 331.89512114171924,
+      "no_improvement_count": 0,
+      "consecutive_no_improvement": 4,
+      "action_failure_memory": {
+        "fanout_split": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [],
+          "last_failed_iter": 1,
+          "failed_on_current_targets": true
+        },
+        "rapidwright_optimize_cell_placement": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "tensor_weight_y_U0/grp_tensor_weight_y_Pipeline_TENSOR_WEIGHT_Y_OUTER_TENSOR_WEIGHT_Y_INNER_fu_96/tmp_15_reg_3251_pp0_iter4_reg_reg[12]",
+            "tensor_weight_y_U0/grp_tensor_weight_y_Pipeline_TENSOR_WEIGHT_Y_OUTER_TENSOR_WEIGHT_Y_INNER_fu_96",
+            "tensor_weight_y_U0/grp_tensor_weight_y_Pipeline_TENSOR_WEIGHT_Y_OUTER_TENSOR_WEIGHT_Y_INNER_fu_96/tmp_31_reg_3485_reg[30]"
+          ],
+          "last_failed_iter": 2,
+          "failed_on_current_targets": true
+        },
+        "rapidwright_analyze_fabric_for_pblock": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "pblock_net_delay_003",
+            "SLICE_X73Y115:SLICE_X81Y167 DSP48E2_X9Y46:DSP48E2_X9Y67"
+          ],
+          "last_failed_iter": 3,
+          "failed_on_current_targets": true
+        },
+        "rapidwright_convert_fabric_region_to_pblock": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "pblock_net_delay_003",
+            "SLICE_X73Y115:SLICE_X81Y167 DSP48E2_X9Y46:DSP48E2_X9Y67"
+          ],
+          "last_failed_iter": 3,
+          "failed_on_current_targets": true
+        },
+        "pblock": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "pblock_net_delay_003",
+            "SLICE_X73Y115:SLICE_X81Y167 DSP48E2_X9Y46:DSP48E2_X9Y67"
+          ],
+          "last_failed_iter": 3,
+          "failed_on_current_targets": true
+        },
+        "place_design_explore": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "directive:Explore"
+          ],
+          "last_failed_iter": 4,
+          "failed_on_current_targets": true
+        }
+      },
+      "action_failure_counts": {
+        "fanout_split": 1,
+        "rapidwright_optimize_cell_placement": 1,
+        "rapidwright_analyze_fabric_for_pblock": 1,
+        "rapidwright_convert_fabric_region_to_pblock": 1,
+        "pblock": 1,
+        "place_design_explore": 1
+      },
+      "delay_class": "mixed",
+      "endpoint_type": "REGISTER",
+      "allowed_actions": [
+        "rapidwright_optimize_cell_placement",
+        "pblock",
+        "pblock_full_replace",
+        "place_design_explore"
+      ],
+      "forbidden_actions": [
+        "logic_restructure"
+      ],
+      "action_guidance": {},
+      "congestion_level": 0,
+      "cluster_clock_regions": [
+        "X2Y2"
+      ],
+      "llm_chosen_action": "place_design_explore",
+      "structural_override_active": true,
+      "stuck_iterations": 4,
+      "exhausted_actions": [
+        "fanout_split"
+      ],
+      "validation_result": "ok",
+      "reprompt_count": 0,
+      "why_not_top_forbidden_action": "rapidwright_optimize_cell_placement was not chosen because it earlier produced 699 unplaced cells on the same targets.",
+      "raw_response": "{\n  \"delay_class_acknowledged\": \"mixed\",\n  \"endpoint_type_acknowledged\": \"REGISTER\",\n  \"chosen_action\": \"place_design_explore\",\n  \"action_parameters\": {\n    \"directive\": \"ExtraTimingOpt\",\n    \"route_directive\": \"Explore\"\n  },\n  \"why_this_fits_delay_class\": \"net_pct=0.519 shows routing/placement issues on mixed paths; a fresh untried placement directive targets the exact failure mode of the prior place attempt.\",\n  \"why_not_top_forbidden_action\": \"rapidwright_optimize_cell_placement was not chosen because it earlier produced 699 unplaced cells on the same targets.\",\n  \"confidence\": 3\n}",
+      "cluster_count": 4,
+      "primary_diagnosis": "excessive_fanout",
+      "diagnosis_reasoning_trace": [
+        "normalized 20 timing-path candidate(s) from current_target_candidates",
+        "clustered into 4 cluster(s) via shared start/end cell name",
+        "primary cluster 'cluster_0' contains the current worst path (8 member(s), 1 cell(s) shared across all members)",
+        "outcome history: excessive_fanout's own prescriptions scored 0 win(s) / 1 loss(es) this run -> confidence -0.08",
+        "scored hypotheses: excessive_fanout=0.72, placement_already_compact=0.45, localized_congestion=0.30, long_interconnect=0.25",
+        "primary hypothesis: excessive_fanout (confidence 0.72)",
+        "  + 1 cell(s) (['tensor_weight_y_U0/grp_tensor_weight_y_Pipeline_TENSOR_WEIGHT_Y_OUTER_TENSOR_WEIGHT_Y_INNER_fu_96/tmp_15_reg_3251_pp0_iter4_reg_reg[12]']) recur across 8/20 extracted candidates (40%) -- consistent with a shared high-fanout driver rather than independent placement issues.",
+        "  - outcome history: excessive_fanout's own prescriptions scored 0 win(s) / 1 loss(es) this run -> confidence -0.08"
+      ],
+      "diagnosis_action_adjustment": null
+    }
+  ],
+  "started_at_epoch_s": 1784647054.7388532,
+  "llm_cost_usd": 0.04681199999999999,
+  "benchmark_score": {
+    "formula": "alpha - (0.1*alpha)*beta - (0.1*alpha)*gamma",
+    "alpha_delta_fmax_mhz": 7.008831343148756,
+    "beta_openrouter_cost_usd": 0.04681199999999999,
+    "gamma_runtime_hours": 0.1754370497332679,
+    "wall_clock_runtime_s": 631.5733790397644,
+    "score": 6.853060732573201
+  }
+}

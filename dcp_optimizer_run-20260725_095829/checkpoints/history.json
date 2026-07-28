@@ -1,0 +1,2643 @@
+{
+  "input_dcp": "/home/fpl2026/fpl26_contest_benchmarks/vexriscv_re-place_2025.1.dcp",
+  "clock_name": "clk_fpl26contest",
+  "clock_period_ns": 1.57,
+  "baseline_wns": -1.654,
+  "baseline_fmax_mhz": 310.17369727047145,
+  "best_wns": -0.67,
+  "best_fmax_mhz": 446.4285714285714,
+  "best_checkpoint": "/home/fpl2026/dcp_optimizer_run-20260725_095829/checkpoints/iter_016.dcp",
+  "current_iter": 18,
+  "stall_count": 2,
+  "cells_blacklisted": [
+    "RegFilePlugin_regFile_spinal_port0_reg[22]",
+    "RegFilePlugin_regFile_spinal_port1_reg[20]",
+    "IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[16]",
+    "RegFilePlugin_regFile_spinal_port0_reg[6]",
+    "RegFilePlugin_regFile_spinal_port0_reg[10]",
+    "RegFilePlugin_regFile_spinal_port0_reg[26]",
+    "RegFilePlugin_regFile_spinal_port1_reg[19]",
+    "RegFilePlugin_regFile_spinal_port1_reg[17]"
+  ],
+  "nets_blacklisted": [],
+  "iterations": [
+    {
+      "iter": 1,
+      "recipe": "place_design_explore",
+      "batch_size": 1,
+      "targets": [
+        "directive:Default"
+      ],
+      "wns_before": -1.654,
+      "wns_after": -0.785,
+      "fmax_before": 310.17369727047145,
+      "fmax_after": 424.6284501061571,
+      "delta_fmax": 114.45475283568567,
+      "vivado_runtime_s": 118.47437262535095,
+      "status": "improved",
+      "checkpoint": "/home/fpl2026/dcp_optimizer_run-20260725_095829/checkpoints/iter_001.dcp",
+      "target_tier": "tier1_violating_paths",
+      "target_candidate_count": 20,
+      "path_delay_classification": "net_delay_bound",
+      "path_delay_breakdown": {
+        "logic_pct": 0.16105,
+        "net_pct": 0.83895,
+        "logic_delay_ns": 0.507,
+        "net_delay_ns": 2.641
+      },
+      "clock_period_ns": 1.57,
+      "achieved_fmax_mhz": 424.6284501061571,
+      "no_improvement_count": 0,
+      "consecutive_no_improvement": 0,
+      "action_failure_memory": {},
+      "action_failure_counts": {},
+      "llm_chosen_action": "place_design_explore",
+      "warm_start": true,
+      "validation_result": "warm_start"
+    },
+    {
+      "iter": 2,
+      "recipe": "vivado_phys_opt",
+      "batch_size": 1,
+      "targets": [
+        "Explore"
+      ],
+      "wns_before": -0.785,
+      "wns_after": -0.785,
+      "fmax_before": 424.6284501061571,
+      "fmax_after": 424.6284501061571,
+      "delta_fmax": 0.0,
+      "vivado_runtime_s": 44.832295179367065,
+      "status": "no_improvement",
+      "checkpoint": "/home/fpl2026/dcp_optimizer_run-20260725_095829/checkpoints/iter_002.dcp",
+      "target_tier": "tier1_violating_paths",
+      "target_candidate_count": 20,
+      "path_delay_classification": "mixed",
+      "path_delay_breakdown": {
+        "logic_pct": 0.50575,
+        "net_pct": 0.49424999999999997,
+        "logic_delay_ns": 1.158,
+        "net_delay_ns": 1.132
+      },
+      "clock_period_ns": 1.57,
+      "achieved_fmax_mhz": 424.6284501061571,
+      "no_improvement_count": 1,
+      "consecutive_no_improvement": 0,
+      "action_failure_memory": {},
+      "action_failure_counts": {},
+      "delay_class": "mixed",
+      "endpoint_type": "REGISTER",
+      "allowed_actions": [
+        "phys_opt_design",
+        "phys_opt_design_retime",
+        "lut_opt",
+        "run_recipe",
+        "replicate_register",
+        "fanout_split",
+        "route_explore",
+        "pblock_full_replace",
+        "place_design_explore",
+        "pblock",
+        "rapidwright_optimize_cell_placement"
+      ],
+      "forbidden_actions": [
+        "logic_restructure"
+      ],
+      "action_guidance": {
+        "route_explore": "0 wins / 3 losses across previous runs on this design",
+        "place_design_explore": "directives with losing cross-run records on this design (never improved): Explore (0/3) -- do not re-try these; this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won",
+        "pblock_full_replace": "this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won",
+        "pblock": "placement_already_compact (confidence 0.90) argues against this action: cluster is already tightly placed (avg spread 11.0 tiles <= 30) and delay is logic-dominated (51% logic) -- moving cells further is unlikely to help; look at logic restructuring instead.",
+        "rapidwright_optimize_cell_placement": "placement_already_compact (confidence 0.90) argues against this action: cluster is already tightly placed (avg spread 11.0 tiles <= 30) and delay is logic-dominated (51% logic) -- moving cells further is unlikely to help; look at logic restructuring instead."
+      },
+      "congestion_level": 0,
+      "cluster_clock_regions": [
+        "X0Y1"
+      ],
+      "llm_chosen_action": "phys_opt_design",
+      "structural_override_active": false,
+      "stuck_iterations": 0,
+      "exhausted_actions": [],
+      "validation_result": "ok",
+      "reprompt_count": 0,
+      "why_not_top_forbidden_action": "phys_opt_design_retime was skipped because the mixed delay and already-compact placement (avg spread 11 tiles) favor a standard phys_opt pass first before any retiming that risks logic-depth regression.",
+      "raw_response": "{\n  \"delay_class_acknowledged\": \"mixed\",\n  \"endpoint_type_acknowledged\": \"REGISTER\",\n  \"chosen_action\": \"phys_opt_design\",\n  \"action_parameters\": {\n    \"directive\": \"Explore\"\n  },\n  \"why_this_fits_delay_class\": \"Mixed delay (logic 50.6%, net 49.4%) on the critical REGISTER endpoint is best addressed by incremental phys_opt refinement on the winning Default placement rather than re-placement or routing-only changes.\",\n  \"why_not_top_forbidden_action\": \"phys_opt_design_retime was skipped because the mixed delay and already-compact placement (avg spread 11 tiles) favor a standard phys_opt pass first before any retiming that risks logic-depth regression.\",\n  \"confidence\": 4\n}",
+      "cluster_count": 7,
+      "primary_diagnosis": "placement_already_compact",
+      "diagnosis_reasoning_trace": [
+        "normalized 20 timing-path candidate(s) from current_target_candidates",
+        "clustered into 7 cluster(s) via shared start/end cell name",
+        "primary cluster 'cluster_0' contains the current worst path (9 member(s), 1 cell(s) shared across all members)",
+        "scored hypotheses: placement_already_compact=0.90, excessive_fanout=0.80, localized_congestion=0.30, long_interconnect=0.25",
+        "primary hypothesis: placement_already_compact (confidence 0.90)",
+        "  + cluster is already tightly placed (avg spread 11.0 tiles <= 30) and delay is logic-dominated (51% logic) -- moving cells further is unlikely to help; look at logic restructuring instead.",
+        "  + all cluster cells share clock region X0Y1."
+      ],
+      "diagnosis_action_adjustment": "placement_already_compact (confidence 0.90) demoted ['pblock', 'rapidwright_optimize_cell_placement']; placement_already_compact (confidence 0.90) prioritized ['phys_opt_design', 'phys_opt_design_retime', 'lut_opt']"
+    },
+    {
+      "iter": 3,
+      "recipe": "vivado_phys_opt",
+      "batch_size": 1,
+      "targets": [
+        "Explore"
+      ],
+      "wns_before": -0.785,
+      "wns_after": -0.785,
+      "fmax_before": 424.6284501061571,
+      "fmax_after": 424.6284501061571,
+      "delta_fmax": 0.0,
+      "vivado_runtime_s": 52.36682724952698,
+      "status": "no_improvement",
+      "checkpoint": "/home/fpl2026/dcp_optimizer_run-20260725_095829/checkpoints/iter_003.dcp",
+      "target_tier": "tier1_violating_paths",
+      "target_candidate_count": 20,
+      "path_delay_classification": "mixed",
+      "path_delay_breakdown": {
+        "logic_pct": 0.50575,
+        "net_pct": 0.49424999999999997,
+        "logic_delay_ns": 1.158,
+        "net_delay_ns": 1.132
+      },
+      "clock_period_ns": 1.57,
+      "achieved_fmax_mhz": 424.6284501061571,
+      "no_improvement_count": 2,
+      "consecutive_no_improvement": 1,
+      "action_failure_memory": {
+        "phys_opt_design": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "Explore"
+          ],
+          "last_failed_iter": 2,
+          "failed_on_current_targets": true
+        }
+      },
+      "action_failure_counts": {
+        "phys_opt_design": 1
+      },
+      "delay_class": "mixed",
+      "endpoint_type": "REGISTER",
+      "allowed_actions": [
+        "phys_opt_design",
+        "phys_opt_design_retime",
+        "lut_opt",
+        "run_recipe",
+        "replicate_register",
+        "fanout_split",
+        "route_explore",
+        "pblock_full_replace",
+        "place_design_explore",
+        "pblock",
+        "rapidwright_optimize_cell_placement"
+      ],
+      "forbidden_actions": [
+        "logic_restructure"
+      ],
+      "action_guidance": {
+        "route_explore": "0 wins / 3 losses across previous runs on this design",
+        "place_design_explore": "directives with losing cross-run records on this design (never improved): Explore (0/3) -- do not re-try these; this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won",
+        "pblock_full_replace": "this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won",
+        "pblock": "placement_already_compact (confidence 0.82) argues against this action: cluster is already tightly placed (avg spread 11.0 tiles <= 30) and delay is logic-dominated (51% logic) -- moving cells further is unlikely to help; look at logic restructuring instead.",
+        "rapidwright_optimize_cell_placement": "placement_already_compact (confidence 0.82) argues against this action: cluster is already tightly placed (avg spread 11.0 tiles <= 30) and delay is logic-dominated (51% logic) -- moving cells further is unlikely to help; look at logic restructuring instead."
+      },
+      "congestion_level": 0,
+      "cluster_clock_regions": [
+        "X0Y1"
+      ],
+      "llm_chosen_action": "phys_opt_design_retime",
+      "structural_override_active": false,
+      "stuck_iterations": 1,
+      "exhausted_actions": [],
+      "validation_result": "ok",
+      "reprompt_count": 0,
+      "why_not_top_forbidden_action": "phys_opt_design was not chosen again because its Explore directive already failed consecutively on the current targets and repeating a failed directive+action pair is disallowed.",
+      "raw_response": "{\n  \"delay_class_acknowledged\": \"mixed\",\n  \"endpoint_type_acknowledged\": \"REGISTER\",\n  \"chosen_action\": \"phys_opt_design_retime\",\n  \"action_parameters\": {\n    \"directive\": \"Explore\"\n  },\n  \"why_this_fits_delay_class\": \"Mixed delay (logic_pct 0.50575) favors retiming over pure routing fixes on this REGISTER endpoint after the preceding phys_opt Explore pass showed no gain.\",\n  \"why_not_top_forbidden_action\": \"phys_opt_design was not chosen again because its Explore directive already failed consecutively on the current targets and repeating a failed directive+action pair is disallowed.\",\n  \"confidence\": 4\n}",
+      "cluster_count": 7,
+      "primary_diagnosis": "placement_already_compact",
+      "diagnosis_reasoning_trace": [
+        "normalized 20 timing-path candidate(s) from current_target_candidates",
+        "clustered into 7 cluster(s) via shared start/end cell name",
+        "primary cluster 'cluster_0' contains the current worst path (9 member(s), 1 cell(s) shared across all members)",
+        "outcome history: placement_already_compact's own prescriptions scored 0 win(s) / 1 loss(es) this run -> confidence -0.08",
+        "scored hypotheses: placement_already_compact=0.82, excessive_fanout=0.80, localized_congestion=0.30, long_interconnect=0.25",
+        "primary hypothesis: placement_already_compact (confidence 0.82)",
+        "  + cluster is already tightly placed (avg spread 11.0 tiles <= 30) and delay is logic-dominated (51% logic) -- moving cells further is unlikely to help; look at logic restructuring instead.",
+        "  + all cluster cells share clock region X0Y1.",
+        "  - outcome history: placement_already_compact's own prescriptions scored 0 win(s) / 1 loss(es) this run -> confidence -0.08"
+      ],
+      "diagnosis_action_adjustment": "placement_already_compact (confidence 0.82) demoted ['pblock', 'rapidwright_optimize_cell_placement']; placement_already_compact (confidence 0.82) prioritized ['phys_opt_design', 'phys_opt_design_retime', 'lut_opt']"
+    },
+    {
+      "iter": 4,
+      "recipe": "vivado_phys_opt",
+      "batch_size": 1,
+      "targets": [
+        "Explore"
+      ],
+      "wns_before": -0.785,
+      "wns_after": null,
+      "fmax_before": 424.6284501061571,
+      "fmax_after": null,
+      "delta_fmax": 0.0,
+      "vivado_runtime_s": 0.42626380920410156,
+      "status": "failed",
+      "reason": "fanout_split selected but no high-fanout nets are available; action withheld for the rest of the run.",
+      "error_type": "no_action_target",
+      "checkpoint": null,
+      "rapidwright_edit_summary": null,
+      "action_failure_memory": {
+        "phys_opt_design": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "Explore"
+          ],
+          "last_failed_iter": 2,
+          "failed_on_current_targets": true
+        },
+        "phys_opt_design_retime": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "Explore"
+          ],
+          "last_failed_iter": 3,
+          "failed_on_current_targets": true
+        }
+      },
+      "action_failure_counts": {
+        "phys_opt_design": 1,
+        "phys_opt_design_retime": 1
+      },
+      "delay_class": "mixed",
+      "endpoint_type": "REGISTER",
+      "allowed_actions": [
+        "fanout_split",
+        "replicate_register",
+        "phys_opt_design_retime",
+        "run_recipe",
+        "lut_opt",
+        "route_explore",
+        "phys_opt_design",
+        "pblock_full_replace",
+        "place_design_explore",
+        "pblock",
+        "rapidwright_optimize_cell_placement"
+      ],
+      "forbidden_actions": [
+        "logic_restructure"
+      ],
+      "action_guidance": {
+        "route_explore": "0 wins / 3 losses across previous runs on this design",
+        "phys_opt_design": "0 wins / 3 losses across previous runs on this design",
+        "place_design_explore": "directives with losing cross-run records on this design (never improved): Explore (0/3) -- do not re-try these; this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won",
+        "pblock_full_replace": "this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won",
+        "pblock": "excessive_fanout (confidence 0.80) argues against this action: 1 cell(s) (['IBusCachedPlugin_cache/banks_0_reg_bram_1']) recur across 9/20 extracted candidates (45%) -- consistent with a shared high-fanout driver rather than independent placement issues.",
+        "rapidwright_optimize_cell_placement": "excessive_fanout (confidence 0.80) argues against this action: 1 cell(s) (['IBusCachedPlugin_cache/banks_0_reg_bram_1']) recur across 9/20 extracted candidates (45%) -- consistent with a shared high-fanout driver rather than independent placement issues."
+      },
+      "congestion_level": 0,
+      "cluster_clock_regions": [
+        "X0Y1"
+      ],
+      "llm_chosen_action": "fanout_split",
+      "structural_override_active": false,
+      "stuck_iterations": 2,
+      "consecutive_no_improvement": 2,
+      "exhausted_actions": [],
+      "validation_result": "ok",
+      "reprompt_count": 0,
+      "why_not_top_forbidden_action": "replicate_register was not chosen because fanout_split is the highest-ranked entry that directly targets the primary excessive_fanout hypothesis.",
+      "raw_response": "{\n  \"delay_class_acknowledged\": \"mixed\",\n  \"endpoint_type_acknowledged\": \"REGISTER\",\n  \"chosen_action\": \"fanout_split\",\n  \"action_parameters\": {},\n  \"why_this_fits_delay_class\": \"Mixed delay (logic_pct 0.50575) with excessive_fanout diagnosis (recurring driver across 45% of candidates) is best reduced by fanout_split before further logic or placement moves.\",\n  \"why_not_top_forbidden_action\": \"replicate_register was not chosen because fanout_split is the highest-ranked entry that directly targets the primary excessive_fanout hypothesis.\",\n  \"confidence\": 4\n}",
+      "cluster_count": 7,
+      "primary_diagnosis": "excessive_fanout",
+      "diagnosis_reasoning_trace": [
+        "normalized 20 timing-path candidate(s) from current_target_candidates",
+        "clustered into 7 cluster(s) via shared start/end cell name",
+        "primary cluster 'cluster_0' contains the current worst path (9 member(s), 1 cell(s) shared across all members)",
+        "outcome history: placement_already_compact's own prescriptions scored 0 win(s) / 2 loss(es) this run -> confidence -0.16",
+        "scored hypotheses: excessive_fanout=0.80, placement_already_compact=0.74, localized_congestion=0.30, long_interconnect=0.25",
+        "primary hypothesis: excessive_fanout (confidence 0.80)",
+        "  + 1 cell(s) (['IBusCachedPlugin_cache/banks_0_reg_bram_1']) recur across 9/20 extracted candidates (45%) -- consistent with a shared high-fanout driver rather than independent placement issues."
+      ],
+      "diagnosis_action_adjustment": "excessive_fanout (confidence 0.80) demoted ['pblock', 'rapidwright_optimize_cell_placement']; excessive_fanout (confidence 0.80) prioritized ['fanout_split', 'replicate_register']"
+    },
+    {
+      "iter": 5,
+      "recipe": "rapidwright_cell_placement",
+      "batch_size": 10,
+      "targets": [
+        "IBusCachedPlugin_cache/banks_0_reg_bram_1",
+        "RegFilePlugin_regFile_spinal_port0_reg[22]",
+        "RegFilePlugin_regFile_spinal_port1_reg[20]",
+        "IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[16]",
+        "RegFilePlugin_regFile_spinal_port0_reg[6]",
+        "RegFilePlugin_regFile_spinal_port0_reg[10]",
+        "IBusCachedPlugin_cache/banks_0_reg_bram_0",
+        "RegFilePlugin_regFile_spinal_port0_reg[26]",
+        "RegFilePlugin_regFile_spinal_port1_reg[19]",
+        "RegFilePlugin_regFile_spinal_port1_reg[17]"
+      ],
+      "wns_before": -0.785,
+      "wns_after": null,
+      "fmax_before": 424.6284501061571,
+      "fmax_after": null,
+      "delta_fmax": 0.0,
+      "vivado_runtime_s": 0.9769260883331299,
+      "status": "failed",
+      "reason": "rapidwright_optimize_cell_placement moved cells independently and increased average cluster spread from 19.0 to 67.0 tiles (+253%), which is expected to worsen net delay; rejected before routing.",
+      "error_type": "cluster_spread_regression",
+      "checkpoint": null,
+      "rapidwright_edit_summary": {
+        "action": "rapidwright_optimize_cell_placement",
+        "requested_cells": [
+          "IBusCachedPlugin_cache/banks_0_reg_bram_1",
+          "RegFilePlugin_regFile_spinal_port0_reg[22]",
+          "RegFilePlugin_regFile_spinal_port1_reg[20]",
+          "IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[16]",
+          "RegFilePlugin_regFile_spinal_port0_reg[6]",
+          "RegFilePlugin_regFile_spinal_port0_reg[10]",
+          "IBusCachedPlugin_cache/banks_0_reg_bram_0",
+          "RegFilePlugin_regFile_spinal_port0_reg[26]",
+          "RegFilePlugin_regFile_spinal_port1_reg[19]",
+          "RegFilePlugin_regFile_spinal_port1_reg[17]"
+        ],
+        "cells_processed": 10,
+        "cells_moved": 8,
+        "moved_cells": [
+          "RegFilePlugin_regFile_spinal_port0_reg[22]",
+          "RegFilePlugin_regFile_spinal_port1_reg[20]",
+          "IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[16]",
+          "RegFilePlugin_regFile_spinal_port0_reg[6]",
+          "RegFilePlugin_regFile_spinal_port0_reg[10]",
+          "RegFilePlugin_regFile_spinal_port0_reg[26]",
+          "RegFilePlugin_regFile_spinal_port1_reg[19]",
+          "RegFilePlugin_regFile_spinal_port1_reg[17]"
+        ],
+        "nets_affected": 16,
+        "results": [
+          {
+            "cell": "IBusCachedPlugin_cache/banks_0_reg_bram_1",
+            "status": "error",
+            "message": "No available site near centroid"
+          },
+          {
+            "cell": "RegFilePlugin_regFile_spinal_port0_reg[22]",
+            "status": "success",
+            "old_site": "SLICE_X117Y16",
+            "new_site": "SLICE_X113Y19",
+            "distance_moved": 6,
+            "affected_nets": 2,
+            "message": "Moved from SLICE_X117Y16 to SLICE_X113Y19"
+          },
+          {
+            "cell": "RegFilePlugin_regFile_spinal_port1_reg[20]",
+            "status": "success",
+            "old_site": "SLICE_X116Y12",
+            "new_site": "SLICE_X111Y10",
+            "distance_moved": 6,
+            "affected_nets": 2,
+            "message": "Moved from SLICE_X116Y12 to SLICE_X111Y10"
+          },
+          {
+            "cell": "IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[16]",
+            "status": "success",
+            "old_site": "SLICE_X114Y19",
+            "new_site": "SLICE_X113Y20",
+            "distance_moved": 1,
+            "affected_nets": 2,
+            "message": "Moved from SLICE_X114Y19 to SLICE_X113Y20"
+          },
+          {
+            "cell": "RegFilePlugin_regFile_spinal_port0_reg[6]",
+            "status": "success",
+            "old_site": "SLICE_X116Y20",
+            "new_site": "SLICE_X112Y20",
+            "distance_moved": 3,
+            "affected_nets": 2,
+            "message": "Moved from SLICE_X116Y20 to SLICE_X112Y20"
+          },
+          {
+            "cell": "RegFilePlugin_regFile_spinal_port0_reg[10]",
+            "status": "success",
+            "old_site": "SLICE_X116Y20",
+            "new_site": "SLICE_X113Y21",
+            "distance_moved": 3,
+            "affected_nets": 2,
+            "message": "Moved from SLICE_X116Y20 to SLICE_X113Y21"
+          },
+          {
+            "cell": "IBusCachedPlugin_cache/banks_0_reg_bram_0",
+            "status": "error",
+            "message": "No available site near centroid"
+          },
+          {
+            "cell": "RegFilePlugin_regFile_spinal_port0_reg[26]",
+            "status": "success",
+            "old_site": "SLICE_X117Y16",
+            "new_site": "SLICE_X112Y19",
+            "distance_moved": 7,
+            "affected_nets": 2,
+            "message": "Moved from SLICE_X117Y16 to SLICE_X112Y19"
+          },
+          {
+            "cell": "RegFilePlugin_regFile_spinal_port1_reg[19]",
+            "status": "success",
+            "old_site": "SLICE_X116Y13",
+            "new_site": "SLICE_X111Y17",
+            "distance_moved": 8,
+            "affected_nets": 2,
+            "message": "Moved from SLICE_X116Y13 to SLICE_X111Y17"
+          },
+          {
+            "cell": "RegFilePlugin_regFile_spinal_port1_reg[17]",
+            "status": "success",
+            "old_site": "SLICE_X116Y13",
+            "new_site": "SLICE_X110Y17",
+            "distance_moved": 8,
+            "affected_nets": 2,
+            "message": "Moved from SLICE_X116Y13 to SLICE_X110Y17"
+          }
+        ]
+      },
+      "action_failure_memory": {
+        "phys_opt_design": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "Explore"
+          ],
+          "last_failed_iter": 2,
+          "failed_on_current_targets": true
+        },
+        "phys_opt_design_retime": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "Explore"
+          ],
+          "last_failed_iter": 3,
+          "failed_on_current_targets": true
+        },
+        "fanout_split": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "Explore"
+          ],
+          "last_failed_iter": 4,
+          "failed_on_current_targets": true
+        }
+      },
+      "action_failure_counts": {
+        "phys_opt_design": 1,
+        "phys_opt_design_retime": 1,
+        "fanout_split": 1
+      },
+      "delay_class": "mixed",
+      "endpoint_type": "REGISTER",
+      "allowed_actions": [
+        "rapidwright_optimize_cell_placement",
+        "pblock",
+        "pblock_full_replace",
+        "place_design_explore"
+      ],
+      "forbidden_actions": [
+        "logic_restructure"
+      ],
+      "action_guidance": {
+        "route_explore": "0 wins / 3 losses across previous runs on this design",
+        "phys_opt_design": "0 wins / 3 losses across previous runs on this design",
+        "place_design_explore": "directives with losing cross-run records on this design (never improved): Explore (0/3) -- do not re-try these; this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won",
+        "pblock_full_replace": "this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won"
+      },
+      "congestion_level": 0,
+      "cluster_clock_regions": [
+        "X0Y1"
+      ],
+      "llm_chosen_action": "rapidwright_optimize_cell_placement",
+      "structural_override_active": true,
+      "stuck_iterations": 3,
+      "consecutive_no_improvement": 3,
+      "exhausted_actions": [
+        "fanout_split"
+      ],
+      "validation_result": "ok",
+      "reprompt_count": 0,
+      "why_not_top_forbidden_action": "place_design_explore was not chosen because cross-run records show 0/3 wins and the current unbeaten best placement (424.63 MHz) is protected against full re-placement re-rolls.",
+      "raw_response": "{\n  \"delay_class_acknowledged\": \"mixed\",\n  \"endpoint_type_acknowledged\": \"REGISTER\",\n  \"chosen_action\": \"rapidwright_optimize_cell_placement\",\n  \"action_parameters\": {},\n  \"why_this_fits_delay_class\": \"Mixed delay (logic_pct 0.50575, net_pct 0.49425) on REGISTER endpoints with 53.5-tile avg spread benefits from targeted cell movement on the 20 critical-path candidates without touching the winning placement.\",\n  \"why_not_top_forbidden_action\": \"place_design_explore was not chosen because cross-run records show 0/3 wins and the current unbeaten best placement (424.63 MHz) is protected against full re-placement re-rolls.\",\n  \"confidence\": 4\n}",
+      "cluster_count": 7,
+      "primary_diagnosis": "placement_already_compact",
+      "diagnosis_reasoning_trace": [
+        "normalized 20 timing-path candidate(s) from current_target_candidates",
+        "clustered into 7 cluster(s) via shared start/end cell name",
+        "primary cluster 'cluster_0' contains the current worst path (9 member(s), 1 cell(s) shared across all members)",
+        "outcome history: placement_already_compact's own prescriptions scored 0 win(s) / 2 loss(es) this run -> confidence -0.16",
+        "outcome history: excessive_fanout's own prescriptions scored 0 win(s) / 1 loss(es) this run -> confidence -0.08",
+        "scored hypotheses: placement_already_compact=0.74, excessive_fanout=0.72, localized_congestion=0.30, long_interconnect=0.25",
+        "primary hypothesis: placement_already_compact (confidence 0.74)",
+        "  + cluster is already tightly placed (avg spread 11.0 tiles <= 30) and delay is logic-dominated (51% logic) -- moving cells further is unlikely to help; look at logic restructuring instead.",
+        "  + all cluster cells share clock region X0Y1.",
+        "  - outcome history: placement_already_compact's own prescriptions scored 0 win(s) / 2 loss(es) this run -> confidence -0.16"
+      ],
+      "diagnosis_action_adjustment": null
+    },
+    {
+      "iter": 6,
+      "recipe": "pblock",
+      "batch_size": 1,
+      "targets": [
+        "pblock_net_delay_006",
+        "SLICE_X24Y48:SLICE_X30Y100 DSP48E2_X3Y20:DSP48E2_X3Y41 RAMB18_X2Y20:RAMB18_X2Y41 RAMB36_X2Y10:RAMB36_X2Y20"
+      ],
+      "wns_before": -0.785,
+      "wns_after": -0.736,
+      "fmax_before": 424.6284501061571,
+      "fmax_after": 433.6513443191674,
+      "delta_fmax": 9.022894213010261,
+      "vivado_runtime_s": 64.3177740573883,
+      "status": "improved",
+      "checkpoint": "/home/fpl2026/dcp_optimizer_run-20260725_095829/checkpoints/iter_006.dcp",
+      "target_tier": "tier1_violating_paths",
+      "target_candidate_count": 20,
+      "path_delay_classification": "mixed",
+      "path_delay_breakdown": {
+        "logic_pct": 0.50575,
+        "net_pct": 0.49424999999999997,
+        "logic_delay_ns": 1.158,
+        "net_delay_ns": 1.132
+      },
+      "clock_period_ns": 1.57,
+      "achieved_fmax_mhz": 433.6513443191674,
+      "no_improvement_count": 0,
+      "consecutive_no_improvement": 4,
+      "action_failure_memory": {
+        "phys_opt_design": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "Explore"
+          ],
+          "last_failed_iter": 2,
+          "failed_on_current_targets": true
+        },
+        "phys_opt_design_retime": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "Explore"
+          ],
+          "last_failed_iter": 3,
+          "failed_on_current_targets": true
+        },
+        "fanout_split": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "Explore"
+          ],
+          "last_failed_iter": 4,
+          "failed_on_current_targets": true
+        },
+        "rapidwright_optimize_cell_placement": {
+          "consecutive_no_action_failures": 2,
+          "failed_targets": [
+            "RegFilePlugin_regFile_spinal_port0_reg[22]",
+            "RegFilePlugin_regFile_spinal_port1_reg[20]",
+            "IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[16]"
+          ],
+          "last_failed_iter": 5,
+          "failed_on_current_targets": true
+        }
+      },
+      "action_failure_counts": {
+        "phys_opt_design": 1,
+        "phys_opt_design_retime": 1,
+        "fanout_split": 1,
+        "rapidwright_optimize_cell_placement": 2
+      },
+      "delay_class": "mixed",
+      "endpoint_type": "REGISTER",
+      "allowed_actions": [
+        "rapidwright_optimize_cell_placement",
+        "pblock",
+        "pblock_full_replace",
+        "place_design_explore"
+      ],
+      "forbidden_actions": [
+        "logic_restructure"
+      ],
+      "action_guidance": {
+        "route_explore": "0 wins / 3 losses across previous runs on this design",
+        "phys_opt_design": "0 wins / 3 losses across previous runs on this design",
+        "place_design_explore": "directives with losing cross-run records on this design (never improved): Explore (0/3) -- do not re-try these; this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won",
+        "pblock_full_replace": "this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won"
+      },
+      "congestion_level": 0,
+      "cluster_clock_regions": [
+        "X0Y1"
+      ],
+      "llm_chosen_action": "pblock",
+      "structural_override_active": true,
+      "stuck_iterations": 4,
+      "exhausted_actions": [
+        "fanout_split"
+      ],
+      "validation_result": "ok",
+      "reprompt_count": 0,
+      "why_not_top_forbidden_action": "rapidwright_optimize_cell_placement was not chosen because its two prior attempts already produced cluster_spread_regression (avg spread +253%), confirming it is unsuitable for the placement_already_compact diagnosis.",
+      "raw_response": "{\n  \"delay_class_acknowledged\": \"mixed\",\n  \"endpoint_type_acknowledged\": \"REGISTER\",\n  \"chosen_action\": \"pblock\",\n  \"action_parameters\": {\"use_clock_regions\": true},\n  \"why_this_fits_delay_class\": \"Mixed delay (logic_pct 0.50575, net_pct 0.49425) with all critical clusters already inside clock region X0Y1 benefits from a pblock constraint that preserves the compact placement rather than moving cells.\",\n  \"why_not_top_forbidden_action\": \"rapidwright_optimize_cell_placement was not chosen because its two prior attempts already produced cluster_spread_regression (avg spread +253%), confirming it is unsuitable for the placement_already_compact diagnosis.\",\n  \"confidence\": 4\n}",
+      "cluster_count": 7,
+      "primary_diagnosis": "placement_already_compact",
+      "diagnosis_reasoning_trace": [
+        "normalized 20 timing-path candidate(s) from current_target_candidates",
+        "clustered into 7 cluster(s) via shared start/end cell name",
+        "primary cluster 'cluster_0' contains the current worst path (9 member(s), 1 cell(s) shared across all members)",
+        "outcome history: placement_already_compact's own prescriptions scored 0 win(s) / 2 loss(es) this run -> confidence -0.16",
+        "outcome history: excessive_fanout's own prescriptions scored 0 win(s) / 1 loss(es) this run -> confidence -0.08",
+        "scored hypotheses: placement_already_compact=0.74, excessive_fanout=0.72, localized_congestion=0.30, long_interconnect=0.25",
+        "primary hypothesis: placement_already_compact (confidence 0.74)",
+        "  + cluster is already tightly placed (avg spread 23.0 tiles <= 30) and delay is logic-dominated (51% logic) -- moving cells further is unlikely to help; look at logic restructuring instead.",
+        "  + all cluster cells share clock region X0Y1.",
+        "  - outcome history: placement_already_compact's own prescriptions scored 0 win(s) / 2 loss(es) this run -> confidence -0.16"
+      ],
+      "diagnosis_action_adjustment": null,
+      "rapidwright_edit_summary": {
+        "action": "pblock",
+        "cells_moved": 1411,
+        "nets_affected": 0,
+        "pblock_ranges": "SLICE_X24Y48:SLICE_X30Y100 DSP48E2_X3Y20:DSP48E2_X3Y41 RAMB18_X2Y20:RAMB18_X2Y41 RAMB36_X2Y10:RAMB36_X2Y20",
+        "fabric_region": {
+          "col_min": 123,
+          "col_max": 143,
+          "row_min": 206,
+          "row_max": 260,
+          "center_col": 334,
+          "center_row": 155,
+          "center_of_mass_col": 133,
+          "center_of_mass_row": 233,
+          "contiguous_columns": 21,
+          "contiguous_rows": 55
+        },
+        "target_lut_count": 800,
+        "target_ff_count": 1600,
+        "site_counts": {
+          "SLICE": 371,
+          "DSP48E2": 22,
+          "RAMB18": 22,
+          "RAMB36": 11,
+          "URAM288": 0
+        },
+        "changed_design": true,
+        "pblock_name": "pblock_net_delay_006",
+        "apply_to": "current_design",
+        "is_soft": false,
+        "cells_matched": 1411,
+        "cells_assigned": 1411,
+        "resource_validation": {
+          "is_valid": true,
+          "primitive_count": 3293,
+          "cell_count": 1411,
+          "resource_issues": {},
+          "errors": [],
+          "drc_output": "Copyright 1986-2022 Xilinx, Inc. All Rights Reserved. Copyright 2022-2025 Advanced Micro Devices, Inc. All Rights Reserved.\n---------------------------------------------------------------------------------------------------------------------------------------------\n| Tool Version : Vivado v.2025.1 (lin64) Build 6140274 Wed May 21 22:58:25 MDT 2025\n| Date         : Sat Jul 25 10:02:16 2026\n| Host         : 35ns7cfvpwajp9e9nht0kyrsvp running 64-bit Ubuntu 24.04.4 LTS\n| Command      : report_drc -checks {UTLZ-1 UTLZ-2} -file /home/fpl2026/VivadoMCP/drc_check_pblock_net_delay_006.rpt\n| Design       : VexRiscv\n| Device       : xcvu3p-ffvc1517-2-e\n| Speed File   : -2\n| Design State : ignored\n---------------------------------------------------------------------------------------------------------------------------------------------\n\nReport DRC\n\nTable of Contents\n-----------------\n1. REPORT SUMMARY\n2. REPORT DETAILS\n\n1. REPORT SUMMARY\n-----------------\n            Netlist: netlist\n          Fl"
+        }
+      }
+    },
+    {
+      "iter": 7,
+      "recipe": "pblock",
+      "batch_size": 1,
+      "targets": [
+        "pblock_net_delay_007",
+        "SLICE_X24Y48:SLICE_X30Y100 DSP48E2_X3Y20:DSP48E2_X3Y41 RAMB18_X2Y20:RAMB18_X2Y41 RAMB36_X2Y10:RAMB36_X2Y20"
+      ],
+      "wns_before": -0.736,
+      "wns_after": -0.736,
+      "fmax_before": 433.6513443191674,
+      "fmax_after": 433.6513443191674,
+      "delta_fmax": 0.0,
+      "vivado_runtime_s": 27.795592308044434,
+      "status": "no_improvement",
+      "checkpoint": "/home/fpl2026/dcp_optimizer_run-20260725_095829/checkpoints/iter_007.dcp",
+      "target_tier": "tier1_violating_paths",
+      "target_candidate_count": 20,
+      "path_delay_classification": "mixed",
+      "path_delay_breakdown": {
+        "logic_pct": 0.49354,
+        "net_pct": 0.50646,
+        "logic_delay_ns": 1.106,
+        "net_delay_ns": 1.135
+      },
+      "clock_period_ns": 1.57,
+      "achieved_fmax_mhz": 433.6513443191674,
+      "no_improvement_count": 1,
+      "consecutive_no_improvement": 0,
+      "action_failure_memory": {
+        "phys_opt_design": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "Explore"
+          ],
+          "last_failed_iter": 2,
+          "failed_on_current_targets": false
+        },
+        "phys_opt_design_retime": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "Explore"
+          ],
+          "last_failed_iter": 3,
+          "failed_on_current_targets": false
+        },
+        "fanout_split": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "Explore"
+          ],
+          "last_failed_iter": 4,
+          "failed_on_current_targets": false
+        },
+        "rapidwright_optimize_cell_placement": {
+          "consecutive_no_action_failures": 2,
+          "failed_targets": [
+            "RegFilePlugin_regFile_spinal_port0_reg[22]",
+            "RegFilePlugin_regFile_spinal_port1_reg[20]",
+            "IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[16]"
+          ],
+          "last_failed_iter": 5,
+          "failed_on_current_targets": false
+        }
+      },
+      "action_failure_counts": {
+        "phys_opt_design": 1,
+        "phys_opt_design_retime": 1,
+        "fanout_split": 1,
+        "rapidwright_optimize_cell_placement": 2
+      },
+      "delay_class": "mixed",
+      "endpoint_type": "REGISTER",
+      "allowed_actions": [
+        "pblock",
+        "phys_opt_design_retime",
+        "rapidwright_optimize_cell_placement",
+        "run_recipe",
+        "replicate_register",
+        "lut_opt",
+        "route_explore",
+        "phys_opt_design",
+        "pblock_full_replace",
+        "place_design_explore"
+      ],
+      "forbidden_actions": [
+        "logic_restructure"
+      ],
+      "action_guidance": {
+        "route_explore": "0 wins / 3 losses across previous runs on this design",
+        "phys_opt_design": "0 wins / 3 losses across previous runs on this design",
+        "place_design_explore": "directives with losing cross-run records on this design (never improved): Explore (0/3) -- do not re-try these; this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won",
+        "pblock_full_replace": "this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won"
+      },
+      "congestion_level": 0,
+      "cluster_clock_regions": [
+        "X0Y1"
+      ],
+      "llm_chosen_action": "pblock",
+      "structural_override_active": false,
+      "stuck_iterations": 0,
+      "exhausted_actions": [
+        "fanout_split"
+      ],
+      "validation_result": "ok",
+      "reprompt_count": 0,
+      "why_not_top_forbidden_action": "phys_opt_design_retime was not chosen because it shares the same 0/2 bad cross-run record as other phys_opt variants and the current winning placement is better refined with placement constraints than retiming.",
+      "raw_response": "{\n  \"delay_class_acknowledged\": \"mixed\",\n  \"endpoint_type_acknowledged\": \"REGISTER\",\n  \"chosen_action\": \"pblock\",\n  \"action_parameters\": {\"use_clock_regions\": true},\n  \"why_this_fits_delay_class\": \"Mixed delay (logic_pct 0.49354, net_pct 0.50646) still benefits from an incremental pblock tightening around the X0Y1 cluster that already produced the current best WNS of -0.736 ns.\",\n  \"why_not_top_forbidden_action\": \"phys_opt_design_retime was not chosen because it shares the same 0/2 bad cross-run record as other phys_opt variants and the current winning placement is better refined with placement constraints than retiming.\",\n  \"confidence\": 4\n}",
+      "cluster_count": 7,
+      "primary_diagnosis": "excessive_fanout",
+      "diagnosis_reasoning_trace": [
+        "normalized 20 timing-path candidate(s) from current_target_candidates",
+        "clustered into 7 cluster(s) via shared start/end cell name",
+        "primary cluster 'cluster_0' contains the current worst path (9 member(s), 1 cell(s) shared across all members)",
+        "outcome history: excessive_fanout's own prescriptions scored 0 win(s) / 1 loss(es) this run -> confidence -0.08",
+        "outcome history: placement_already_compact's own prescriptions scored 0 win(s) / 2 loss(es) this run -> confidence -0.16",
+        "scored hypotheses: excessive_fanout=0.72, localized_congestion=0.30, placement_already_compact=0.29, long_interconnect=0.25",
+        "primary hypothesis: excessive_fanout (confidence 0.72)",
+        "  + 1 cell(s) (['IBusCachedPlugin_cache/banks_0_reg_bram_1']) recur across 9/20 extracted candidates (45%) -- consistent with a shared high-fanout driver rather than independent placement issues.",
+        "  - outcome history: excessive_fanout's own prescriptions scored 0 win(s) / 1 loss(es) this run -> confidence -0.08"
+      ],
+      "diagnosis_action_adjustment": null,
+      "rapidwright_edit_summary": {
+        "action": "pblock",
+        "cells_moved": 1411,
+        "nets_affected": 0,
+        "pblock_ranges": "SLICE_X24Y48:SLICE_X30Y100 DSP48E2_X3Y20:DSP48E2_X3Y41 RAMB18_X2Y20:RAMB18_X2Y41 RAMB36_X2Y10:RAMB36_X2Y20",
+        "fabric_region": {
+          "col_min": 123,
+          "col_max": 143,
+          "row_min": 206,
+          "row_max": 260,
+          "center_col": 334,
+          "center_row": 155,
+          "center_of_mass_col": 133,
+          "center_of_mass_row": 233,
+          "contiguous_columns": 21,
+          "contiguous_rows": 55
+        },
+        "target_lut_count": 800,
+        "target_ff_count": 1600,
+        "site_counts": {
+          "SLICE": 371,
+          "DSP48E2": 22,
+          "RAMB18": 22,
+          "RAMB36": 11,
+          "URAM288": 0
+        },
+        "changed_design": true,
+        "pblock_name": "pblock_net_delay_007",
+        "apply_to": "current_design",
+        "is_soft": false,
+        "cells_matched": 1411,
+        "cells_assigned": 1411,
+        "resource_validation": {
+          "is_valid": true,
+          "primitive_count": 3293,
+          "cell_count": 1411,
+          "resource_issues": {},
+          "errors": [],
+          "drc_output": "Copyright 1986-2022 Xilinx, Inc. All Rights Reserved. Copyright 2022-2025 Advanced Micro Devices, Inc. All Rights Reserved.\n---------------------------------------------------------------------------------------------------------------------------------------------\n| Tool Version : Vivado v.2025.1 (lin64) Build 6140274 Wed May 21 22:58:25 MDT 2025\n| Date         : Sat Jul 25 10:03:04 2026\n| Host         : 35ns7cfvpwajp9e9nht0kyrsvp running 64-bit Ubuntu 24.04.4 LTS\n| Command      : report_drc -checks {UTLZ-1 UTLZ-2} -file /home/fpl2026/VivadoMCP/drc_check_pblock_net_delay_007.rpt\n| Design       : VexRiscv\n| Device       : xcvu3p-ffvc1517-2-e\n| Speed File   : -2\n| Design State : ignored\n---------------------------------------------------------------------------------------------------------------------------------------------\n\nReport DRC\n\nTable of Contents\n-----------------\n1. REPORT SUMMARY\n2. REPORT DETAILS\n\n1. REPORT SUMMARY\n-----------------\n            Netlist: netlist\n          Fl"
+        }
+      }
+    },
+    {
+      "iter": 8,
+      "recipe": "vivado_phys_opt",
+      "batch_size": 1,
+      "targets": [
+        "critical_cell_opt"
+      ],
+      "wns_before": -0.736,
+      "wns_after": -0.736,
+      "fmax_before": 433.6513443191674,
+      "fmax_after": 433.6513443191674,
+      "delta_fmax": 0.0,
+      "vivado_runtime_s": 53.10926151275635,
+      "status": "no_improvement",
+      "checkpoint": "/home/fpl2026/dcp_optimizer_run-20260725_095829/checkpoints/iter_008.dcp",
+      "target_tier": "tier1_violating_paths",
+      "target_candidate_count": 20,
+      "path_delay_classification": "mixed",
+      "path_delay_breakdown": {
+        "logic_pct": 0.49354,
+        "net_pct": 0.50646,
+        "logic_delay_ns": 1.106,
+        "net_delay_ns": 1.135
+      },
+      "clock_period_ns": 1.57,
+      "achieved_fmax_mhz": 433.6513443191674,
+      "no_improvement_count": 2,
+      "consecutive_no_improvement": 1,
+      "action_failure_memory": {
+        "phys_opt_design": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "Explore"
+          ],
+          "last_failed_iter": 2,
+          "failed_on_current_targets": false
+        },
+        "phys_opt_design_retime": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "Explore"
+          ],
+          "last_failed_iter": 3,
+          "failed_on_current_targets": false
+        },
+        "fanout_split": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "Explore"
+          ],
+          "last_failed_iter": 4,
+          "failed_on_current_targets": false
+        },
+        "rapidwright_optimize_cell_placement": {
+          "consecutive_no_action_failures": 2,
+          "failed_targets": [
+            "RegFilePlugin_regFile_spinal_port0_reg[22]",
+            "RegFilePlugin_regFile_spinal_port1_reg[20]",
+            "IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[16]"
+          ],
+          "last_failed_iter": 5,
+          "failed_on_current_targets": false
+        },
+        "rapidwright_analyze_fabric_for_pblock": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "pblock_net_delay_007",
+            "SLICE_X24Y48:SLICE_X30Y100 DSP48E2_X3Y20:DSP48E2_X3Y41 RAMB18_X2Y20:RAMB18_X2Y41 RAMB36_X2Y10:RAMB36_X2Y20"
+          ],
+          "last_failed_iter": 7,
+          "failed_on_current_targets": true
+        },
+        "rapidwright_convert_fabric_region_to_pblock": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "pblock_net_delay_007",
+            "SLICE_X24Y48:SLICE_X30Y100 DSP48E2_X3Y20:DSP48E2_X3Y41 RAMB18_X2Y20:RAMB18_X2Y41 RAMB36_X2Y10:RAMB36_X2Y20"
+          ],
+          "last_failed_iter": 7,
+          "failed_on_current_targets": true
+        },
+        "pblock": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "pblock_net_delay_007",
+            "SLICE_X24Y48:SLICE_X30Y100 DSP48E2_X3Y20:DSP48E2_X3Y41 RAMB18_X2Y20:RAMB18_X2Y41 RAMB36_X2Y10:RAMB36_X2Y20"
+          ],
+          "last_failed_iter": 7,
+          "failed_on_current_targets": true
+        }
+      },
+      "action_failure_counts": {
+        "phys_opt_design": 1,
+        "phys_opt_design_retime": 1,
+        "fanout_split": 1,
+        "rapidwright_optimize_cell_placement": 2,
+        "pblock": 1,
+        "rapidwright_analyze_fabric_for_pblock": 1,
+        "rapidwright_convert_fabric_region_to_pblock": 1
+      },
+      "delay_class": "mixed",
+      "endpoint_type": "REGISTER",
+      "allowed_actions": [
+        "pblock",
+        "phys_opt_design_retime",
+        "rapidwright_optimize_cell_placement",
+        "run_recipe",
+        "replicate_register",
+        "lut_opt",
+        "route_explore",
+        "phys_opt_design",
+        "pblock_full_replace",
+        "place_design_explore"
+      ],
+      "forbidden_actions": [
+        "logic_restructure"
+      ],
+      "action_guidance": {
+        "route_explore": "0 wins / 3 losses across previous runs on this design",
+        "phys_opt_design": "0 wins / 3 losses across previous runs on this design",
+        "place_design_explore": "directives with losing cross-run records on this design (never improved): Explore (0/3) -- do not re-try these; this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won",
+        "pblock_full_replace": "this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won"
+      },
+      "congestion_level": 0,
+      "cluster_clock_regions": [
+        "X0Y1"
+      ],
+      "llm_chosen_action": "replicate_register",
+      "structural_override_active": false,
+      "stuck_iterations": 1,
+      "exhausted_actions": [
+        "fanout_split"
+      ],
+      "validation_result": "ok",
+      "reprompt_count": 0,
+      "why_not_top_forbidden_action": "pblock was not chosen because its two prior attempts (iter 6 improved, iter 7 no_improvement) have already been exhausted on the current targets and produced the last_action_failure state.",
+      "raw_response": "{\n  \"delay_class_acknowledged\": \"mixed\",\n  \"endpoint_type_acknowledged\": \"REGISTER\",\n  \"chosen_action\": \"replicate_register\",\n  \"action_parameters\": {},\n  \"why_this_fits_delay_class\": \"Mixed delay (logic_pct 0.49354, net_pct 0.50646) on a BRAM control endpoint (IBusCachedPlugin_cache/banks_0_reg_bram_1/CLKBWRCLK) with excessive_fanout diagnosis is best addressed by replication to reduce net delay without moving cells.\",\n  \"why_not_top_forbidden_action\": \"pblock was not chosen because its two prior attempts (iter 6 improved, iter 7 no_improvement) have already been exhausted on the current targets and produced the last_action_failure state.\",\n  \"confidence\": 4\n}",
+      "cluster_count": 7,
+      "primary_diagnosis": "excessive_fanout",
+      "diagnosis_reasoning_trace": [
+        "normalized 20 timing-path candidate(s) from current_target_candidates",
+        "clustered into 7 cluster(s) via shared start/end cell name",
+        "primary cluster 'cluster_0' contains the current worst path (9 member(s), 1 cell(s) shared across all members)",
+        "outcome history: excessive_fanout's own prescriptions scored 0 win(s) / 1 loss(es) this run -> confidence -0.08",
+        "outcome history: placement_already_compact's own prescriptions scored 0 win(s) / 2 loss(es) this run -> confidence -0.16",
+        "scored hypotheses: excessive_fanout=0.72, localized_congestion=0.30, placement_already_compact=0.29, long_interconnect=0.25",
+        "primary hypothesis: excessive_fanout (confidence 0.72)",
+        "  + 1 cell(s) (['IBusCachedPlugin_cache/banks_0_reg_bram_1']) recur across 9/20 extracted candidates (45%) -- consistent with a shared high-fanout driver rather than independent placement issues.",
+        "  - outcome history: excessive_fanout's own prescriptions scored 0 win(s) / 1 loss(es) this run -> confidence -0.08"
+      ],
+      "diagnosis_action_adjustment": null
+    },
+    {
+      "iter": 9,
+      "recipe": "route_explore",
+      "batch_size": 1,
+      "targets": [
+        "directive:HigherDelayCost"
+      ],
+      "wns_before": -0.736,
+      "wns_after": -0.736,
+      "fmax_before": 433.6513443191674,
+      "fmax_after": 433.6513443191674,
+      "delta_fmax": 0.0,
+      "vivado_runtime_s": 27.734941482543945,
+      "status": "no_improvement",
+      "checkpoint": "/home/fpl2026/dcp_optimizer_run-20260725_095829/checkpoints/iter_009.dcp",
+      "target_tier": "tier1_violating_paths",
+      "target_candidate_count": 20,
+      "path_delay_classification": "mixed",
+      "path_delay_breakdown": {
+        "logic_pct": 0.49354,
+        "net_pct": 0.50646,
+        "logic_delay_ns": 1.106,
+        "net_delay_ns": 1.135
+      },
+      "clock_period_ns": 1.57,
+      "achieved_fmax_mhz": 433.6513443191674,
+      "no_improvement_count": 3,
+      "consecutive_no_improvement": 2,
+      "action_failure_memory": {
+        "phys_opt_design": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "Explore"
+          ],
+          "last_failed_iter": 2,
+          "failed_on_current_targets": false
+        },
+        "phys_opt_design_retime": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "Explore"
+          ],
+          "last_failed_iter": 3,
+          "failed_on_current_targets": false
+        },
+        "fanout_split": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "Explore"
+          ],
+          "last_failed_iter": 4,
+          "failed_on_current_targets": false
+        },
+        "rapidwright_optimize_cell_placement": {
+          "consecutive_no_action_failures": 2,
+          "failed_targets": [
+            "RegFilePlugin_regFile_spinal_port0_reg[22]",
+            "RegFilePlugin_regFile_spinal_port1_reg[20]",
+            "IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[16]"
+          ],
+          "last_failed_iter": 5,
+          "failed_on_current_targets": false
+        },
+        "rapidwright_analyze_fabric_for_pblock": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "pblock_net_delay_007",
+            "SLICE_X24Y48:SLICE_X30Y100 DSP48E2_X3Y20:DSP48E2_X3Y41 RAMB18_X2Y20:RAMB18_X2Y41 RAMB36_X2Y10:RAMB36_X2Y20"
+          ],
+          "last_failed_iter": 7,
+          "failed_on_current_targets": true
+        },
+        "rapidwright_convert_fabric_region_to_pblock": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "pblock_net_delay_007",
+            "SLICE_X24Y48:SLICE_X30Y100 DSP48E2_X3Y20:DSP48E2_X3Y41 RAMB18_X2Y20:RAMB18_X2Y41 RAMB36_X2Y10:RAMB36_X2Y20"
+          ],
+          "last_failed_iter": 7,
+          "failed_on_current_targets": true
+        },
+        "pblock": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "pblock_net_delay_007",
+            "SLICE_X24Y48:SLICE_X30Y100 DSP48E2_X3Y20:DSP48E2_X3Y41 RAMB18_X2Y20:RAMB18_X2Y41 RAMB36_X2Y10:RAMB36_X2Y20"
+          ],
+          "last_failed_iter": 7,
+          "failed_on_current_targets": true
+        },
+        "replicate_register": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "critical_cell_opt"
+          ],
+          "last_failed_iter": 8,
+          "failed_on_current_targets": true
+        }
+      },
+      "action_failure_counts": {
+        "phys_opt_design": 1,
+        "phys_opt_design_retime": 1,
+        "fanout_split": 1,
+        "rapidwright_optimize_cell_placement": 2,
+        "pblock": 1,
+        "rapidwright_analyze_fabric_for_pblock": 1,
+        "rapidwright_convert_fabric_region_to_pblock": 1,
+        "replicate_register": 1
+      },
+      "delay_class": "mixed",
+      "endpoint_type": "REGISTER",
+      "allowed_actions": [
+        "pblock",
+        "phys_opt_design_retime",
+        "rapidwright_optimize_cell_placement",
+        "run_recipe",
+        "replicate_register",
+        "lut_opt",
+        "route_explore",
+        "phys_opt_design",
+        "pblock_full_replace",
+        "place_design_explore"
+      ],
+      "forbidden_actions": [
+        "logic_restructure"
+      ],
+      "action_guidance": {
+        "route_explore": "0 wins / 3 losses across previous runs on this design",
+        "phys_opt_design": "0 wins / 3 losses across previous runs on this design",
+        "place_design_explore": "directives with losing cross-run records on this design (never improved): Explore (0/3) -- do not re-try these; this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won",
+        "pblock_full_replace": "this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won"
+      },
+      "congestion_level": 0,
+      "cluster_clock_regions": [
+        "X0Y1"
+      ],
+      "llm_chosen_action": "route_explore",
+      "structural_override_active": false,
+      "stuck_iterations": 2,
+      "exhausted_actions": [
+        "fanout_split"
+      ],
+      "validation_result": "ok",
+      "reprompt_count": 0,
+      "why_not_top_forbidden_action": "pblock was not chosen because its three prior attempts (one improvement, two failures on current targets) have exhausted the pblock approach and the last_action_failure record shows fabric analysis also failed.",
+      "raw_response": "{\n  \"delay_class_acknowledged\": \"mixed\",\n  \"endpoint_type_acknowledged\": \"REGISTER\",\n  \"chosen_action\": \"route_explore\",\n  \"action_parameters\": {\"directive\": \"HigherDelayCost\"},\n  \"why_this_fits_delay_class\": \"Mixed delay (logic_pct 0.49354, net_pct 0.50646) on fanout-suspect BRAM control net is best served by a low-variance route pass that can reduce net_delay without touching the already-compact placement.\",\n  \"why_not_top_forbidden_action\": \"pblock was not chosen because its three prior attempts (one improvement, two failures on current targets) have exhausted the pblock approach and the last_action_failure record shows fabric analysis also failed.\",\n  \"confidence\": 3\n}",
+      "cluster_count": 7,
+      "primary_diagnosis": "excessive_fanout",
+      "diagnosis_reasoning_trace": [
+        "normalized 20 timing-path candidate(s) from current_target_candidates",
+        "clustered into 7 cluster(s) via shared start/end cell name",
+        "primary cluster 'cluster_0' contains the current worst path (9 member(s), 1 cell(s) shared across all members)",
+        "outcome history: excessive_fanout's own prescriptions scored 0 win(s) / 2 loss(es) this run -> confidence -0.16",
+        "outcome history: placement_already_compact's own prescriptions scored 0 win(s) / 2 loss(es) this run -> confidence -0.16",
+        "scored hypotheses: excessive_fanout=0.64, localized_congestion=0.30, placement_already_compact=0.29, long_interconnect=0.25",
+        "primary hypothesis: excessive_fanout (confidence 0.64)",
+        "  + 1 cell(s) (['IBusCachedPlugin_cache/banks_0_reg_bram_1']) recur across 9/20 extracted candidates (45%) -- consistent with a shared high-fanout driver rather than independent placement issues.",
+        "  - outcome history: excessive_fanout's own prescriptions scored 0 win(s) / 2 loss(es) this run -> confidence -0.16"
+      ],
+      "diagnosis_action_adjustment": null
+    },
+    {
+      "iter": 10,
+      "recipe": "pblock_full_replace",
+      "batch_size": 1,
+      "targets": [
+        "full_design",
+        "SLICE_X24Y48:SLICE_X30Y100 DSP48E2_X3Y20:DSP48E2_X3Y41 RAMB18_X2Y20:RAMB18_X2Y41 RAMB36_X2Y10:RAMB36_X2Y20"
+      ],
+      "wns_before": -0.736,
+      "wns_after": -0.674,
+      "fmax_before": 433.6513443191674,
+      "fmax_after": 445.632798573975,
+      "delta_fmax": 11.981454254807602,
+      "vivado_runtime_s": 119.42029523849487,
+      "status": "improved",
+      "checkpoint": "/home/fpl2026/dcp_optimizer_run-20260725_095829/checkpoints/iter_010.dcp",
+      "target_tier": "tier1_violating_paths",
+      "target_candidate_count": 20,
+      "path_delay_classification": "mixed",
+      "path_delay_breakdown": {
+        "logic_pct": 0.49354,
+        "net_pct": 0.50646,
+        "logic_delay_ns": 1.106,
+        "net_delay_ns": 1.135
+      },
+      "clock_period_ns": 1.57,
+      "achieved_fmax_mhz": 445.632798573975,
+      "no_improvement_count": 0,
+      "consecutive_no_improvement": 3,
+      "action_failure_memory": {
+        "phys_opt_design": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "Explore"
+          ],
+          "last_failed_iter": 2,
+          "failed_on_current_targets": false
+        },
+        "phys_opt_design_retime": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "Explore"
+          ],
+          "last_failed_iter": 3,
+          "failed_on_current_targets": false
+        },
+        "fanout_split": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "Explore"
+          ],
+          "last_failed_iter": 4,
+          "failed_on_current_targets": false
+        },
+        "rapidwright_optimize_cell_placement": {
+          "consecutive_no_action_failures": 2,
+          "failed_targets": [
+            "RegFilePlugin_regFile_spinal_port0_reg[22]",
+            "RegFilePlugin_regFile_spinal_port1_reg[20]",
+            "IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[16]"
+          ],
+          "last_failed_iter": 5,
+          "failed_on_current_targets": false
+        },
+        "rapidwright_analyze_fabric_for_pblock": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "pblock_net_delay_007",
+            "SLICE_X24Y48:SLICE_X30Y100 DSP48E2_X3Y20:DSP48E2_X3Y41 RAMB18_X2Y20:RAMB18_X2Y41 RAMB36_X2Y10:RAMB36_X2Y20"
+          ],
+          "last_failed_iter": 7,
+          "failed_on_current_targets": true
+        },
+        "rapidwright_convert_fabric_region_to_pblock": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "pblock_net_delay_007",
+            "SLICE_X24Y48:SLICE_X30Y100 DSP48E2_X3Y20:DSP48E2_X3Y41 RAMB18_X2Y20:RAMB18_X2Y41 RAMB36_X2Y10:RAMB36_X2Y20"
+          ],
+          "last_failed_iter": 7,
+          "failed_on_current_targets": true
+        },
+        "pblock": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "pblock_net_delay_007",
+            "SLICE_X24Y48:SLICE_X30Y100 DSP48E2_X3Y20:DSP48E2_X3Y41 RAMB18_X2Y20:RAMB18_X2Y41 RAMB36_X2Y10:RAMB36_X2Y20"
+          ],
+          "last_failed_iter": 7,
+          "failed_on_current_targets": true
+        },
+        "replicate_register": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "critical_cell_opt"
+          ],
+          "last_failed_iter": 8,
+          "failed_on_current_targets": true
+        },
+        "route_explore": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "directive:HigherDelayCost"
+          ],
+          "last_failed_iter": 9,
+          "failed_on_current_targets": true
+        }
+      },
+      "action_failure_counts": {
+        "phys_opt_design": 1,
+        "phys_opt_design_retime": 1,
+        "fanout_split": 1,
+        "rapidwright_optimize_cell_placement": 2,
+        "pblock": 1,
+        "rapidwright_analyze_fabric_for_pblock": 1,
+        "rapidwright_convert_fabric_region_to_pblock": 1,
+        "replicate_register": 1,
+        "route_explore": 1
+      },
+      "delay_class": "mixed",
+      "endpoint_type": "REGISTER",
+      "allowed_actions": [
+        "rapidwright_optimize_cell_placement",
+        "pblock",
+        "pblock_full_replace",
+        "place_design_explore"
+      ],
+      "forbidden_actions": [
+        "logic_restructure"
+      ],
+      "action_guidance": {
+        "route_explore": "0 wins / 3 losses across previous runs on this design",
+        "phys_opt_design": "0 wins / 3 losses across previous runs on this design",
+        "place_design_explore": "directives with losing cross-run records on this design (never improved): Explore (0/3) -- do not re-try these; this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won",
+        "pblock_full_replace": "this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won"
+      },
+      "congestion_level": 0,
+      "cluster_clock_regions": [
+        "X0Y1"
+      ],
+      "llm_chosen_action": "pblock_full_replace",
+      "structural_override_active": true,
+      "stuck_iterations": 3,
+      "exhausted_actions": [
+        "fanout_split"
+      ],
+      "validation_result": "ok",
+      "reprompt_count": 0,
+      "why_not_top_forbidden_action": "rapidwright_optimize_cell_placement was not chosen because its prior execution produced a +253% cell-spread regression that directly worsened net delay on the same targets.",
+      "raw_response": "{\n  \"delay_class_acknowledged\": \"mixed\",\n  \"endpoint_type_acknowledged\": \"REGISTER\",\n  \"chosen_action\": \"pblock_full_replace\",\n  \"action_parameters\": {\"place_directive\": \"ExtraTimingOpt\", \"route_directive\": \"Explore\"},\n  \"why_this_fits_delay_class\": \"Mixed delay (logic_pct 0.49354, net_pct 0.50646) on an excessive-fanout BRAM control path requires a fresh whole-design constrained placement because all refinement actions have stalled.\",\n  \"why_not_top_forbidden_action\": \"rapidwright_optimize_cell_placement was not chosen because its prior execution produced a +253% cell-spread regression that directly worsened net delay on the same targets.\",\n  \"confidence\": 3\n}",
+      "cluster_count": 7,
+      "primary_diagnosis": "excessive_fanout",
+      "diagnosis_reasoning_trace": [
+        "normalized 20 timing-path candidate(s) from current_target_candidates",
+        "clustered into 7 cluster(s) via shared start/end cell name",
+        "primary cluster 'cluster_0' contains the current worst path (9 member(s), 1 cell(s) shared across all members)",
+        "outcome history: excessive_fanout's own prescriptions scored 0 win(s) / 2 loss(es) this run -> confidence -0.16",
+        "outcome history: placement_already_compact's own prescriptions scored 0 win(s) / 2 loss(es) this run -> confidence -0.16",
+        "scored hypotheses: excessive_fanout=0.64, localized_congestion=0.30, placement_already_compact=0.29, long_interconnect=0.25",
+        "primary hypothesis: excessive_fanout (confidence 0.64)",
+        "  + 1 cell(s) (['IBusCachedPlugin_cache/banks_0_reg_bram_1']) recur across 9/20 extracted candidates (45%) -- consistent with a shared high-fanout driver rather than independent placement issues.",
+        "  - outcome history: excessive_fanout's own prescriptions scored 0 win(s) / 2 loss(es) this run -> confidence -0.16"
+      ],
+      "diagnosis_action_adjustment": null,
+      "rapidwright_edit_summary": {
+        "action": "pblock_full_replace",
+        "cells_moved": 0,
+        "nets_affected": 0,
+        "pblock_ranges": "SLICE_X24Y48:SLICE_X30Y100 DSP48E2_X3Y20:DSP48E2_X3Y41 RAMB18_X2Y20:RAMB18_X2Y41 RAMB36_X2Y10:RAMB36_X2Y20",
+        "fabric_region": {
+          "col_min": 123,
+          "col_max": 143,
+          "row_min": 206,
+          "row_max": 260,
+          "center_col": 334,
+          "center_row": 155,
+          "center_of_mass_col": 133,
+          "center_of_mass_row": 233,
+          "contiguous_columns": 21,
+          "contiguous_rows": 55
+        }
+      }
+    },
+    {
+      "iter": 11,
+      "recipe": "pblock",
+      "batch_size": 1,
+      "targets": [
+        "pblock_net_delay_011",
+        "SLICE_X24Y48:SLICE_X30Y100 DSP48E2_X3Y20:DSP48E2_X3Y41 RAMB18_X2Y20:RAMB18_X2Y41 RAMB36_X2Y10:RAMB36_X2Y20"
+      ],
+      "wns_before": -0.674,
+      "wns_after": -0.674,
+      "fmax_before": 445.632798573975,
+      "fmax_after": 445.632798573975,
+      "delta_fmax": 0.0,
+      "vivado_runtime_s": 29.294963359832764,
+      "status": "no_improvement",
+      "checkpoint": "/home/fpl2026/dcp_optimizer_run-20260725_095829/checkpoints/iter_011.dcp",
+      "target_tier": "tier1_violating_paths",
+      "target_candidate_count": 20,
+      "path_delay_classification": "mixed",
+      "path_delay_breakdown": {
+        "logic_pct": 0.36076,
+        "net_pct": 0.63924,
+        "logic_delay_ns": 0.66,
+        "net_delay_ns": 1.169
+      },
+      "clock_period_ns": 1.57,
+      "achieved_fmax_mhz": 445.632798573975,
+      "no_improvement_count": 1,
+      "consecutive_no_improvement": 0,
+      "action_failure_memory": {
+        "phys_opt_design": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "Explore"
+          ],
+          "last_failed_iter": 2,
+          "failed_on_current_targets": false
+        },
+        "phys_opt_design_retime": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "Explore"
+          ],
+          "last_failed_iter": 3,
+          "failed_on_current_targets": false
+        },
+        "fanout_split": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "Explore"
+          ],
+          "last_failed_iter": 4,
+          "failed_on_current_targets": false
+        },
+        "rapidwright_optimize_cell_placement": {
+          "consecutive_no_action_failures": 2,
+          "failed_targets": [
+            "RegFilePlugin_regFile_spinal_port0_reg[22]",
+            "RegFilePlugin_regFile_spinal_port1_reg[20]",
+            "IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[16]"
+          ],
+          "last_failed_iter": 5,
+          "failed_on_current_targets": false
+        },
+        "rapidwright_analyze_fabric_for_pblock": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "pblock_net_delay_007",
+            "SLICE_X24Y48:SLICE_X30Y100 DSP48E2_X3Y20:DSP48E2_X3Y41 RAMB18_X2Y20:RAMB18_X2Y41 RAMB36_X2Y10:RAMB36_X2Y20"
+          ],
+          "last_failed_iter": 7,
+          "failed_on_current_targets": false
+        },
+        "rapidwright_convert_fabric_region_to_pblock": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "pblock_net_delay_007",
+            "SLICE_X24Y48:SLICE_X30Y100 DSP48E2_X3Y20:DSP48E2_X3Y41 RAMB18_X2Y20:RAMB18_X2Y41 RAMB36_X2Y10:RAMB36_X2Y20"
+          ],
+          "last_failed_iter": 7,
+          "failed_on_current_targets": false
+        },
+        "pblock": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "pblock_net_delay_007",
+            "SLICE_X24Y48:SLICE_X30Y100 DSP48E2_X3Y20:DSP48E2_X3Y41 RAMB18_X2Y20:RAMB18_X2Y41 RAMB36_X2Y10:RAMB36_X2Y20"
+          ],
+          "last_failed_iter": 7,
+          "failed_on_current_targets": false
+        },
+        "replicate_register": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "critical_cell_opt"
+          ],
+          "last_failed_iter": 8,
+          "failed_on_current_targets": false
+        },
+        "route_explore": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "directive:HigherDelayCost"
+          ],
+          "last_failed_iter": 9,
+          "failed_on_current_targets": false
+        }
+      },
+      "action_failure_counts": {
+        "phys_opt_design": 1,
+        "phys_opt_design_retime": 1,
+        "fanout_split": 1,
+        "rapidwright_optimize_cell_placement": 2,
+        "pblock": 1,
+        "rapidwright_analyze_fabric_for_pblock": 1,
+        "rapidwright_convert_fabric_region_to_pblock": 1,
+        "replicate_register": 1,
+        "route_explore": 1
+      },
+      "delay_class": "mixed",
+      "endpoint_type": "BRAM_CONTROL",
+      "allowed_actions": [
+        "rapidwright_optimize_cell_placement",
+        "pblock",
+        "run_recipe",
+        "lut_opt",
+        "phys_opt_design_retime",
+        "replicate_register",
+        "route_explore",
+        "phys_opt_design",
+        "pblock_full_replace",
+        "place_design_explore"
+      ],
+      "forbidden_actions": [
+        "logic_restructure"
+      ],
+      "action_guidance": {
+        "fanout_split": "endpoint is a BRAM_CONTROL pin; routing to a hard-block control pin needs physical proximity, not net splitting",
+        "phys_opt_design_retime": "WNS -0.674 ns is below -0.500 ns; incremental phys_opt cannot close that gap while structural actions remain",
+        "phys_opt_design": "WNS -0.674 ns is below -0.500 ns; incremental phys_opt cannot close that gap while structural actions remain; 0 wins / 3 losses across previous runs on this design",
+        "replicate_register": "WNS -0.674 ns is below -0.500 ns; incremental phys_opt cannot close that gap while structural actions remain",
+        "route_explore": "0 wins / 3 losses across previous runs on this design",
+        "place_design_explore": "directives with losing cross-run records on this design (never improved): Explore (0/3) -- do not re-try these; this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won",
+        "pblock_full_replace": "this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won"
+      },
+      "congestion_level": 0,
+      "cluster_clock_regions": [
+        "X0Y0",
+        "X0Y1"
+      ],
+      "llm_chosen_action": "pblock",
+      "structural_override_active": false,
+      "stuck_iterations": 0,
+      "exhausted_actions": [
+        "fanout_split"
+      ],
+      "validation_result": "ok",
+      "reprompt_count": 0,
+      "why_not_top_forbidden_action": "rapidwright_optimize_cell_placement was not chosen because its last execution on the same targets increased average cluster spread by +253 % and regressed net delay, contradicting the long_interconnect diagnosis.",
+      "raw_response": "{\n  \"delay_class_acknowledged\": \"mixed\",\n  \"endpoint_type_acknowledged\": \"BRAM_CONTROL\",\n  \"chosen_action\": \"pblock\",\n  \"action_parameters\": {},\n  \"why_this_fits_delay_class\": \"Mixed delay (logic_pct 0.36076, net_pct 0.63924) with long_interconnect diagnosis (53.5-tile spread) on a BRAM_CONTROL endpoint is best addressed by a constrained pblock that forces physical proximity, directly reducing net_delay.\",\n  \"why_not_top_forbidden_action\": \"rapidwright_optimize_cell_placement was not chosen because its last execution on the same targets increased average cluster spread by +253 % and regressed net delay, contradicting the long_interconnect diagnosis.\",\n  \"confidence\": 4\n}",
+      "cluster_count": 7,
+      "primary_diagnosis": "long_interconnect",
+      "diagnosis_reasoning_trace": [
+        "normalized 20 timing-path candidate(s) from current_target_candidates",
+        "clustered into 7 cluster(s) via shared start/end cell name",
+        "primary cluster 'cluster_0' contains the current worst path (3 member(s), 1 cell(s) shared across all members)",
+        "outcome history: excessive_fanout's own prescriptions scored 0 win(s) / 2 loss(es) this run -> confidence -0.16",
+        "outcome history: placement_already_compact's own prescriptions scored 0 win(s) / 2 loss(es) this run -> confidence -0.16",
+        "scored hypotheses: long_interconnect=0.90, excessive_fanout=0.24, localized_congestion=0.10, placement_already_compact=0.09",
+        "primary hypothesis: long_interconnect (confidence 0.90)",
+        "  + avg spread 32.0 tiles exceeds 30 on a net-delay-bound cluster (64% net delay) -- cells are genuinely far apart, not just congested.",
+        "  + cluster cells span 2 clock regions (['X0Y0', 'X0Y1']) -- crossings confirm real physical distance."
+      ],
+      "diagnosis_action_adjustment": "long_interconnect (confidence 0.90) prioritized ['rapidwright_optimize_cell_placement']",
+      "rapidwright_edit_summary": {
+        "action": "pblock",
+        "cells_moved": 1411,
+        "nets_affected": 0,
+        "pblock_ranges": "SLICE_X24Y48:SLICE_X30Y100 DSP48E2_X3Y20:DSP48E2_X3Y41 RAMB18_X2Y20:RAMB18_X2Y41 RAMB36_X2Y10:RAMB36_X2Y20",
+        "fabric_region": {
+          "col_min": 123,
+          "col_max": 143,
+          "row_min": 206,
+          "row_max": 260,
+          "center_col": 334,
+          "center_row": 155,
+          "center_of_mass_col": 133,
+          "center_of_mass_row": 233,
+          "contiguous_columns": 21,
+          "contiguous_rows": 55
+        },
+        "target_lut_count": 1200,
+        "target_ff_count": 2400,
+        "site_counts": {
+          "SLICE": 371,
+          "DSP48E2": 22,
+          "RAMB18": 22,
+          "RAMB36": 11,
+          "URAM288": 0
+        },
+        "changed_design": true,
+        "pblock_name": "pblock_net_delay_011",
+        "apply_to": "current_design",
+        "is_soft": false,
+        "cells_matched": 1411,
+        "cells_assigned": 1411,
+        "resource_validation": {
+          "is_valid": true,
+          "primitive_count": 3293,
+          "cell_count": 1411,
+          "resource_issues": {},
+          "errors": [],
+          "drc_output": "Copyright 1986-2022 Xilinx, Inc. All Rights Reserved. Copyright 2022-2025 Advanced Micro Devices, Inc. All Rights Reserved.\n---------------------------------------------------------------------------------------------------------------------------------------------\n| Tool Version : Vivado v.2025.1 (lin64) Build 6140274 Wed May 21 22:58:25 MDT 2025\n| Date         : Sat Jul 25 10:06:59 2026\n| Host         : 35ns7cfvpwajp9e9nht0kyrsvp running 64-bit Ubuntu 24.04.4 LTS\n| Command      : report_drc -checks {UTLZ-1 UTLZ-2} -file /home/fpl2026/VivadoMCP/drc_check_pblock_net_delay_011.rpt\n| Design       : VexRiscv\n| Device       : xcvu3p-ffvc1517-2-e\n| Speed File   : -2\n| Design State : ignored\n---------------------------------------------------------------------------------------------------------------------------------------------\n\nReport DRC\n\nTable of Contents\n-----------------\n1. REPORT SUMMARY\n2. REPORT DETAILS\n\n1. REPORT SUMMARY\n-----------------\n            Netlist: netlist\n          Fl"
+        }
+      }
+    },
+    {
+      "iter": 12,
+      "recipe": "vivado_phys_opt",
+      "batch_size": 1,
+      "targets": [
+        "Explore"
+      ],
+      "wns_before": -0.674,
+      "wns_after": null,
+      "fmax_before": 445.632798573975,
+      "fmax_after": null,
+      "delta_fmax": 0.0,
+      "vivado_runtime_s": 0.56689453125,
+      "status": "failed",
+      "reason": "Skipping phys_opt_design because current WNS -0.674 ns is below -0.500 ns; use structural placement actions first.",
+      "error_type": "phys_opt_below_useful_wns",
+      "checkpoint": null,
+      "rapidwright_edit_summary": null,
+      "action_failure_memory": {
+        "phys_opt_design": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "Explore"
+          ],
+          "target_fingerprint": "{\"candidates\": [{\"endpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_0/ADDRBWRADDR[4]\", \"slack\": -0.674, \"startpoint\": \"IBusCachedPlugin_predictor_history_reg/CLKARDCLK\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port1_reg[5]/D\", \"slack\": -0.668, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[21]/C\"}, {\"endpoint\": \"decode_to_execute_RS2_reg[31]/D\", \"slack\": -0.656, \"startpoint\": \"decode_to_execute_SRC2_CTRL_reg[1]/C\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[7]/D\", \"slack\": -0.656, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[21]/C\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port1_reg[1]/D\", \"slack\": -0.648, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[21]/C\"}], \"delay_class\": \"mixed\", \"tier\": \"tier1_violating_paths\"}",
+          "last_failed_iter": 12
+        },
+        "phys_opt_design_retime": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "Explore"
+          ],
+          "target_fingerprint": "{\"candidates\": [{\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[22]/D\", \"slack\": -0.785, \"startpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_1/CLKBWRCLK\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port1_reg[20]/D\", \"slack\": -0.772, \"startpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_1/CLKBWRCLK\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[6]/D\", \"slack\": -0.761, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[16]/C\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[10]/D\", \"slack\": -0.755, \"startpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_1/CLKBWRCLK\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[26]/D\", \"slack\": -0.747, \"startpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_0/CLKBWRCLK\"}], \"delay_class\": \"mixed\", \"tier\": \"tier1_violating_paths\"}",
+          "last_failed_iter": 3
+        },
+        "fanout_split": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "Explore"
+          ],
+          "target_fingerprint": "{\"candidates\": [{\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[22]/D\", \"slack\": -0.785, \"startpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_1/CLKBWRCLK\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port1_reg[20]/D\", \"slack\": -0.772, \"startpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_1/CLKBWRCLK\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[6]/D\", \"slack\": -0.761, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[16]/C\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[10]/D\", \"slack\": -0.755, \"startpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_1/CLKBWRCLK\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[26]/D\", \"slack\": -0.747, \"startpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_0/CLKBWRCLK\"}], \"delay_class\": \"mixed\", \"tier\": \"tier1_violating_paths\"}",
+          "last_failed_iter": 4
+        },
+        "rapidwright_optimize_cell_placement": {
+          "consecutive_no_action_failures": 2,
+          "failed_targets": [
+            "RegFilePlugin_regFile_spinal_port0_reg[22]",
+            "RegFilePlugin_regFile_spinal_port1_reg[20]",
+            "IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[16]",
+            "RegFilePlugin_regFile_spinal_port0_reg[6]",
+            "RegFilePlugin_regFile_spinal_port0_reg[10]",
+            "RegFilePlugin_regFile_spinal_port0_reg[26]",
+            "RegFilePlugin_regFile_spinal_port1_reg[19]",
+            "RegFilePlugin_regFile_spinal_port1_reg[17]",
+            "IBusCachedPlugin_cache/banks_0_reg_bram_1",
+            "IBusCachedPlugin_cache/banks_0_reg_bram_0"
+          ],
+          "target_fingerprint": "{\"candidates\": [{\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[22]/D\", \"slack\": -0.785, \"startpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_1/CLKBWRCLK\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port1_reg[20]/D\", \"slack\": -0.772, \"startpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_1/CLKBWRCLK\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[6]/D\", \"slack\": -0.761, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[16]/C\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[10]/D\", \"slack\": -0.755, \"startpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_1/CLKBWRCLK\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[26]/D\", \"slack\": -0.747, \"startpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_0/CLKBWRCLK\"}], \"delay_class\": \"mixed\", \"tier\": \"tier1_violating_paths\"}",
+          "last_failed_iter": 5
+        },
+        "rapidwright_analyze_fabric_for_pblock": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "pblock_net_delay_011",
+            "SLICE_X24Y48:SLICE_X30Y100 DSP48E2_X3Y20:DSP48E2_X3Y41 RAMB18_X2Y20:RAMB18_X2Y41 RAMB36_X2Y10:RAMB36_X2Y20"
+          ],
+          "target_fingerprint": "{\"candidates\": [{\"endpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_0/ADDRBWRADDR[4]\", \"slack\": -0.674, \"startpoint\": \"IBusCachedPlugin_predictor_history_reg/CLKARDCLK\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port1_reg[5]/D\", \"slack\": -0.668, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[21]/C\"}, {\"endpoint\": \"decode_to_execute_RS2_reg[31]/D\", \"slack\": -0.656, \"startpoint\": \"decode_to_execute_SRC2_CTRL_reg[1]/C\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[7]/D\", \"slack\": -0.656, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[21]/C\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port1_reg[1]/D\", \"slack\": -0.648, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[21]/C\"}], \"delay_class\": \"mixed\", \"tier\": \"tier1_violating_paths\"}",
+          "last_failed_iter": 11
+        },
+        "rapidwright_convert_fabric_region_to_pblock": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "pblock_net_delay_011",
+            "SLICE_X24Y48:SLICE_X30Y100 DSP48E2_X3Y20:DSP48E2_X3Y41 RAMB18_X2Y20:RAMB18_X2Y41 RAMB36_X2Y10:RAMB36_X2Y20"
+          ],
+          "target_fingerprint": "{\"candidates\": [{\"endpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_0/ADDRBWRADDR[4]\", \"slack\": -0.674, \"startpoint\": \"IBusCachedPlugin_predictor_history_reg/CLKARDCLK\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port1_reg[5]/D\", \"slack\": -0.668, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[21]/C\"}, {\"endpoint\": \"decode_to_execute_RS2_reg[31]/D\", \"slack\": -0.656, \"startpoint\": \"decode_to_execute_SRC2_CTRL_reg[1]/C\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[7]/D\", \"slack\": -0.656, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[21]/C\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port1_reg[1]/D\", \"slack\": -0.648, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[21]/C\"}], \"delay_class\": \"mixed\", \"tier\": \"tier1_violating_paths\"}",
+          "last_failed_iter": 11
+        },
+        "pblock": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "pblock_net_delay_011",
+            "SLICE_X24Y48:SLICE_X30Y100 DSP48E2_X3Y20:DSP48E2_X3Y41 RAMB18_X2Y20:RAMB18_X2Y41 RAMB36_X2Y10:RAMB36_X2Y20"
+          ],
+          "target_fingerprint": "{\"candidates\": [{\"endpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_0/ADDRBWRADDR[4]\", \"slack\": -0.674, \"startpoint\": \"IBusCachedPlugin_predictor_history_reg/CLKARDCLK\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port1_reg[5]/D\", \"slack\": -0.668, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[21]/C\"}, {\"endpoint\": \"decode_to_execute_RS2_reg[31]/D\", \"slack\": -0.656, \"startpoint\": \"decode_to_execute_SRC2_CTRL_reg[1]/C\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[7]/D\", \"slack\": -0.656, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[21]/C\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port1_reg[1]/D\", \"slack\": -0.648, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[21]/C\"}], \"delay_class\": \"mixed\", \"tier\": \"tier1_violating_paths\"}",
+          "last_failed_iter": 11
+        },
+        "replicate_register": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "critical_cell_opt"
+          ],
+          "target_fingerprint": "{\"candidates\": [{\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[22]/D\", \"slack\": -0.736, \"startpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_1/CLKBWRCLK\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[6]/D\", \"slack\": -0.734, \"startpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_0/CLKBWRCLK\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[20]/D\", \"slack\": -0.727, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[12]/C\"}, {\"endpoint\": \"decode_to_execute_RS1_reg[19]/D\", \"slack\": -0.726, \"startpoint\": \"decode_to_execute_SRC1_CTRL_reg[0]/C\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port1_reg[20]/D\", \"slack\": -0.714, \"startpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_1/CLKBWRCLK\"}], \"delay_class\": \"mixed\", \"tier\": \"tier1_violating_paths\"}",
+          "last_failed_iter": 8
+        },
+        "route_explore": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "directive:HigherDelayCost"
+          ],
+          "target_fingerprint": "{\"candidates\": [{\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[22]/D\", \"slack\": -0.736, \"startpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_1/CLKBWRCLK\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[6]/D\", \"slack\": -0.734, \"startpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_0/CLKBWRCLK\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[20]/D\", \"slack\": -0.727, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[12]/C\"}, {\"endpoint\": \"decode_to_execute_RS1_reg[19]/D\", \"slack\": -0.726, \"startpoint\": \"decode_to_execute_SRC1_CTRL_reg[0]/C\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port1_reg[20]/D\", \"slack\": -0.714, \"startpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_1/CLKBWRCLK\"}], \"delay_class\": \"mixed\", \"tier\": \"tier1_violating_paths\"}",
+          "last_failed_iter": 9
+        }
+      },
+      "action_failure_counts": {
+        "phys_opt_design": 2,
+        "phys_opt_design_retime": 1,
+        "fanout_split": 1,
+        "rapidwright_optimize_cell_placement": 2,
+        "pblock": 2,
+        "rapidwright_analyze_fabric_for_pblock": 2,
+        "rapidwright_convert_fabric_region_to_pblock": 2,
+        "replicate_register": 1,
+        "route_explore": 1
+      },
+      "llm_chosen_action": "phys_opt_design",
+      "run_recipe_stage": 0,
+      "validation_result": "run_recipe"
+    },
+    {
+      "iter": 13,
+      "recipe": "route_explore",
+      "batch_size": 1,
+      "targets": [
+        "directive:Explore"
+      ],
+      "wns_before": -0.674,
+      "wns_after": -0.674,
+      "fmax_before": 445.632798573975,
+      "fmax_after": 445.632798573975,
+      "delta_fmax": 0.0,
+      "vivado_runtime_s": 47.47247624397278,
+      "status": "no_improvement",
+      "checkpoint": "/home/fpl2026/dcp_optimizer_run-20260725_095829/checkpoints/iter_013.dcp",
+      "target_tier": "tier1_violating_paths",
+      "target_candidate_count": 20,
+      "path_delay_classification": "mixed",
+      "path_delay_breakdown": {
+        "logic_pct": 0.36076,
+        "net_pct": 0.63924,
+        "logic_delay_ns": 0.66,
+        "net_delay_ns": 1.169
+      },
+      "clock_period_ns": 1.57,
+      "achieved_fmax_mhz": 445.632798573975,
+      "no_improvement_count": 3,
+      "consecutive_no_improvement": 3,
+      "action_failure_memory": {
+        "phys_opt_design": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "Explore"
+          ],
+          "target_fingerprint": "{\"candidates\": [{\"endpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_0/ADDRBWRADDR[4]\", \"slack\": -0.674, \"startpoint\": \"IBusCachedPlugin_predictor_history_reg/CLKARDCLK\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port1_reg[5]/D\", \"slack\": -0.668, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[21]/C\"}, {\"endpoint\": \"decode_to_execute_RS2_reg[31]/D\", \"slack\": -0.656, \"startpoint\": \"decode_to_execute_SRC2_CTRL_reg[1]/C\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[7]/D\", \"slack\": -0.656, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[21]/C\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port1_reg[1]/D\", \"slack\": -0.648, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[21]/C\"}], \"delay_class\": \"mixed\", \"tier\": \"tier1_violating_paths\"}",
+          "last_failed_iter": 12
+        },
+        "phys_opt_design_retime": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "Explore"
+          ],
+          "target_fingerprint": "{\"candidates\": [{\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[22]/D\", \"slack\": -0.785, \"startpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_1/CLKBWRCLK\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port1_reg[20]/D\", \"slack\": -0.772, \"startpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_1/CLKBWRCLK\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[6]/D\", \"slack\": -0.761, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[16]/C\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[10]/D\", \"slack\": -0.755, \"startpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_1/CLKBWRCLK\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[26]/D\", \"slack\": -0.747, \"startpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_0/CLKBWRCLK\"}], \"delay_class\": \"mixed\", \"tier\": \"tier1_violating_paths\"}",
+          "last_failed_iter": 3
+        },
+        "fanout_split": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "Explore"
+          ],
+          "target_fingerprint": "{\"candidates\": [{\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[22]/D\", \"slack\": -0.785, \"startpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_1/CLKBWRCLK\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port1_reg[20]/D\", \"slack\": -0.772, \"startpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_1/CLKBWRCLK\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[6]/D\", \"slack\": -0.761, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[16]/C\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[10]/D\", \"slack\": -0.755, \"startpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_1/CLKBWRCLK\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[26]/D\", \"slack\": -0.747, \"startpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_0/CLKBWRCLK\"}], \"delay_class\": \"mixed\", \"tier\": \"tier1_violating_paths\"}",
+          "last_failed_iter": 4
+        },
+        "rapidwright_optimize_cell_placement": {
+          "consecutive_no_action_failures": 2,
+          "failed_targets": [
+            "RegFilePlugin_regFile_spinal_port0_reg[22]",
+            "RegFilePlugin_regFile_spinal_port1_reg[20]",
+            "IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[16]",
+            "RegFilePlugin_regFile_spinal_port0_reg[6]",
+            "RegFilePlugin_regFile_spinal_port0_reg[10]",
+            "RegFilePlugin_regFile_spinal_port0_reg[26]",
+            "RegFilePlugin_regFile_spinal_port1_reg[19]",
+            "RegFilePlugin_regFile_spinal_port1_reg[17]",
+            "IBusCachedPlugin_cache/banks_0_reg_bram_1",
+            "IBusCachedPlugin_cache/banks_0_reg_bram_0"
+          ],
+          "target_fingerprint": "{\"candidates\": [{\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[22]/D\", \"slack\": -0.785, \"startpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_1/CLKBWRCLK\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port1_reg[20]/D\", \"slack\": -0.772, \"startpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_1/CLKBWRCLK\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[6]/D\", \"slack\": -0.761, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[16]/C\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[10]/D\", \"slack\": -0.755, \"startpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_1/CLKBWRCLK\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[26]/D\", \"slack\": -0.747, \"startpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_0/CLKBWRCLK\"}], \"delay_class\": \"mixed\", \"tier\": \"tier1_violating_paths\"}",
+          "last_failed_iter": 5
+        },
+        "rapidwright_analyze_fabric_for_pblock": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "pblock_net_delay_011",
+            "SLICE_X24Y48:SLICE_X30Y100 DSP48E2_X3Y20:DSP48E2_X3Y41 RAMB18_X2Y20:RAMB18_X2Y41 RAMB36_X2Y10:RAMB36_X2Y20"
+          ],
+          "target_fingerprint": "{\"candidates\": [{\"endpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_0/ADDRBWRADDR[4]\", \"slack\": -0.674, \"startpoint\": \"IBusCachedPlugin_predictor_history_reg/CLKARDCLK\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port1_reg[5]/D\", \"slack\": -0.668, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[21]/C\"}, {\"endpoint\": \"decode_to_execute_RS2_reg[31]/D\", \"slack\": -0.656, \"startpoint\": \"decode_to_execute_SRC2_CTRL_reg[1]/C\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[7]/D\", \"slack\": -0.656, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[21]/C\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port1_reg[1]/D\", \"slack\": -0.648, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[21]/C\"}], \"delay_class\": \"mixed\", \"tier\": \"tier1_violating_paths\"}",
+          "last_failed_iter": 11
+        },
+        "rapidwright_convert_fabric_region_to_pblock": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "pblock_net_delay_011",
+            "SLICE_X24Y48:SLICE_X30Y100 DSP48E2_X3Y20:DSP48E2_X3Y41 RAMB18_X2Y20:RAMB18_X2Y41 RAMB36_X2Y10:RAMB36_X2Y20"
+          ],
+          "target_fingerprint": "{\"candidates\": [{\"endpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_0/ADDRBWRADDR[4]\", \"slack\": -0.674, \"startpoint\": \"IBusCachedPlugin_predictor_history_reg/CLKARDCLK\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port1_reg[5]/D\", \"slack\": -0.668, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[21]/C\"}, {\"endpoint\": \"decode_to_execute_RS2_reg[31]/D\", \"slack\": -0.656, \"startpoint\": \"decode_to_execute_SRC2_CTRL_reg[1]/C\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[7]/D\", \"slack\": -0.656, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[21]/C\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port1_reg[1]/D\", \"slack\": -0.648, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[21]/C\"}], \"delay_class\": \"mixed\", \"tier\": \"tier1_violating_paths\"}",
+          "last_failed_iter": 11
+        },
+        "pblock": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "pblock_net_delay_011",
+            "SLICE_X24Y48:SLICE_X30Y100 DSP48E2_X3Y20:DSP48E2_X3Y41 RAMB18_X2Y20:RAMB18_X2Y41 RAMB36_X2Y10:RAMB36_X2Y20"
+          ],
+          "target_fingerprint": "{\"candidates\": [{\"endpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_0/ADDRBWRADDR[4]\", \"slack\": -0.674, \"startpoint\": \"IBusCachedPlugin_predictor_history_reg/CLKARDCLK\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port1_reg[5]/D\", \"slack\": -0.668, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[21]/C\"}, {\"endpoint\": \"decode_to_execute_RS2_reg[31]/D\", \"slack\": -0.656, \"startpoint\": \"decode_to_execute_SRC2_CTRL_reg[1]/C\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[7]/D\", \"slack\": -0.656, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[21]/C\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port1_reg[1]/D\", \"slack\": -0.648, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[21]/C\"}], \"delay_class\": \"mixed\", \"tier\": \"tier1_violating_paths\"}",
+          "last_failed_iter": 11
+        },
+        "replicate_register": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "critical_cell_opt"
+          ],
+          "target_fingerprint": "{\"candidates\": [{\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[22]/D\", \"slack\": -0.736, \"startpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_1/CLKBWRCLK\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[6]/D\", \"slack\": -0.734, \"startpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_0/CLKBWRCLK\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[20]/D\", \"slack\": -0.727, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[12]/C\"}, {\"endpoint\": \"decode_to_execute_RS1_reg[19]/D\", \"slack\": -0.726, \"startpoint\": \"decode_to_execute_SRC1_CTRL_reg[0]/C\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port1_reg[20]/D\", \"slack\": -0.714, \"startpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_1/CLKBWRCLK\"}], \"delay_class\": \"mixed\", \"tier\": \"tier1_violating_paths\"}",
+          "last_failed_iter": 8
+        },
+        "route_explore": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "directive:Explore"
+          ],
+          "target_fingerprint": "{\"candidates\": [{\"endpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_0/ADDRBWRADDR[4]\", \"slack\": -0.674, \"startpoint\": \"IBusCachedPlugin_predictor_history_reg/CLKARDCLK\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port1_reg[5]/D\", \"slack\": -0.668, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[21]/C\"}, {\"endpoint\": \"decode_to_execute_RS2_reg[31]/D\", \"slack\": -0.656, \"startpoint\": \"decode_to_execute_SRC2_CTRL_reg[1]/C\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[7]/D\", \"slack\": -0.656, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[21]/C\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port1_reg[1]/D\", \"slack\": -0.648, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[21]/C\"}], \"delay_class\": \"mixed\", \"tier\": \"tier1_violating_paths\"}",
+          "last_failed_iter": 13
+        }
+      },
+      "action_failure_counts": {
+        "phys_opt_design": 2,
+        "phys_opt_design_retime": 1,
+        "fanout_split": 1,
+        "rapidwright_optimize_cell_placement": 2,
+        "pblock": 2,
+        "rapidwright_analyze_fabric_for_pblock": 2,
+        "rapidwright_convert_fabric_region_to_pblock": 2,
+        "replicate_register": 1,
+        "route_explore": 2
+      },
+      "llm_chosen_action": "route_explore",
+      "run_recipe_stage": 1,
+      "validation_result": "run_recipe"
+    },
+    {
+      "iter": 14,
+      "recipe": "pblock_full_replace",
+      "batch_size": 1,
+      "targets": [
+        "full_design",
+        "SLICE_X24Y48:SLICE_X30Y100 DSP48E2_X3Y20:DSP48E2_X3Y41 RAMB18_X2Y20:RAMB18_X2Y41 RAMB36_X2Y10:RAMB36_X2Y20"
+      ],
+      "wns_before": -0.674,
+      "wns_after": -0.674,
+      "fmax_before": 445.632798573975,
+      "fmax_after": 445.632798573975,
+      "delta_fmax": 0.0,
+      "vivado_runtime_s": 112.89699912071228,
+      "status": "no_improvement",
+      "checkpoint": "/home/fpl2026/dcp_optimizer_run-20260725_095829/checkpoints/iter_014.dcp",
+      "target_tier": "tier1_violating_paths",
+      "target_candidate_count": 20,
+      "path_delay_classification": "mixed",
+      "path_delay_breakdown": {
+        "logic_pct": 0.36076,
+        "net_pct": 0.63924,
+        "logic_delay_ns": 0.66,
+        "net_delay_ns": 1.169
+      },
+      "clock_period_ns": 1.57,
+      "achieved_fmax_mhz": 445.632798573975,
+      "no_improvement_count": 4,
+      "consecutive_no_improvement": 3,
+      "action_failure_memory": {
+        "phys_opt_design": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "Explore"
+          ],
+          "last_failed_iter": 12,
+          "failed_on_current_targets": true
+        },
+        "phys_opt_design_retime": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "Explore"
+          ],
+          "last_failed_iter": 3,
+          "failed_on_current_targets": false
+        },
+        "fanout_split": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "Explore"
+          ],
+          "last_failed_iter": 4,
+          "failed_on_current_targets": false
+        },
+        "rapidwright_optimize_cell_placement": {
+          "consecutive_no_action_failures": 2,
+          "failed_targets": [
+            "RegFilePlugin_regFile_spinal_port0_reg[22]",
+            "RegFilePlugin_regFile_spinal_port1_reg[20]",
+            "IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[16]"
+          ],
+          "last_failed_iter": 5,
+          "failed_on_current_targets": false
+        },
+        "rapidwright_analyze_fabric_for_pblock": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "pblock_net_delay_011",
+            "SLICE_X24Y48:SLICE_X30Y100 DSP48E2_X3Y20:DSP48E2_X3Y41 RAMB18_X2Y20:RAMB18_X2Y41 RAMB36_X2Y10:RAMB36_X2Y20"
+          ],
+          "last_failed_iter": 11,
+          "failed_on_current_targets": true
+        },
+        "rapidwright_convert_fabric_region_to_pblock": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "pblock_net_delay_011",
+            "SLICE_X24Y48:SLICE_X30Y100 DSP48E2_X3Y20:DSP48E2_X3Y41 RAMB18_X2Y20:RAMB18_X2Y41 RAMB36_X2Y10:RAMB36_X2Y20"
+          ],
+          "last_failed_iter": 11,
+          "failed_on_current_targets": true
+        },
+        "pblock": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "pblock_net_delay_011",
+            "SLICE_X24Y48:SLICE_X30Y100 DSP48E2_X3Y20:DSP48E2_X3Y41 RAMB18_X2Y20:RAMB18_X2Y41 RAMB36_X2Y10:RAMB36_X2Y20"
+          ],
+          "last_failed_iter": 11,
+          "failed_on_current_targets": true
+        },
+        "replicate_register": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "critical_cell_opt"
+          ],
+          "last_failed_iter": 8,
+          "failed_on_current_targets": false
+        },
+        "route_explore": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "directive:Explore"
+          ],
+          "last_failed_iter": 13,
+          "failed_on_current_targets": true
+        }
+      },
+      "action_failure_counts": {
+        "phys_opt_design": 2,
+        "phys_opt_design_retime": 1,
+        "fanout_split": 1,
+        "rapidwright_optimize_cell_placement": 2,
+        "pblock": 2,
+        "rapidwright_analyze_fabric_for_pblock": 2,
+        "rapidwright_convert_fabric_region_to_pblock": 2,
+        "replicate_register": 1,
+        "route_explore": 2
+      },
+      "delay_class": "mixed",
+      "endpoint_type": "BRAM_CONTROL",
+      "allowed_actions": [
+        "pblock_full_replace",
+        "place_design_explore",
+        "pblock",
+        "rapidwright_optimize_cell_placement"
+      ],
+      "forbidden_actions": [
+        "logic_restructure"
+      ],
+      "action_guidance": {
+        "fanout_split": "endpoint is a BRAM_CONTROL pin; routing to a hard-block control pin needs physical proximity, not net splitting",
+        "phys_opt_design_retime": "WNS -0.674 ns is below -0.500 ns; incremental phys_opt cannot close that gap while structural actions remain",
+        "phys_opt_design": "WNS -0.674 ns is below -0.500 ns; incremental phys_opt cannot close that gap while structural actions remain; 0 wins / 3 losses across previous runs on this design",
+        "replicate_register": "WNS -0.674 ns is below -0.500 ns; incremental phys_opt cannot close that gap while structural actions remain",
+        "route_explore": "0 wins / 3 losses across previous runs on this design",
+        "place_design_explore": "directives with losing cross-run records on this design (never improved): Explore (0/3) -- do not re-try these; this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won",
+        "pblock_full_replace": "this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won"
+      },
+      "congestion_level": 0,
+      "cluster_clock_regions": [
+        "X0Y0",
+        "X0Y1"
+      ],
+      "llm_chosen_action": "pblock_full_replace",
+      "structural_override_active": true,
+      "stuck_iterations": 3,
+      "exhausted_actions": [
+        "fanout_split"
+      ],
+      "validation_result": "ok",
+      "reprompt_count": 0,
+      "why_not_top_forbidden_action": "rapidwright_optimize_cell_placement was not chosen because its sole prior execution on the same targets increased average cluster spread by +253 % and regressed net delay.",
+      "raw_response": "{\n  \"delay_class_acknowledged\": \"mixed\",\n  \"endpoint_type_acknowledged\": \"BRAM_CONTROL\",\n  \"chosen_action\": \"pblock_full_replace\",\n  \"action_parameters\": {\"place_directive\": \"ExtraTimingOpt\", \"route_directive\": \"Explore\"},\n  \"why_this_fits_delay_class\": \"Mixed delay (logic_pct 0.36076, net_pct 0.63924) with 53.5-tile spread now requires a fresh whole-design pblock because all prior refinement (phys_opt, route_explore, incremental pblock) produced 3 consecutive stalls with no WNS improvement.\",\n  \"why_not_top_forbidden_action\": \"rapidwright_optimize_cell_placement was not chosen because its sole prior execution on the same targets increased average cluster spread by +253 % and regressed net delay.\",\n  \"confidence\": 3\n}",
+      "cluster_count": 7,
+      "primary_diagnosis": "localized_congestion",
+      "diagnosis_reasoning_trace": [
+        "normalized 20 timing-path candidate(s) from current_target_candidates",
+        "clustered into 7 cluster(s) via shared start/end cell name",
+        "primary cluster 'cluster_0' contains the current worst path (3 member(s), 1 cell(s) shared across all members)",
+        "top two hypotheses (localized_congestion=0.55, long_interconnect=0.50) within 0.15 of each other and neither hit the 0.75 floor -- fetching rapidwright_analyze_net_detour as tie-break evidence.",
+        "outcome history: excessive_fanout's own prescriptions scored 0 win(s) / 2 loss(es) this run -> confidence -0.16",
+        "outcome history: placement_already_compact's own prescriptions scored 0 win(s) / 2 loss(es) this run -> confidence -0.16",
+        "scored hypotheses: localized_congestion=0.55, long_interconnect=0.40, excessive_fanout=0.24, placement_already_compact=0.09",
+        "primary hypothesis: localized_congestion (confidence 0.55)",
+        "  + 3 clustered paths sit close together (avg spread 21.0 tiles <= 30) but are still net-delay-bound (64% net delay) -- consistent with routing congestion rather than physical distance.",
+        "  - measured congestion level is only 0; the router is not actually congested, whatever the spread numbers suggest."
+      ],
+      "diagnosis_action_adjustment": null,
+      "rapidwright_edit_summary": {
+        "action": "pblock_full_replace",
+        "cells_moved": 0,
+        "nets_affected": 0,
+        "pblock_ranges": "SLICE_X24Y48:SLICE_X30Y100 DSP48E2_X3Y20:DSP48E2_X3Y41 RAMB18_X2Y20:RAMB18_X2Y41 RAMB36_X2Y10:RAMB36_X2Y20",
+        "fabric_region": {
+          "col_min": 124,
+          "col_max": 144,
+          "row_min": 206,
+          "row_max": 260,
+          "center_col": 334,
+          "center_row": 155,
+          "center_of_mass_col": 134,
+          "center_of_mass_row": 233,
+          "contiguous_columns": 21,
+          "contiguous_rows": 55
+        }
+      }
+    },
+    {
+      "iter": 15,
+      "recipe": "pblock",
+      "batch_size": 1,
+      "targets": [
+        "pblock_net_delay_015",
+        "SLICE_X24Y48:SLICE_X30Y100 DSP48E2_X3Y20:DSP48E2_X3Y41 RAMB18_X2Y20:RAMB18_X2Y41 RAMB36_X2Y10:RAMB36_X2Y20"
+      ],
+      "wns_before": -0.674,
+      "wns_after": -0.674,
+      "fmax_before": 445.632798573975,
+      "fmax_after": 445.632798573975,
+      "delta_fmax": 0.0,
+      "vivado_runtime_s": 27.986052989959717,
+      "status": "no_improvement",
+      "checkpoint": "/home/fpl2026/dcp_optimizer_run-20260725_095829/checkpoints/iter_015.dcp",
+      "target_tier": "tier1_violating_paths",
+      "target_candidate_count": 20,
+      "path_delay_classification": "mixed",
+      "path_delay_breakdown": {
+        "logic_pct": 0.36076,
+        "net_pct": 0.63924,
+        "logic_delay_ns": 0.66,
+        "net_delay_ns": 1.169
+      },
+      "clock_period_ns": 1.57,
+      "achieved_fmax_mhz": 445.632798573975,
+      "no_improvement_count": 5,
+      "consecutive_no_improvement": 4,
+      "action_failure_memory": {
+        "phys_opt_design": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "Explore"
+          ],
+          "last_failed_iter": 12,
+          "failed_on_current_targets": true
+        },
+        "phys_opt_design_retime": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "Explore"
+          ],
+          "last_failed_iter": 3,
+          "failed_on_current_targets": false
+        },
+        "fanout_split": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "Explore"
+          ],
+          "last_failed_iter": 4,
+          "failed_on_current_targets": false
+        },
+        "rapidwright_optimize_cell_placement": {
+          "consecutive_no_action_failures": 2,
+          "failed_targets": [
+            "RegFilePlugin_regFile_spinal_port0_reg[22]",
+            "RegFilePlugin_regFile_spinal_port1_reg[20]",
+            "IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[16]"
+          ],
+          "last_failed_iter": 5,
+          "failed_on_current_targets": false
+        },
+        "rapidwright_analyze_fabric_for_pblock": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "pblock_net_delay_011",
+            "SLICE_X24Y48:SLICE_X30Y100 DSP48E2_X3Y20:DSP48E2_X3Y41 RAMB18_X2Y20:RAMB18_X2Y41 RAMB36_X2Y10:RAMB36_X2Y20"
+          ],
+          "last_failed_iter": 11,
+          "failed_on_current_targets": true
+        },
+        "rapidwright_convert_fabric_region_to_pblock": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "pblock_net_delay_011",
+            "SLICE_X24Y48:SLICE_X30Y100 DSP48E2_X3Y20:DSP48E2_X3Y41 RAMB18_X2Y20:RAMB18_X2Y41 RAMB36_X2Y10:RAMB36_X2Y20"
+          ],
+          "last_failed_iter": 11,
+          "failed_on_current_targets": true
+        },
+        "pblock": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "pblock_net_delay_011",
+            "SLICE_X24Y48:SLICE_X30Y100 DSP48E2_X3Y20:DSP48E2_X3Y41 RAMB18_X2Y20:RAMB18_X2Y41 RAMB36_X2Y10:RAMB36_X2Y20"
+          ],
+          "last_failed_iter": 11,
+          "failed_on_current_targets": true
+        },
+        "replicate_register": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "critical_cell_opt"
+          ],
+          "last_failed_iter": 8,
+          "failed_on_current_targets": false
+        },
+        "route_explore": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "directive:Explore"
+          ],
+          "last_failed_iter": 13,
+          "failed_on_current_targets": true
+        },
+        "pblock_full_replace": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "full_design",
+            "SLICE_X24Y48:SLICE_X30Y100 DSP48E2_X3Y20:DSP48E2_X3Y41 RAMB18_X2Y20:RAMB18_X2Y41 RAMB36_X2Y10:RAMB36_X2Y20"
+          ],
+          "last_failed_iter": 14,
+          "failed_on_current_targets": true
+        }
+      },
+      "action_failure_counts": {
+        "phys_opt_design": 2,
+        "phys_opt_design_retime": 1,
+        "fanout_split": 1,
+        "rapidwright_optimize_cell_placement": 2,
+        "pblock": 2,
+        "rapidwright_analyze_fabric_for_pblock": 2,
+        "rapidwright_convert_fabric_region_to_pblock": 2,
+        "replicate_register": 1,
+        "route_explore": 2,
+        "pblock_full_replace": 1
+      },
+      "delay_class": "mixed",
+      "endpoint_type": "BRAM_CONTROL",
+      "allowed_actions": [
+        "pblock_full_replace",
+        "place_design_explore",
+        "pblock",
+        "rapidwright_optimize_cell_placement"
+      ],
+      "forbidden_actions": [
+        "logic_restructure"
+      ],
+      "action_guidance": {
+        "fanout_split": "endpoint is a BRAM_CONTROL pin; routing to a hard-block control pin needs physical proximity, not net splitting",
+        "phys_opt_design_retime": "WNS -0.674 ns is below -0.500 ns; incremental phys_opt cannot close that gap while structural actions remain",
+        "phys_opt_design": "WNS -0.674 ns is below -0.500 ns; incremental phys_opt cannot close that gap while structural actions remain; 0 wins / 3 losses across previous runs on this design",
+        "replicate_register": "WNS -0.674 ns is below -0.500 ns; incremental phys_opt cannot close that gap while structural actions remain",
+        "route_explore": "0 wins / 3 losses across previous runs on this design",
+        "place_design_explore": "directives with losing cross-run records on this design (never improved): Explore (0/3) -- do not re-try these; this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won",
+        "pblock_full_replace": "this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won"
+      },
+      "congestion_level": 0,
+      "cluster_clock_regions": [
+        "X0Y0",
+        "X0Y1"
+      ],
+      "llm_chosen_action": "pblock",
+      "structural_override_active": true,
+      "stuck_iterations": 4,
+      "exhausted_actions": [
+        "fanout_split"
+      ],
+      "validation_result": "ok",
+      "reprompt_count": 0,
+      "why_not_top_forbidden_action": "pblock_full_replace was not chosen because its most recent execution on full_design targets produced no WNS improvement and the run already holds an unbeaten placement.",
+      "raw_response": "{\n  \"delay_class_acknowledged\": \"mixed\",\n  \"endpoint_type_acknowledged\": \"BRAM_CONTROL\",\n  \"chosen_action\": \"pblock\",\n  \"action_parameters\": {\"target_lut_count\": 1200, \"target_ff_count\": 2400, \"use_clock_regions\": false},\n  \"why_this_fits_delay_class\": \"Mixed delay (net_pct 0.63924) with 53.5-tile spread on BRAM_CONTROL paths still benefits from targeted pblock clustering on the X0Y0/X0Y1 cluster to tighten net delay after full-replace attempts stalled.\",\n  \"why_not_top_forbidden_action\": \"pblock_full_replace was not chosen because its most recent execution on full_design targets produced no WNS improvement and the run already holds an unbeaten placement.\",\n  \"confidence\": 3\n}",
+      "cluster_count": 7,
+      "primary_diagnosis": "localized_congestion",
+      "diagnosis_reasoning_trace": [
+        "normalized 20 timing-path candidate(s) from current_target_candidates",
+        "clustered into 7 cluster(s) via shared start/end cell name",
+        "primary cluster 'cluster_0' contains the current worst path (3 member(s), 1 cell(s) shared across all members)",
+        "top two hypotheses (localized_congestion=0.55, long_interconnect=0.50) within 0.15 of each other and neither hit the 0.75 floor -- fetching rapidwright_analyze_net_detour as tie-break evidence.",
+        "outcome history: excessive_fanout's own prescriptions scored 0 win(s) / 2 loss(es) this run -> confidence -0.16",
+        "outcome history: placement_already_compact's own prescriptions scored 0 win(s) / 2 loss(es) this run -> confidence -0.16",
+        "scored hypotheses: localized_congestion=0.55, long_interconnect=0.40, excessive_fanout=0.24, placement_already_compact=0.09",
+        "primary hypothesis: localized_congestion (confidence 0.55)",
+        "  + 3 clustered paths sit close together (avg spread 21.0 tiles <= 30) but are still net-delay-bound (64% net delay) -- consistent with routing congestion rather than physical distance.",
+        "  - measured congestion level is only 0; the router is not actually congested, whatever the spread numbers suggest."
+      ],
+      "diagnosis_action_adjustment": null,
+      "rapidwright_edit_summary": {
+        "action": "pblock",
+        "cells_moved": 1411,
+        "nets_affected": 0,
+        "pblock_ranges": "SLICE_X24Y48:SLICE_X30Y100 DSP48E2_X3Y20:DSP48E2_X3Y41 RAMB18_X2Y20:RAMB18_X2Y41 RAMB36_X2Y10:RAMB36_X2Y20",
+        "fabric_region": {
+          "col_min": 124,
+          "col_max": 144,
+          "row_min": 206,
+          "row_max": 260,
+          "center_col": 334,
+          "center_row": 155,
+          "center_of_mass_col": 134,
+          "center_of_mass_row": 233,
+          "contiguous_columns": 21,
+          "contiguous_rows": 55
+        },
+        "target_lut_count": 1200,
+        "target_ff_count": 2400,
+        "site_counts": {
+          "SLICE": 371,
+          "DSP48E2": 22,
+          "RAMB18": 22,
+          "RAMB36": 11,
+          "URAM288": 0
+        },
+        "changed_design": true,
+        "pblock_name": "pblock_net_delay_015",
+        "apply_to": "current_design",
+        "is_soft": false,
+        "cells_matched": 1411,
+        "cells_assigned": 1411,
+        "resource_validation": {
+          "is_valid": true,
+          "primitive_count": 3293,
+          "cell_count": 1411,
+          "resource_issues": {},
+          "errors": [],
+          "drc_output": "Copyright 1986-2022 Xilinx, Inc. All Rights Reserved. Copyright 2022-2025 Advanced Micro Devices, Inc. All Rights Reserved.\n---------------------------------------------------------------------------------------------------------------------------------------------\n| Tool Version : Vivado v.2025.1 (lin64) Build 6140274 Wed May 21 22:58:25 MDT 2025\n| Date         : Sat Jul 25 10:10:43 2026\n| Host         : 35ns7cfvpwajp9e9nht0kyrsvp running 64-bit Ubuntu 24.04.4 LTS\n| Command      : report_drc -checks {UTLZ-1 UTLZ-2} -file /home/fpl2026/VivadoMCP/drc_check_pblock_net_delay_015.rpt\n| Design       : VexRiscv\n| Device       : xcvu3p-ffvc1517-2-e\n| Speed File   : -2\n| Design State : ignored\n---------------------------------------------------------------------------------------------------------------------------------------------\n\nReport DRC\n\nTable of Contents\n-----------------\n1. REPORT SUMMARY\n2. REPORT DETAILS\n\n1. REPORT SUMMARY\n-----------------\n            Netlist: netlist\n          Fl"
+        }
+      }
+    },
+    {
+      "iter": 16,
+      "recipe": "vivado_phys_opt",
+      "batch_size": 1,
+      "targets": [
+        "Explore"
+      ],
+      "wns_before": -0.674,
+      "wns_after": -0.67,
+      "fmax_before": 445.632798573975,
+      "fmax_after": 446.4285714285714,
+      "delta_fmax": 0.7957728545964073,
+      "vivado_runtime_s": 62.16312026977539,
+      "status": "improved",
+      "checkpoint": "/home/fpl2026/dcp_optimizer_run-20260725_095829/checkpoints/iter_016.dcp",
+      "target_tier": "tier1_violating_paths",
+      "target_candidate_count": 20,
+      "path_delay_classification": "mixed",
+      "path_delay_breakdown": {
+        "logic_pct": 0.36076,
+        "net_pct": 0.63924,
+        "logic_delay_ns": 0.66,
+        "net_delay_ns": 1.169
+      },
+      "clock_period_ns": 1.57,
+      "achieved_fmax_mhz": 446.4285714285714,
+      "no_improvement_count": 0,
+      "consecutive_no_improvement": 0,
+      "action_failure_memory": {
+        "phys_opt_design_retime": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "Explore"
+          ],
+          "target_fingerprint": "{\"candidates\": [{\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[22]/D\", \"slack\": -0.785, \"startpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_1/CLKBWRCLK\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port1_reg[20]/D\", \"slack\": -0.772, \"startpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_1/CLKBWRCLK\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[6]/D\", \"slack\": -0.761, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[16]/C\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[10]/D\", \"slack\": -0.755, \"startpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_1/CLKBWRCLK\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[26]/D\", \"slack\": -0.747, \"startpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_0/CLKBWRCLK\"}], \"delay_class\": \"mixed\", \"tier\": \"tier1_violating_paths\"}",
+          "last_failed_iter": 3
+        },
+        "fanout_split": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "Explore"
+          ],
+          "target_fingerprint": "{\"candidates\": [{\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[22]/D\", \"slack\": -0.785, \"startpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_1/CLKBWRCLK\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port1_reg[20]/D\", \"slack\": -0.772, \"startpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_1/CLKBWRCLK\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[6]/D\", \"slack\": -0.761, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[16]/C\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[10]/D\", \"slack\": -0.755, \"startpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_1/CLKBWRCLK\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[26]/D\", \"slack\": -0.747, \"startpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_0/CLKBWRCLK\"}], \"delay_class\": \"mixed\", \"tier\": \"tier1_violating_paths\"}",
+          "last_failed_iter": 4
+        },
+        "rapidwright_optimize_cell_placement": {
+          "consecutive_no_action_failures": 2,
+          "failed_targets": [
+            "RegFilePlugin_regFile_spinal_port0_reg[22]",
+            "RegFilePlugin_regFile_spinal_port1_reg[20]",
+            "IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[16]",
+            "RegFilePlugin_regFile_spinal_port0_reg[6]",
+            "RegFilePlugin_regFile_spinal_port0_reg[10]",
+            "RegFilePlugin_regFile_spinal_port0_reg[26]",
+            "RegFilePlugin_regFile_spinal_port1_reg[19]",
+            "RegFilePlugin_regFile_spinal_port1_reg[17]",
+            "IBusCachedPlugin_cache/banks_0_reg_bram_1",
+            "IBusCachedPlugin_cache/banks_0_reg_bram_0"
+          ],
+          "target_fingerprint": "{\"candidates\": [{\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[22]/D\", \"slack\": -0.785, \"startpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_1/CLKBWRCLK\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port1_reg[20]/D\", \"slack\": -0.772, \"startpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_1/CLKBWRCLK\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[6]/D\", \"slack\": -0.761, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[16]/C\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[10]/D\", \"slack\": -0.755, \"startpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_1/CLKBWRCLK\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[26]/D\", \"slack\": -0.747, \"startpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_0/CLKBWRCLK\"}], \"delay_class\": \"mixed\", \"tier\": \"tier1_violating_paths\"}",
+          "last_failed_iter": 5
+        },
+        "rapidwright_analyze_fabric_for_pblock": {
+          "consecutive_no_action_failures": 2,
+          "failed_targets": [
+            "pblock_net_delay_011",
+            "SLICE_X24Y48:SLICE_X30Y100 DSP48E2_X3Y20:DSP48E2_X3Y41 RAMB18_X2Y20:RAMB18_X2Y41 RAMB36_X2Y10:RAMB36_X2Y20",
+            "pblock_net_delay_015"
+          ],
+          "target_fingerprint": "{\"candidates\": [{\"endpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_0/ADDRBWRADDR[4]\", \"slack\": -0.674, \"startpoint\": \"IBusCachedPlugin_predictor_history_reg/CLKARDCLK\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port1_reg[5]/D\", \"slack\": -0.668, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[21]/C\"}, {\"endpoint\": \"decode_to_execute_RS2_reg[31]/D\", \"slack\": -0.656, \"startpoint\": \"decode_to_execute_SRC2_CTRL_reg[1]/C\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[7]/D\", \"slack\": -0.656, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[21]/C\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port1_reg[1]/D\", \"slack\": -0.648, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[21]/C\"}], \"delay_class\": \"mixed\", \"tier\": \"tier1_violating_paths\"}",
+          "last_failed_iter": 15
+        },
+        "rapidwright_convert_fabric_region_to_pblock": {
+          "consecutive_no_action_failures": 2,
+          "failed_targets": [
+            "pblock_net_delay_011",
+            "SLICE_X24Y48:SLICE_X30Y100 DSP48E2_X3Y20:DSP48E2_X3Y41 RAMB18_X2Y20:RAMB18_X2Y41 RAMB36_X2Y10:RAMB36_X2Y20",
+            "pblock_net_delay_015"
+          ],
+          "target_fingerprint": "{\"candidates\": [{\"endpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_0/ADDRBWRADDR[4]\", \"slack\": -0.674, \"startpoint\": \"IBusCachedPlugin_predictor_history_reg/CLKARDCLK\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port1_reg[5]/D\", \"slack\": -0.668, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[21]/C\"}, {\"endpoint\": \"decode_to_execute_RS2_reg[31]/D\", \"slack\": -0.656, \"startpoint\": \"decode_to_execute_SRC2_CTRL_reg[1]/C\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[7]/D\", \"slack\": -0.656, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[21]/C\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port1_reg[1]/D\", \"slack\": -0.648, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[21]/C\"}], \"delay_class\": \"mixed\", \"tier\": \"tier1_violating_paths\"}",
+          "last_failed_iter": 15
+        },
+        "pblock": {
+          "consecutive_no_action_failures": 2,
+          "failed_targets": [
+            "pblock_net_delay_011",
+            "SLICE_X24Y48:SLICE_X30Y100 DSP48E2_X3Y20:DSP48E2_X3Y41 RAMB18_X2Y20:RAMB18_X2Y41 RAMB36_X2Y10:RAMB36_X2Y20",
+            "pblock_net_delay_015"
+          ],
+          "target_fingerprint": "{\"candidates\": [{\"endpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_0/ADDRBWRADDR[4]\", \"slack\": -0.674, \"startpoint\": \"IBusCachedPlugin_predictor_history_reg/CLKARDCLK\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port1_reg[5]/D\", \"slack\": -0.668, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[21]/C\"}, {\"endpoint\": \"decode_to_execute_RS2_reg[31]/D\", \"slack\": -0.656, \"startpoint\": \"decode_to_execute_SRC2_CTRL_reg[1]/C\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[7]/D\", \"slack\": -0.656, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[21]/C\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port1_reg[1]/D\", \"slack\": -0.648, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[21]/C\"}], \"delay_class\": \"mixed\", \"tier\": \"tier1_violating_paths\"}",
+          "last_failed_iter": 15
+        },
+        "replicate_register": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "critical_cell_opt"
+          ],
+          "target_fingerprint": "{\"candidates\": [{\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[22]/D\", \"slack\": -0.736, \"startpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_1/CLKBWRCLK\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[6]/D\", \"slack\": -0.734, \"startpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_0/CLKBWRCLK\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[20]/D\", \"slack\": -0.727, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[12]/C\"}, {\"endpoint\": \"decode_to_execute_RS1_reg[19]/D\", \"slack\": -0.726, \"startpoint\": \"decode_to_execute_SRC1_CTRL_reg[0]/C\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port1_reg[20]/D\", \"slack\": -0.714, \"startpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_1/CLKBWRCLK\"}], \"delay_class\": \"mixed\", \"tier\": \"tier1_violating_paths\"}",
+          "last_failed_iter": 8
+        },
+        "route_explore": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "directive:Explore"
+          ],
+          "target_fingerprint": "{\"candidates\": [{\"endpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_0/ADDRBWRADDR[4]\", \"slack\": -0.674, \"startpoint\": \"IBusCachedPlugin_predictor_history_reg/CLKARDCLK\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port1_reg[5]/D\", \"slack\": -0.668, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[21]/C\"}, {\"endpoint\": \"decode_to_execute_RS2_reg[31]/D\", \"slack\": -0.656, \"startpoint\": \"decode_to_execute_SRC2_CTRL_reg[1]/C\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[7]/D\", \"slack\": -0.656, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[21]/C\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port1_reg[1]/D\", \"slack\": -0.648, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[21]/C\"}], \"delay_class\": \"mixed\", \"tier\": \"tier1_violating_paths\"}",
+          "last_failed_iter": 13
+        },
+        "pblock_full_replace": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "full_design",
+            "SLICE_X24Y48:SLICE_X30Y100 DSP48E2_X3Y20:DSP48E2_X3Y41 RAMB18_X2Y20:RAMB18_X2Y41 RAMB36_X2Y10:RAMB36_X2Y20"
+          ],
+          "target_fingerprint": "{\"candidates\": [{\"endpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_0/ADDRBWRADDR[4]\", \"slack\": -0.674, \"startpoint\": \"IBusCachedPlugin_predictor_history_reg/CLKARDCLK\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port1_reg[5]/D\", \"slack\": -0.668, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[21]/C\"}, {\"endpoint\": \"decode_to_execute_RS2_reg[31]/D\", \"slack\": -0.656, \"startpoint\": \"decode_to_execute_SRC2_CTRL_reg[1]/C\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[7]/D\", \"slack\": -0.656, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[21]/C\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port1_reg[1]/D\", \"slack\": -0.648, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[21]/C\"}], \"delay_class\": \"mixed\", \"tier\": \"tier1_violating_paths\"}",
+          "last_failed_iter": 14
+        }
+      },
+      "action_failure_counts": {
+        "phys_opt_design_retime": 1,
+        "fanout_split": 1,
+        "rapidwright_optimize_cell_placement": 2,
+        "pblock": 3,
+        "rapidwright_analyze_fabric_for_pblock": 3,
+        "rapidwright_convert_fabric_region_to_pblock": 3,
+        "replicate_register": 1,
+        "route_explore": 2,
+        "pblock_full_replace": 1
+      },
+      "llm_chosen_action": "phys_opt_design",
+      "endgame_polish": true,
+      "validation_result": "endgame_polish"
+    },
+    {
+      "iter": 17,
+      "recipe": "route_explore",
+      "batch_size": 1,
+      "targets": [
+        "directive:Explore"
+      ],
+      "wns_before": -0.67,
+      "wns_after": -0.67,
+      "fmax_before": 446.4285714285714,
+      "fmax_after": 446.4285714285714,
+      "delta_fmax": 0.0,
+      "vivado_runtime_s": 25.72919511795044,
+      "status": "no_improvement",
+      "checkpoint": "/home/fpl2026/dcp_optimizer_run-20260725_095829/checkpoints/iter_017.dcp",
+      "target_tier": "tier1_violating_paths",
+      "target_candidate_count": 20,
+      "path_delay_classification": "mixed",
+      "path_delay_breakdown": {
+        "logic_pct": 0.36076,
+        "net_pct": 0.63924,
+        "logic_delay_ns": 0.66,
+        "net_delay_ns": 1.169
+      },
+      "clock_period_ns": 1.57,
+      "achieved_fmax_mhz": 446.4285714285714,
+      "no_improvement_count": 1,
+      "consecutive_no_improvement": 1,
+      "action_failure_memory": {
+        "phys_opt_design_retime": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "Explore"
+          ],
+          "target_fingerprint": "{\"candidates\": [{\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[22]/D\", \"slack\": -0.785, \"startpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_1/CLKBWRCLK\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port1_reg[20]/D\", \"slack\": -0.772, \"startpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_1/CLKBWRCLK\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[6]/D\", \"slack\": -0.761, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[16]/C\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[10]/D\", \"slack\": -0.755, \"startpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_1/CLKBWRCLK\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[26]/D\", \"slack\": -0.747, \"startpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_0/CLKBWRCLK\"}], \"delay_class\": \"mixed\", \"tier\": \"tier1_violating_paths\"}",
+          "last_failed_iter": 3
+        },
+        "fanout_split": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "Explore"
+          ],
+          "target_fingerprint": "{\"candidates\": [{\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[22]/D\", \"slack\": -0.785, \"startpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_1/CLKBWRCLK\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port1_reg[20]/D\", \"slack\": -0.772, \"startpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_1/CLKBWRCLK\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[6]/D\", \"slack\": -0.761, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[16]/C\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[10]/D\", \"slack\": -0.755, \"startpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_1/CLKBWRCLK\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[26]/D\", \"slack\": -0.747, \"startpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_0/CLKBWRCLK\"}], \"delay_class\": \"mixed\", \"tier\": \"tier1_violating_paths\"}",
+          "last_failed_iter": 4
+        },
+        "rapidwright_optimize_cell_placement": {
+          "consecutive_no_action_failures": 2,
+          "failed_targets": [
+            "RegFilePlugin_regFile_spinal_port0_reg[22]",
+            "RegFilePlugin_regFile_spinal_port1_reg[20]",
+            "IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[16]",
+            "RegFilePlugin_regFile_spinal_port0_reg[6]",
+            "RegFilePlugin_regFile_spinal_port0_reg[10]",
+            "RegFilePlugin_regFile_spinal_port0_reg[26]",
+            "RegFilePlugin_regFile_spinal_port1_reg[19]",
+            "RegFilePlugin_regFile_spinal_port1_reg[17]",
+            "IBusCachedPlugin_cache/banks_0_reg_bram_1",
+            "IBusCachedPlugin_cache/banks_0_reg_bram_0"
+          ],
+          "target_fingerprint": "{\"candidates\": [{\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[22]/D\", \"slack\": -0.785, \"startpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_1/CLKBWRCLK\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port1_reg[20]/D\", \"slack\": -0.772, \"startpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_1/CLKBWRCLK\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[6]/D\", \"slack\": -0.761, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[16]/C\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[10]/D\", \"slack\": -0.755, \"startpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_1/CLKBWRCLK\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[26]/D\", \"slack\": -0.747, \"startpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_0/CLKBWRCLK\"}], \"delay_class\": \"mixed\", \"tier\": \"tier1_violating_paths\"}",
+          "last_failed_iter": 5
+        },
+        "rapidwright_analyze_fabric_for_pblock": {
+          "consecutive_no_action_failures": 2,
+          "failed_targets": [
+            "pblock_net_delay_011",
+            "SLICE_X24Y48:SLICE_X30Y100 DSP48E2_X3Y20:DSP48E2_X3Y41 RAMB18_X2Y20:RAMB18_X2Y41 RAMB36_X2Y10:RAMB36_X2Y20",
+            "pblock_net_delay_015"
+          ],
+          "target_fingerprint": "{\"candidates\": [{\"endpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_0/ADDRBWRADDR[4]\", \"slack\": -0.674, \"startpoint\": \"IBusCachedPlugin_predictor_history_reg/CLKARDCLK\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port1_reg[5]/D\", \"slack\": -0.668, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[21]/C\"}, {\"endpoint\": \"decode_to_execute_RS2_reg[31]/D\", \"slack\": -0.656, \"startpoint\": \"decode_to_execute_SRC2_CTRL_reg[1]/C\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[7]/D\", \"slack\": -0.656, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[21]/C\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port1_reg[1]/D\", \"slack\": -0.648, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[21]/C\"}], \"delay_class\": \"mixed\", \"tier\": \"tier1_violating_paths\"}",
+          "last_failed_iter": 15
+        },
+        "rapidwright_convert_fabric_region_to_pblock": {
+          "consecutive_no_action_failures": 2,
+          "failed_targets": [
+            "pblock_net_delay_011",
+            "SLICE_X24Y48:SLICE_X30Y100 DSP48E2_X3Y20:DSP48E2_X3Y41 RAMB18_X2Y20:RAMB18_X2Y41 RAMB36_X2Y10:RAMB36_X2Y20",
+            "pblock_net_delay_015"
+          ],
+          "target_fingerprint": "{\"candidates\": [{\"endpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_0/ADDRBWRADDR[4]\", \"slack\": -0.674, \"startpoint\": \"IBusCachedPlugin_predictor_history_reg/CLKARDCLK\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port1_reg[5]/D\", \"slack\": -0.668, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[21]/C\"}, {\"endpoint\": \"decode_to_execute_RS2_reg[31]/D\", \"slack\": -0.656, \"startpoint\": \"decode_to_execute_SRC2_CTRL_reg[1]/C\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[7]/D\", \"slack\": -0.656, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[21]/C\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port1_reg[1]/D\", \"slack\": -0.648, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[21]/C\"}], \"delay_class\": \"mixed\", \"tier\": \"tier1_violating_paths\"}",
+          "last_failed_iter": 15
+        },
+        "pblock": {
+          "consecutive_no_action_failures": 2,
+          "failed_targets": [
+            "pblock_net_delay_011",
+            "SLICE_X24Y48:SLICE_X30Y100 DSP48E2_X3Y20:DSP48E2_X3Y41 RAMB18_X2Y20:RAMB18_X2Y41 RAMB36_X2Y10:RAMB36_X2Y20",
+            "pblock_net_delay_015"
+          ],
+          "target_fingerprint": "{\"candidates\": [{\"endpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_0/ADDRBWRADDR[4]\", \"slack\": -0.674, \"startpoint\": \"IBusCachedPlugin_predictor_history_reg/CLKARDCLK\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port1_reg[5]/D\", \"slack\": -0.668, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[21]/C\"}, {\"endpoint\": \"decode_to_execute_RS2_reg[31]/D\", \"slack\": -0.656, \"startpoint\": \"decode_to_execute_SRC2_CTRL_reg[1]/C\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[7]/D\", \"slack\": -0.656, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[21]/C\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port1_reg[1]/D\", \"slack\": -0.648, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[21]/C\"}], \"delay_class\": \"mixed\", \"tier\": \"tier1_violating_paths\"}",
+          "last_failed_iter": 15
+        },
+        "replicate_register": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "critical_cell_opt"
+          ],
+          "target_fingerprint": "{\"candidates\": [{\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[22]/D\", \"slack\": -0.736, \"startpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_1/CLKBWRCLK\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[6]/D\", \"slack\": -0.734, \"startpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_0/CLKBWRCLK\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[20]/D\", \"slack\": -0.727, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[12]/C\"}, {\"endpoint\": \"decode_to_execute_RS1_reg[19]/D\", \"slack\": -0.726, \"startpoint\": \"decode_to_execute_SRC1_CTRL_reg[0]/C\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port1_reg[20]/D\", \"slack\": -0.714, \"startpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_1/CLKBWRCLK\"}], \"delay_class\": \"mixed\", \"tier\": \"tier1_violating_paths\"}",
+          "last_failed_iter": 8
+        },
+        "route_explore": {
+          "consecutive_no_action_failures": 2,
+          "failed_targets": [
+            "directive:Explore"
+          ],
+          "target_fingerprint": "{\"candidates\": [{\"endpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_0/ADDRBWRADDR[4]\", \"slack\": -0.674, \"startpoint\": \"IBusCachedPlugin_predictor_history_reg/CLKARDCLK\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port1_reg[5]/D\", \"slack\": -0.668, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[21]/C\"}, {\"endpoint\": \"decode_to_execute_RS2_reg[31]/D\", \"slack\": -0.656, \"startpoint\": \"decode_to_execute_SRC2_CTRL_reg[1]/C\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[7]/D\", \"slack\": -0.656, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[21]/C\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port1_reg[1]/D\", \"slack\": -0.648, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[21]/C\"}], \"delay_class\": \"mixed\", \"tier\": \"tier1_violating_paths\"}",
+          "last_failed_iter": 17
+        },
+        "pblock_full_replace": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "full_design",
+            "SLICE_X24Y48:SLICE_X30Y100 DSP48E2_X3Y20:DSP48E2_X3Y41 RAMB18_X2Y20:RAMB18_X2Y41 RAMB36_X2Y10:RAMB36_X2Y20"
+          ],
+          "target_fingerprint": "{\"candidates\": [{\"endpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_0/ADDRBWRADDR[4]\", \"slack\": -0.674, \"startpoint\": \"IBusCachedPlugin_predictor_history_reg/CLKARDCLK\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port1_reg[5]/D\", \"slack\": -0.668, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[21]/C\"}, {\"endpoint\": \"decode_to_execute_RS2_reg[31]/D\", \"slack\": -0.656, \"startpoint\": \"decode_to_execute_SRC2_CTRL_reg[1]/C\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[7]/D\", \"slack\": -0.656, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[21]/C\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port1_reg[1]/D\", \"slack\": -0.648, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[21]/C\"}], \"delay_class\": \"mixed\", \"tier\": \"tier1_violating_paths\"}",
+          "last_failed_iter": 14
+        }
+      },
+      "action_failure_counts": {
+        "phys_opt_design_retime": 1,
+        "fanout_split": 1,
+        "rapidwright_optimize_cell_placement": 2,
+        "pblock": 3,
+        "rapidwright_analyze_fabric_for_pblock": 3,
+        "rapidwright_convert_fabric_region_to_pblock": 3,
+        "replicate_register": 1,
+        "route_explore": 3,
+        "pblock_full_replace": 1
+      },
+      "llm_chosen_action": "route_explore",
+      "endgame_polish": true,
+      "validation_result": "endgame_polish"
+    },
+    {
+      "iter": 18,
+      "recipe": "vivado_phys_opt",
+      "batch_size": 1,
+      "targets": [
+        "AggressiveExplore"
+      ],
+      "wns_before": -0.67,
+      "wns_after": null,
+      "fmax_before": 446.4285714285714,
+      "fmax_after": null,
+      "delta_fmax": 0.0,
+      "vivado_runtime_s": 0.1228644847869873,
+      "status": "failed",
+      "reason": "Skipping phys_opt_design because current WNS -0.670 ns is below -0.500 ns; use structural placement actions first.",
+      "error_type": "phys_opt_below_useful_wns",
+      "checkpoint": null,
+      "rapidwright_edit_summary": null,
+      "action_failure_memory": {
+        "phys_opt_design": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "Explore",
+            "AggressiveExplore"
+          ],
+          "target_fingerprint": "{\"candidates\": [{\"endpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_0/ADDRBWRADDR[4]\", \"slack\": -0.674, \"startpoint\": \"IBusCachedPlugin_predictor_history_reg/CLKARDCLK\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port1_reg[5]/D\", \"slack\": -0.668, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[21]/C\"}, {\"endpoint\": \"decode_to_execute_RS2_reg[31]/D\", \"slack\": -0.656, \"startpoint\": \"decode_to_execute_SRC2_CTRL_reg[1]/C\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[7]/D\", \"slack\": -0.656, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[21]/C\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port1_reg[1]/D\", \"slack\": -0.648, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[21]/C\"}], \"delay_class\": \"mixed\", \"tier\": \"tier1_violating_paths\"}",
+          "last_failed_iter": 18,
+          "cooldown_until_iter": -1
+        },
+        "phys_opt_design_retime": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "Explore"
+          ],
+          "target_fingerprint": "{\"candidates\": [{\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[22]/D\", \"slack\": -0.785, \"startpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_1/CLKBWRCLK\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port1_reg[20]/D\", \"slack\": -0.772, \"startpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_1/CLKBWRCLK\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[6]/D\", \"slack\": -0.761, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[16]/C\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[10]/D\", \"slack\": -0.755, \"startpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_1/CLKBWRCLK\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[26]/D\", \"slack\": -0.747, \"startpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_0/CLKBWRCLK\"}], \"delay_class\": \"mixed\", \"tier\": \"tier1_violating_paths\"}",
+          "last_failed_iter": 3
+        },
+        "fanout_split": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "Explore"
+          ],
+          "target_fingerprint": "{\"candidates\": [{\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[22]/D\", \"slack\": -0.785, \"startpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_1/CLKBWRCLK\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port1_reg[20]/D\", \"slack\": -0.772, \"startpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_1/CLKBWRCLK\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[6]/D\", \"slack\": -0.761, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[16]/C\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[10]/D\", \"slack\": -0.755, \"startpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_1/CLKBWRCLK\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[26]/D\", \"slack\": -0.747, \"startpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_0/CLKBWRCLK\"}], \"delay_class\": \"mixed\", \"tier\": \"tier1_violating_paths\"}",
+          "last_failed_iter": 4
+        },
+        "rapidwright_optimize_cell_placement": {
+          "consecutive_no_action_failures": 2,
+          "failed_targets": [
+            "RegFilePlugin_regFile_spinal_port0_reg[22]",
+            "RegFilePlugin_regFile_spinal_port1_reg[20]",
+            "IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[16]",
+            "RegFilePlugin_regFile_spinal_port0_reg[6]",
+            "RegFilePlugin_regFile_spinal_port0_reg[10]",
+            "RegFilePlugin_regFile_spinal_port0_reg[26]",
+            "RegFilePlugin_regFile_spinal_port1_reg[19]",
+            "RegFilePlugin_regFile_spinal_port1_reg[17]",
+            "IBusCachedPlugin_cache/banks_0_reg_bram_1",
+            "IBusCachedPlugin_cache/banks_0_reg_bram_0"
+          ],
+          "target_fingerprint": "{\"candidates\": [{\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[22]/D\", \"slack\": -0.785, \"startpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_1/CLKBWRCLK\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port1_reg[20]/D\", \"slack\": -0.772, \"startpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_1/CLKBWRCLK\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[6]/D\", \"slack\": -0.761, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[16]/C\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[10]/D\", \"slack\": -0.755, \"startpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_1/CLKBWRCLK\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[26]/D\", \"slack\": -0.747, \"startpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_0/CLKBWRCLK\"}], \"delay_class\": \"mixed\", \"tier\": \"tier1_violating_paths\"}",
+          "last_failed_iter": 5
+        },
+        "rapidwright_analyze_fabric_for_pblock": {
+          "consecutive_no_action_failures": 2,
+          "failed_targets": [
+            "pblock_net_delay_011",
+            "SLICE_X24Y48:SLICE_X30Y100 DSP48E2_X3Y20:DSP48E2_X3Y41 RAMB18_X2Y20:RAMB18_X2Y41 RAMB36_X2Y10:RAMB36_X2Y20",
+            "pblock_net_delay_015"
+          ],
+          "target_fingerprint": "{\"candidates\": [{\"endpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_0/ADDRBWRADDR[4]\", \"slack\": -0.674, \"startpoint\": \"IBusCachedPlugin_predictor_history_reg/CLKARDCLK\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port1_reg[5]/D\", \"slack\": -0.668, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[21]/C\"}, {\"endpoint\": \"decode_to_execute_RS2_reg[31]/D\", \"slack\": -0.656, \"startpoint\": \"decode_to_execute_SRC2_CTRL_reg[1]/C\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[7]/D\", \"slack\": -0.656, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[21]/C\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port1_reg[1]/D\", \"slack\": -0.648, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[21]/C\"}], \"delay_class\": \"mixed\", \"tier\": \"tier1_violating_paths\"}",
+          "last_failed_iter": 15
+        },
+        "rapidwright_convert_fabric_region_to_pblock": {
+          "consecutive_no_action_failures": 2,
+          "failed_targets": [
+            "pblock_net_delay_011",
+            "SLICE_X24Y48:SLICE_X30Y100 DSP48E2_X3Y20:DSP48E2_X3Y41 RAMB18_X2Y20:RAMB18_X2Y41 RAMB36_X2Y10:RAMB36_X2Y20",
+            "pblock_net_delay_015"
+          ],
+          "target_fingerprint": "{\"candidates\": [{\"endpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_0/ADDRBWRADDR[4]\", \"slack\": -0.674, \"startpoint\": \"IBusCachedPlugin_predictor_history_reg/CLKARDCLK\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port1_reg[5]/D\", \"slack\": -0.668, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[21]/C\"}, {\"endpoint\": \"decode_to_execute_RS2_reg[31]/D\", \"slack\": -0.656, \"startpoint\": \"decode_to_execute_SRC2_CTRL_reg[1]/C\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[7]/D\", \"slack\": -0.656, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[21]/C\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port1_reg[1]/D\", \"slack\": -0.648, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[21]/C\"}], \"delay_class\": \"mixed\", \"tier\": \"tier1_violating_paths\"}",
+          "last_failed_iter": 15
+        },
+        "pblock": {
+          "consecutive_no_action_failures": 2,
+          "failed_targets": [
+            "pblock_net_delay_011",
+            "SLICE_X24Y48:SLICE_X30Y100 DSP48E2_X3Y20:DSP48E2_X3Y41 RAMB18_X2Y20:RAMB18_X2Y41 RAMB36_X2Y10:RAMB36_X2Y20",
+            "pblock_net_delay_015"
+          ],
+          "target_fingerprint": "{\"candidates\": [{\"endpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_0/ADDRBWRADDR[4]\", \"slack\": -0.674, \"startpoint\": \"IBusCachedPlugin_predictor_history_reg/CLKARDCLK\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port1_reg[5]/D\", \"slack\": -0.668, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[21]/C\"}, {\"endpoint\": \"decode_to_execute_RS2_reg[31]/D\", \"slack\": -0.656, \"startpoint\": \"decode_to_execute_SRC2_CTRL_reg[1]/C\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[7]/D\", \"slack\": -0.656, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[21]/C\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port1_reg[1]/D\", \"slack\": -0.648, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[21]/C\"}], \"delay_class\": \"mixed\", \"tier\": \"tier1_violating_paths\"}",
+          "last_failed_iter": 15
+        },
+        "replicate_register": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "critical_cell_opt"
+          ],
+          "target_fingerprint": "{\"candidates\": [{\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[22]/D\", \"slack\": -0.736, \"startpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_1/CLKBWRCLK\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[6]/D\", \"slack\": -0.734, \"startpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_0/CLKBWRCLK\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[20]/D\", \"slack\": -0.727, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[12]/C\"}, {\"endpoint\": \"decode_to_execute_RS1_reg[19]/D\", \"slack\": -0.726, \"startpoint\": \"decode_to_execute_SRC1_CTRL_reg[0]/C\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port1_reg[20]/D\", \"slack\": -0.714, \"startpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_1/CLKBWRCLK\"}], \"delay_class\": \"mixed\", \"tier\": \"tier1_violating_paths\"}",
+          "last_failed_iter": 8
+        },
+        "route_explore": {
+          "consecutive_no_action_failures": 2,
+          "failed_targets": [
+            "directive:Explore"
+          ],
+          "target_fingerprint": "{\"candidates\": [{\"endpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_0/ADDRBWRADDR[4]\", \"slack\": -0.674, \"startpoint\": \"IBusCachedPlugin_predictor_history_reg/CLKARDCLK\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port1_reg[5]/D\", \"slack\": -0.668, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[21]/C\"}, {\"endpoint\": \"decode_to_execute_RS2_reg[31]/D\", \"slack\": -0.656, \"startpoint\": \"decode_to_execute_SRC2_CTRL_reg[1]/C\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[7]/D\", \"slack\": -0.656, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[21]/C\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port1_reg[1]/D\", \"slack\": -0.648, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[21]/C\"}], \"delay_class\": \"mixed\", \"tier\": \"tier1_violating_paths\"}",
+          "last_failed_iter": 17
+        },
+        "pblock_full_replace": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "full_design",
+            "SLICE_X24Y48:SLICE_X30Y100 DSP48E2_X3Y20:DSP48E2_X3Y41 RAMB18_X2Y20:RAMB18_X2Y41 RAMB36_X2Y10:RAMB36_X2Y20"
+          ],
+          "target_fingerprint": "{\"candidates\": [{\"endpoint\": \"IBusCachedPlugin_cache/banks_0_reg_bram_0/ADDRBWRADDR[4]\", \"slack\": -0.674, \"startpoint\": \"IBusCachedPlugin_predictor_history_reg/CLKARDCLK\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port1_reg[5]/D\", \"slack\": -0.668, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[21]/C\"}, {\"endpoint\": \"decode_to_execute_RS2_reg[31]/D\", \"slack\": -0.656, \"startpoint\": \"decode_to_execute_SRC2_CTRL_reg[1]/C\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port0_reg[7]/D\", \"slack\": -0.656, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[21]/C\"}, {\"endpoint\": \"RegFilePlugin_regFile_spinal_port1_reg[1]/D\", \"slack\": -0.648, \"startpoint\": \"IBusCachedPlugin_cache/io_cpu_fetch_data_regNextWhen_reg[21]/C\"}], \"delay_class\": \"mixed\", \"tier\": \"tier1_violating_paths\"}",
+          "last_failed_iter": 14
+        }
+      },
+      "action_failure_counts": {
+        "phys_opt_design": 1,
+        "phys_opt_design_retime": 1,
+        "fanout_split": 1,
+        "rapidwright_optimize_cell_placement": 2,
+        "pblock": 3,
+        "rapidwright_analyze_fabric_for_pblock": 3,
+        "rapidwright_convert_fabric_region_to_pblock": 3,
+        "replicate_register": 1,
+        "route_explore": 3,
+        "pblock_full_replace": 1
+      },
+      "llm_chosen_action": "phys_opt_design",
+      "endgame_polish": true,
+      "validation_result": "endgame_polish"
+    }
+  ],
+  "started_at_epoch_s": 1784973525.4561923,
+  "llm_cost_usd": 0.18395040000000001,
+  "benchmark_score": {
+    "formula": "alpha - (0.1*alpha)*beta - (0.1*alpha)*gamma",
+    "alpha_delta_fmax_mhz": 136.25487415809994,
+    "beta_openrouter_cost_usd": 0.18395040000000001,
+    "gamma_runtime_hours": 0.2327574391497506,
+    "wall_clock_runtime_s": 837.9267809391022,
+    "score": 130.5770267396956
+  }
+}

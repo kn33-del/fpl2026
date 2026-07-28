@@ -1,0 +1,706 @@
+{
+  "input_dcp": "/home/fpl2026/fpl26_contest_benchmarks/amd_mini-isp_2025.1.dcp",
+  "clock_name": "clk_fpl26contest",
+  "clock_period_ns": 1.57,
+  "baseline_wns": -1.686,
+  "baseline_fmax_mhz": 307.12530712530713,
+  "best_wns": -0.904,
+  "best_fmax_mhz": 404.20371867421176,
+  "best_checkpoint": "/home/fpl2026/dcp_optimizer_run-20260719_173238/checkpoints/iter_001.dcp",
+  "current_iter": 8,
+  "stall_count": 7,
+  "cells_blacklisted": [],
+  "nets_blacklisted": [],
+  "iterations": [
+    {
+      "iter": 1,
+      "recipe": "place_design_explore",
+      "batch_size": 1,
+      "targets": [
+        "directive:Default"
+      ],
+      "wns_before": -1.686,
+      "wns_after": -0.904,
+      "fmax_before": 307.12530712530713,
+      "fmax_after": 404.20371867421176,
+      "delta_fmax": 97.07841154890463,
+      "vivado_runtime_s": 164.16743087768555,
+      "status": "improved",
+      "checkpoint": "/home/fpl2026/dcp_optimizer_run-20260719_173238/checkpoints/iter_001.dcp",
+      "target_tier": "tier1_violating_paths",
+      "target_candidate_count": 20,
+      "path_delay_classification": "net_delay_bound",
+      "path_delay_breakdown": {
+        "logic_pct": 0.12498,
+        "net_pct": 0.8750199999999999,
+        "logic_delay_ns": 0.361,
+        "net_delay_ns": 2.527
+      },
+      "clock_period_ns": 1.57,
+      "achieved_fmax_mhz": 404.20371867421176,
+      "no_improvement_count": 0,
+      "consecutive_no_improvement": 0,
+      "action_failure_memory": {},
+      "action_failure_counts": {},
+      "llm_chosen_action": "place_design_explore",
+      "warm_start": true,
+      "validation_result": "warm_start"
+    },
+    {
+      "iter": 2,
+      "recipe": "vivado_phys_opt",
+      "batch_size": 1,
+      "targets": [
+        "Explore"
+      ],
+      "wns_before": -0.904,
+      "wns_after": -0.904,
+      "fmax_before": 404.20371867421176,
+      "fmax_after": 404.20371867421176,
+      "delta_fmax": 0.0,
+      "vivado_runtime_s": 48.16318225860596,
+      "status": "no_improvement",
+      "checkpoint": "/home/fpl2026/dcp_optimizer_run-20260719_173238/checkpoints/iter_002.dcp",
+      "target_tier": "tier1_violating_paths",
+      "target_candidate_count": 20,
+      "path_delay_classification": "logic_delay_bound",
+      "path_delay_breakdown": {
+        "logic_pct": 0.82784,
+        "net_pct": 0.17216,
+        "logic_delay_ns": 1.925,
+        "net_delay_ns": 0.4
+      },
+      "clock_period_ns": 1.57,
+      "achieved_fmax_mhz": 404.20371867421176,
+      "no_improvement_count": 1,
+      "consecutive_no_improvement": 0,
+      "action_failure_memory": {},
+      "action_failure_counts": {},
+      "delay_class": "logic_delay_bound",
+      "endpoint_type": "REGISTER",
+      "allowed_actions": [
+        "phys_opt_design",
+        "phys_opt_design_retime",
+        "lut_opt",
+        "qor_suggestions",
+        "route_explore",
+        "fanout_split",
+        "run_recipe",
+        "replicate_register",
+        "pblock_full_replace",
+        "place_design_explore",
+        "rapidwright_optimize_cell_placement",
+        "pblock"
+      ],
+      "forbidden_actions": [
+        "logic_restructure"
+      ],
+      "action_guidance": {
+        "rapidwright_optimize_cell_placement": "delay class is logic_delay_bound; placement changes do not reduce logic depth; placement_already_compact (confidence 0.90) argues against this action: cluster is already tightly placed (avg spread 8.0 tiles <= 30) and delay is logic-dominated (83% logic) -- moving cells further is unlikely to help; look at logic restructuring instead.",
+        "pblock": "delay class is logic_delay_bound; placement changes do not reduce logic depth; placement_already_compact (confidence 0.90) argues against this action: cluster is already tightly placed (avg spread 8.0 tiles <= 30) and delay is logic-dominated (83% logic) -- moving cells further is unlikely to help; look at logic restructuring instead.",
+        "pblock_full_replace": "delay class is logic_delay_bound; placement changes do not reduce logic depth; this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won",
+        "place_design_explore": "delay class is logic_delay_bound; placement changes do not reduce logic depth; this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won"
+      },
+      "congestion_level": 0,
+      "cluster_clock_regions": [
+        "X1Y0"
+      ],
+      "llm_chosen_action": "phys_opt_design",
+      "structural_override_active": false,
+      "stuck_iterations": 0,
+      "exhausted_actions": [],
+      "validation_result": "ok",
+      "reprompt_count": 0,
+      "why_not_top_forbidden_action": "phys_opt_design_retime also fits the logic class but phys_opt is the explicit top-ranked entry",
+      "raw_response": "{\n  \"delay_class_acknowledged\": \"logic_delay_bound\",\n  \"endpoint_type_acknowledged\": \"REGISTER\",\n  \"chosen_action\": \"phys_opt_design\",\n  \"action_parameters\": {\"directive\": \"Explore\"},\n  \"why_this_fits_delay_class\": \"logic_pct=0.82784 > 0.70 so prefer logic-reducing phys_opt/lut_opt over placement\",\n  \"why_not_top_forbidden_action\": \"phys_opt_design_retime also fits the logic class but phys_opt is the explicit top-ranked entry\",\n  \"confidence\": 4\n}",
+      "cluster_count": 2,
+      "primary_diagnosis": "placement_already_compact",
+      "diagnosis_reasoning_trace": [
+        "normalized 20 timing-path candidate(s) from current_target_candidates",
+        "clustered into 2 cluster(s) via shared start/end cell name",
+        "primary cluster 'cluster_0' contains the current worst path (12 member(s), 1 cell(s) shared across all members)",
+        "scored hypotheses: placement_already_compact=0.90, excessive_fanout=0.80, localized_congestion=0.30, long_interconnect=0.25",
+        "primary hypothesis: placement_already_compact (confidence 0.90)",
+        "  + cluster is already tightly placed (avg spread 8.0 tiles <= 30) and delay is logic-dominated (83% logic) -- moving cells further is unlikely to help; look at logic restructuring instead.",
+        "  + all cluster cells share clock region X1Y0."
+      ],
+      "diagnosis_action_adjustment": "placement_already_compact (confidence 0.90) demoted ['rapidwright_optimize_cell_placement', 'pblock']; placement_already_compact (confidence 0.90) prioritized ['phys_opt_design', 'phys_opt_design_retime', 'lut_opt']"
+    },
+    {
+      "iter": 3,
+      "recipe": "vivado_phys_opt",
+      "batch_size": 1,
+      "targets": [
+        "Explore"
+      ],
+      "wns_before": -0.904,
+      "wns_after": -0.904,
+      "fmax_before": 404.20371867421176,
+      "fmax_after": 404.20371867421176,
+      "delta_fmax": 0.0,
+      "vivado_runtime_s": 54.68044948577881,
+      "status": "no_improvement",
+      "checkpoint": "/home/fpl2026/dcp_optimizer_run-20260719_173238/checkpoints/iter_003.dcp",
+      "target_tier": "tier1_violating_paths",
+      "target_candidate_count": 20,
+      "path_delay_classification": "logic_delay_bound",
+      "path_delay_breakdown": {
+        "logic_pct": 0.82784,
+        "net_pct": 0.17216,
+        "logic_delay_ns": 1.925,
+        "net_delay_ns": 0.4
+      },
+      "clock_period_ns": 1.57,
+      "achieved_fmax_mhz": 404.20371867421176,
+      "no_improvement_count": 2,
+      "consecutive_no_improvement": 1,
+      "action_failure_memory": {
+        "phys_opt_design": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "Explore"
+          ],
+          "last_failed_iter": 2,
+          "failed_on_current_targets": true
+        }
+      },
+      "action_failure_counts": {
+        "phys_opt_design": 1
+      },
+      "delay_class": "logic_delay_bound",
+      "endpoint_type": "REGISTER",
+      "allowed_actions": [
+        "phys_opt_design",
+        "phys_opt_design_retime",
+        "lut_opt",
+        "qor_suggestions",
+        "route_explore",
+        "fanout_split",
+        "run_recipe",
+        "replicate_register",
+        "pblock_full_replace",
+        "place_design_explore",
+        "rapidwright_optimize_cell_placement",
+        "pblock"
+      ],
+      "forbidden_actions": [
+        "logic_restructure"
+      ],
+      "action_guidance": {
+        "rapidwright_optimize_cell_placement": "delay class is logic_delay_bound; placement changes do not reduce logic depth; placement_already_compact (confidence 0.82) argues against this action: cluster is already tightly placed (avg spread 8.0 tiles <= 30) and delay is logic-dominated (83% logic) -- moving cells further is unlikely to help; look at logic restructuring instead.",
+        "pblock": "delay class is logic_delay_bound; placement changes do not reduce logic depth; placement_already_compact (confidence 0.82) argues against this action: cluster is already tightly placed (avg spread 8.0 tiles <= 30) and delay is logic-dominated (83% logic) -- moving cells further is unlikely to help; look at logic restructuring instead.",
+        "pblock_full_replace": "delay class is logic_delay_bound; placement changes do not reduce logic depth; this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won",
+        "place_design_explore": "delay class is logic_delay_bound; placement changes do not reduce logic depth; this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won"
+      },
+      "congestion_level": 0,
+      "cluster_clock_regions": [
+        "X1Y0"
+      ],
+      "llm_chosen_action": "phys_opt_design_retime",
+      "structural_override_active": false,
+      "stuck_iterations": 1,
+      "exhausted_actions": [],
+      "validation_result": "ok",
+      "reprompt_count": 0,
+      "why_not_top_forbidden_action": "phys_opt_design already failed its Explore directive on these targets so retime is the next ranked logic action",
+      "raw_response": "{\n  \"delay_class_acknowledged\": \"logic_delay_bound\",\n  \"endpoint_type_acknowledged\": \"REGISTER\",\n  \"chosen_action\": \"phys_opt_design_retime\",\n  \"action_parameters\": {\"directive\": \"Explore\"},\n  \"why_this_fits_delay_class\": \"logic_pct=0.82784 > 0.70, retiming prefers over failed phys_opt\",\n  \"why_not_top_forbidden_action\": \"phys_opt_design already failed its Explore directive on these targets so retime is the next ranked logic action\",\n  \"confidence\": 4\n}",
+      "cluster_count": 2,
+      "primary_diagnosis": "placement_already_compact",
+      "diagnosis_reasoning_trace": [
+        "normalized 20 timing-path candidate(s) from current_target_candidates",
+        "clustered into 2 cluster(s) via shared start/end cell name",
+        "primary cluster 'cluster_0' contains the current worst path (12 member(s), 1 cell(s) shared across all members)",
+        "outcome history: placement_already_compact's own prescriptions scored 0 win(s) / 1 loss(es) this run -> confidence -0.08",
+        "scored hypotheses: placement_already_compact=0.82, excessive_fanout=0.80, localized_congestion=0.30, long_interconnect=0.25",
+        "primary hypothesis: placement_already_compact (confidence 0.82)",
+        "  + cluster is already tightly placed (avg spread 8.0 tiles <= 30) and delay is logic-dominated (83% logic) -- moving cells further is unlikely to help; look at logic restructuring instead.",
+        "  + all cluster cells share clock region X1Y0.",
+        "  - outcome history: placement_already_compact's own prescriptions scored 0 win(s) / 1 loss(es) this run -> confidence -0.08"
+      ],
+      "diagnosis_action_adjustment": "placement_already_compact (confidence 0.82) demoted ['rapidwright_optimize_cell_placement', 'pblock']; placement_already_compact (confidence 0.82) prioritized ['phys_opt_design', 'phys_opt_design_retime', 'lut_opt']"
+    },
+    {
+      "iter": 4,
+      "recipe": "rapidwright_fanout",
+      "batch_size": 1,
+      "targets": [
+        "isp_int/demosaic_inst/linebuffer_inst/linebuffer_sdpram[3].sdpram/pipe_3_tvalid_reg"
+      ],
+      "wns_before": -0.904,
+      "wns_after": null,
+      "fmax_before": 404.20371867421176,
+      "fmax_after": null,
+      "delta_fmax": 0.0,
+      "vivado_runtime_s": 8.320194005966187,
+      "status": "failed",
+      "reason": "fanout_split produced a candidate with 365 unplaced primitive cell(s) (tolerance 55); refusing to route or measure it.",
+      "error_type": "invalid_design_state",
+      "checkpoint": null,
+      "rapidwright_edit_summary": {
+        "action": "fanout_split",
+        "net_name": "isp_int/demosaic_inst/linebuffer_inst/linebuffer_sdpram[3].sdpram/pipe_3_tvalid_reg",
+        "split_factor": 3,
+        "status": "success",
+        "cells_moved": 0,
+        "nets_affected": 2,
+        "new_nets": [
+          {
+            "name": "isp_int/demosaic_inst/linebuffer_inst/linebuffer_sdpram[3].sdpram/pipe_3_tvalid_reg_copy2",
+            "fanout": 67
+          },
+          {
+            "name": "isp_int/demosaic_inst/linebuffer_inst/linebuffer_sdpram[3].sdpram/pipe_3_tvalid_reg_copy1",
+            "fanout": 26
+          }
+        ],
+        "replicas_created": null,
+        "message": "Successfully split net 'isp_int/demosaic_inst/linebuffer_inst/linebuffer_sdpram[3].sdpram/pipe_3_tvalid_reg' into 3 parts"
+      },
+      "action_failure_memory": {
+        "phys_opt_design": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "Explore"
+          ],
+          "last_failed_iter": 2,
+          "failed_on_current_targets": true
+        },
+        "phys_opt_design_retime": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "Explore"
+          ],
+          "last_failed_iter": 3,
+          "failed_on_current_targets": true
+        }
+      },
+      "action_failure_counts": {
+        "phys_opt_design": 1,
+        "phys_opt_design_retime": 1
+      },
+      "delay_class": "logic_delay_bound",
+      "endpoint_type": "REGISTER",
+      "allowed_actions": [
+        "fanout_split",
+        "replicate_register",
+        "phys_opt_design",
+        "qor_suggestions",
+        "route_explore",
+        "phys_opt_design_retime",
+        "lut_opt",
+        "run_recipe",
+        "pblock_full_replace",
+        "place_design_explore",
+        "rapidwright_optimize_cell_placement",
+        "pblock"
+      ],
+      "forbidden_actions": [
+        "logic_restructure"
+      ],
+      "action_guidance": {
+        "rapidwright_optimize_cell_placement": "delay class is logic_delay_bound; placement changes do not reduce logic depth; excessive_fanout (confidence 0.80) argues against this action: 1 cell(s) (['isp_int/colorgain_inst/mult_result__0/DSP_A_B_DATA_INST']) recur across 12/20 extracted candidates (60%) -- consistent with a shared high-fanout driver rather than independent placement issues.",
+        "pblock": "delay class is logic_delay_bound; placement changes do not reduce logic depth; excessive_fanout (confidence 0.80) argues against this action: 1 cell(s) (['isp_int/colorgain_inst/mult_result__0/DSP_A_B_DATA_INST']) recur across 12/20 extracted candidates (60%) -- consistent with a shared high-fanout driver rather than independent placement issues.",
+        "pblock_full_replace": "delay class is logic_delay_bound; placement changes do not reduce logic depth; this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won",
+        "place_design_explore": "delay class is logic_delay_bound; placement changes do not reduce logic depth; this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won"
+      },
+      "congestion_level": 0,
+      "cluster_clock_regions": [
+        "X1Y0"
+      ],
+      "llm_chosen_action": "fanout_split",
+      "structural_override_active": false,
+      "stuck_iterations": 2,
+      "consecutive_no_improvement": 2,
+      "exhausted_actions": [],
+      "validation_result": "ok",
+      "reprompt_count": 0,
+      "why_not_top_forbidden_action": "replicate_register is the next-ranked action but fanout_split is explicitly highest-ranked for the current excessive_fanout diagnosis",
+      "raw_response": "{\n  \"delay_class_acknowledged\": \"logic_delay_bound\",\n  \"endpoint_type_acknowledged\": \"REGISTER\",\n  \"chosen_action\": \"fanout_split\",\n  \"action_parameters\": {},\n  \"why_this_fits_delay_class\": \"logic_pct=0.82784 indicates the path is logic-bound but the shared DSP driver across 60% of candidates (excessive_fanout diagnosis) makes replication the best way to shorten effective logic delay\",\n  \"why_not_top_forbidden_action\": \"replicate_register is the next-ranked action but fanout_split is explicitly highest-ranked for the current excessive_fanout diagnosis\",\n  \"confidence\": 4\n}",
+      "cluster_count": 2,
+      "primary_diagnosis": "excessive_fanout",
+      "diagnosis_reasoning_trace": [
+        "normalized 20 timing-path candidate(s) from current_target_candidates",
+        "clustered into 2 cluster(s) via shared start/end cell name",
+        "primary cluster 'cluster_0' contains the current worst path (12 member(s), 1 cell(s) shared across all members)",
+        "outcome history: placement_already_compact's own prescriptions scored 0 win(s) / 2 loss(es) this run -> confidence -0.16",
+        "scored hypotheses: excessive_fanout=0.80, placement_already_compact=0.74, localized_congestion=0.30, long_interconnect=0.25",
+        "primary hypothesis: excessive_fanout (confidence 0.80)",
+        "  + 1 cell(s) (['isp_int/colorgain_inst/mult_result__0/DSP_A_B_DATA_INST']) recur across 12/20 extracted candidates (60%) -- consistent with a shared high-fanout driver rather than independent placement issues."
+      ],
+      "diagnosis_action_adjustment": "excessive_fanout (confidence 0.80) demoted ['rapidwright_optimize_cell_placement', 'pblock']; excessive_fanout (confidence 0.80) prioritized ['fanout_split', 'replicate_register']"
+    },
+    {
+      "iter": 5,
+      "recipe": "place_design_explore",
+      "batch_size": 1,
+      "targets": [
+        "directive:Explore"
+      ],
+      "wns_before": -0.904,
+      "wns_after": null,
+      "fmax_before": 404.20371867421176,
+      "fmax_after": null,
+      "delta_fmax": 0.0,
+      "vivado_runtime_s": 85.61616778373718,
+      "status": "failed",
+      "reason": "Action completed but left the design in an invalid state (6838 unrouted net(s), 0 net(s) with routing errors); timing observation -0.961 ns rejected.",
+      "error_type": "invalid_design_state",
+      "checkpoint": null,
+      "rapidwright_edit_summary": null,
+      "action_failure_memory": {
+        "phys_opt_design": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "Explore"
+          ],
+          "last_failed_iter": 2,
+          "failed_on_current_targets": true
+        },
+        "phys_opt_design_retime": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "Explore"
+          ],
+          "last_failed_iter": 3,
+          "failed_on_current_targets": true
+        },
+        "fanout_split": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "isp_int/demosaic_inst/linebuffer_inst/linebuffer_sdpram[3].sdpram/pipe_3_tvalid_reg"
+          ],
+          "last_failed_iter": 4,
+          "failed_on_current_targets": true
+        }
+      },
+      "action_failure_counts": {
+        "phys_opt_design": 1,
+        "phys_opt_design_retime": 1,
+        "fanout_split": 1
+      },
+      "delay_class": "logic_delay_bound",
+      "endpoint_type": "REGISTER",
+      "allowed_actions": [
+        "rapidwright_optimize_cell_placement",
+        "pblock",
+        "pblock_full_replace",
+        "place_design_explore"
+      ],
+      "forbidden_actions": [
+        "logic_restructure"
+      ],
+      "action_guidance": {
+        "rapidwright_optimize_cell_placement": "delay class is logic_delay_bound; placement changes do not reduce logic depth",
+        "pblock": "delay class is logic_delay_bound; placement changes do not reduce logic depth",
+        "pblock_full_replace": "delay class is logic_delay_bound; placement changes do not reduce logic depth; this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won",
+        "place_design_explore": "delay class is logic_delay_bound; placement changes do not reduce logic depth; this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won"
+      },
+      "congestion_level": 0,
+      "cluster_clock_regions": [
+        "X1Y0"
+      ],
+      "llm_chosen_action": "place_design_explore",
+      "structural_override_active": true,
+      "stuck_iterations": 3,
+      "consecutive_no_improvement": 3,
+      "exhausted_actions": [],
+      "validation_result": "ok",
+      "reprompt_count": 0,
+      "why_not_top_forbidden_action": "rapidwright_optimize_cell_placement is highest-ranked among remaining allowed actions but place_design_explore has the best cross-run record (1 good)",
+      "raw_response": "{\n  \"delay_class_acknowledged\": \"logic_delay_bound\",\n  \"endpoint_type_acknowledged\": \"REGISTER\",\n  \"chosen_action\": \"place_design_explore\",\n  \"action_parameters\": {\"directive\": \"Explore\"},\n  \"why_this_fits_delay_class\": \"logic_pct=0.82784, all logic-reducing actions exhausted after failures, so placement explore is the only remaining allowed action to try improving the winning placement\",\n  \"why_not_top_forbidden_action\": \"rapidwright_optimize_cell_placement is highest-ranked among remaining allowed actions but place_design_explore has the best cross-run record (1 good)\",\n  \"confidence\": 3\n}",
+      "cluster_count": 2,
+      "primary_diagnosis": "placement_already_compact",
+      "diagnosis_reasoning_trace": [
+        "normalized 20 timing-path candidate(s) from current_target_candidates",
+        "clustered into 2 cluster(s) via shared start/end cell name",
+        "primary cluster 'cluster_0' contains the current worst path (12 member(s), 1 cell(s) shared across all members)",
+        "outcome history: placement_already_compact's own prescriptions scored 0 win(s) / 2 loss(es) this run -> confidence -0.16",
+        "outcome history: excessive_fanout's own prescriptions scored 0 win(s) / 1 loss(es) this run -> confidence -0.08",
+        "scored hypotheses: placement_already_compact=0.74, excessive_fanout=0.72, localized_congestion=0.30, long_interconnect=0.25",
+        "primary hypothesis: placement_already_compact (confidence 0.74)",
+        "  + cluster is already tightly placed (avg spread 6.0 tiles <= 30) and delay is logic-dominated (83% logic) -- moving cells further is unlikely to help; look at logic restructuring instead.",
+        "  + all cluster cells share clock region X1Y0.",
+        "  - outcome history: placement_already_compact's own prescriptions scored 0 win(s) / 2 loss(es) this run -> confidence -0.16"
+      ],
+      "diagnosis_action_adjustment": null
+    },
+    {
+      "iter": 6,
+      "recipe": "place_design_explore",
+      "batch_size": 1,
+      "targets": [
+        "directive:ExtraTimingOpt"
+      ],
+      "wns_before": -0.904,
+      "wns_after": -0.938,
+      "fmax_before": 404.20371867421176,
+      "fmax_after": 398.72408293460927,
+      "delta_fmax": -5.479635739602486,
+      "vivado_runtime_s": 95.96350932121277,
+      "status": "regression",
+      "checkpoint": "/home/fpl2026/dcp_optimizer_run-20260719_173238/checkpoints/iter_006.dcp",
+      "target_tier": "tier1_violating_paths",
+      "target_candidate_count": 20,
+      "path_delay_classification": "logic_delay_bound",
+      "path_delay_breakdown": {
+        "logic_pct": 0.82784,
+        "net_pct": 0.17216,
+        "logic_delay_ns": 1.925,
+        "net_delay_ns": 0.4
+      },
+      "clock_period_ns": 1.57,
+      "achieved_fmax_mhz": 398.72408293460927,
+      "no_improvement_count": 5,
+      "consecutive_no_improvement": 4,
+      "action_failure_memory": {
+        "phys_opt_design": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "Explore"
+          ],
+          "last_failed_iter": 2,
+          "failed_on_current_targets": true
+        },
+        "phys_opt_design_retime": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "Explore"
+          ],
+          "last_failed_iter": 3,
+          "failed_on_current_targets": true
+        },
+        "fanout_split": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "isp_int/demosaic_inst/linebuffer_inst/linebuffer_sdpram[3].sdpram/pipe_3_tvalid_reg"
+          ],
+          "last_failed_iter": 4,
+          "failed_on_current_targets": true
+        },
+        "place_design_explore": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "directive:Explore"
+          ],
+          "last_failed_iter": 5,
+          "failed_on_current_targets": true
+        }
+      },
+      "action_failure_counts": {
+        "place_design_explore": 1,
+        "phys_opt_design": 1,
+        "phys_opt_design_retime": 1,
+        "fanout_split": 1
+      },
+      "delay_class": "logic_delay_bound",
+      "endpoint_type": "REGISTER",
+      "allowed_actions": [
+        "rapidwright_optimize_cell_placement",
+        "pblock",
+        "pblock_full_replace",
+        "place_design_explore"
+      ],
+      "forbidden_actions": [
+        "logic_restructure"
+      ],
+      "action_guidance": {
+        "rapidwright_optimize_cell_placement": "delay class is logic_delay_bound; placement changes do not reduce logic depth",
+        "pblock": "delay class is logic_delay_bound; placement changes do not reduce logic depth",
+        "pblock_full_replace": "delay class is logic_delay_bound; placement changes do not reduce logic depth; this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won",
+        "place_design_explore": "delay class is logic_delay_bound; placement changes do not reduce logic depth; this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won"
+      },
+      "congestion_level": 0,
+      "cluster_clock_regions": [
+        "X1Y0"
+      ],
+      "llm_chosen_action": "place_design_explore",
+      "structural_override_active": true,
+      "stuck_iterations": 4,
+      "exhausted_actions": [],
+      "validation_result": "ok",
+      "reprompt_count": 0,
+      "why_not_top_forbidden_action": "rapidwright_optimize_cell_placement ranks highest but has crossrun record 0 good/1 bad plus placement_already_compact diagnosis shows avg spread already 6 tiles so cell moves will not help logic delay",
+      "raw_response": "{\n  \"delay_class_acknowledged\": \"logic_delay_bound\",\n  \"endpoint_type_acknowledged\": \"REGISTER\",\n  \"chosen_action\": \"place_design_explore\",\n  \"action_parameters\": {\"directive\": \"ExtraTimingOpt\"},\n  \"why_this_fits_delay_class\": \"logic_pct=0.82784 means logic depth dominates but all logic actions exhausted after failures and place_directives_untried still contains an untried directive, with congestion_level=0 allowing placement without worsening nets\",\n  \"why_not_top_forbidden_action\": \"rapidwright_optimize_cell_placement ranks highest but has crossrun record 0 good/1 bad plus placement_already_compact diagnosis shows avg spread already 6 tiles so cell moves will not help logic delay\",\n  \"confidence\": 3\n}",
+      "cluster_count": 2,
+      "primary_diagnosis": "placement_already_compact",
+      "diagnosis_reasoning_trace": [
+        "normalized 20 timing-path candidate(s) from current_target_candidates",
+        "clustered into 2 cluster(s) via shared start/end cell name",
+        "primary cluster 'cluster_0' contains the current worst path (12 member(s), 1 cell(s) shared across all members)",
+        "outcome history: placement_already_compact's own prescriptions scored 0 win(s) / 2 loss(es) this run -> confidence -0.16",
+        "outcome history: excessive_fanout's own prescriptions scored 0 win(s) / 1 loss(es) this run -> confidence -0.08",
+        "scored hypotheses: placement_already_compact=0.74, excessive_fanout=0.72, localized_congestion=0.30, long_interconnect=0.25",
+        "primary hypothesis: placement_already_compact (confidence 0.74)",
+        "  + cluster is already tightly placed (avg spread 6.0 tiles <= 30) and delay is logic-dominated (83% logic) -- moving cells further is unlikely to help; look at logic restructuring instead.",
+        "  + all cluster cells share clock region X1Y0.",
+        "  - outcome history: placement_already_compact's own prescriptions scored 0 win(s) / 2 loss(es) this run -> confidence -0.16"
+      ],
+      "diagnosis_action_adjustment": null
+    },
+    {
+      "iter": 7,
+      "recipe": "vivado_phys_opt",
+      "batch_size": 1,
+      "targets": [
+        "Explore"
+      ],
+      "wns_before": -0.904,
+      "wns_after": -0.904,
+      "fmax_before": 404.20371867421176,
+      "fmax_after": 404.20371867421176,
+      "delta_fmax": 0.0,
+      "vivado_runtime_s": 100.55138063430786,
+      "status": "no_improvement",
+      "checkpoint": "/home/fpl2026/dcp_optimizer_run-20260719_173238/checkpoints/iter_007.dcp",
+      "target_tier": "tier1_violating_paths",
+      "target_candidate_count": 20,
+      "path_delay_classification": "logic_delay_bound",
+      "path_delay_breakdown": {
+        "logic_pct": 0.82784,
+        "net_pct": 0.17216,
+        "logic_delay_ns": 1.925,
+        "net_delay_ns": 0.4
+      },
+      "clock_period_ns": 1.57,
+      "achieved_fmax_mhz": 404.20371867421176,
+      "no_improvement_count": 6,
+      "consecutive_no_improvement": 6,
+      "action_failure_memory": {
+        "phys_opt_design": {
+          "consecutive_no_action_failures": 2,
+          "failed_targets": [
+            "Explore"
+          ],
+          "target_fingerprint": "{\"candidates\": [{\"endpoint\": \"isp_int/colorgain_inst/pipe_2_tdata_reg[20]/S\", \"slack\": -0.904, \"startpoint\": \"isp_int/colorgain_inst/mult_result__0/DSP_A_B_DATA_INST/CLK\"}, {\"endpoint\": \"isp_int/colorgain_inst/pipe_2_tdata_reg[21]/S\", \"slack\": -0.904, \"startpoint\": \"isp_int/colorgain_inst/mult_result__0/DSP_A_B_DATA_INST/CLK\"}, {\"endpoint\": \"isp_int/colorgain_inst/pipe_2_tdata_reg[22]/S\", \"slack\": -0.904, \"startpoint\": \"isp_int/colorgain_inst/mult_result__0/DSP_A_B_DATA_INST/CLK\"}, {\"endpoint\": \"isp_int/colorgain_inst/pipe_2_tdata_reg[23]/S\", \"slack\": -0.904, \"startpoint\": \"isp_int/colorgain_inst/mult_result__0/DSP_A_B_DATA_INST/CLK\"}, {\"endpoint\": \"isp_int/colorgain_inst/pipe_2_tdata_reg[12]/S\", \"slack\": -0.901, \"startpoint\": \"isp_int/colorgain_inst/mult_result__0/DSP_A_B_DATA_INST/CLK\"}], \"delay_class\": \"logic_delay_bound\", \"tier\": \"tier1_violating_paths\"}",
+          "last_failed_iter": 7
+        },
+        "phys_opt_design_retime": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "Explore"
+          ],
+          "target_fingerprint": "{\"candidates\": [{\"endpoint\": \"isp_int/colorgain_inst/pipe_2_tdata_reg[20]/S\", \"slack\": -0.904, \"startpoint\": \"isp_int/colorgain_inst/mult_result__0/DSP_A_B_DATA_INST/CLK\"}, {\"endpoint\": \"isp_int/colorgain_inst/pipe_2_tdata_reg[21]/S\", \"slack\": -0.904, \"startpoint\": \"isp_int/colorgain_inst/mult_result__0/DSP_A_B_DATA_INST/CLK\"}, {\"endpoint\": \"isp_int/colorgain_inst/pipe_2_tdata_reg[22]/S\", \"slack\": -0.904, \"startpoint\": \"isp_int/colorgain_inst/mult_result__0/DSP_A_B_DATA_INST/CLK\"}, {\"endpoint\": \"isp_int/colorgain_inst/pipe_2_tdata_reg[23]/S\", \"slack\": -0.904, \"startpoint\": \"isp_int/colorgain_inst/mult_result__0/DSP_A_B_DATA_INST/CLK\"}, {\"endpoint\": \"isp_int/colorgain_inst/pipe_2_tdata_reg[12]/S\", \"slack\": -0.901, \"startpoint\": \"isp_int/colorgain_inst/mult_result__0/DSP_A_B_DATA_INST/CLK\"}], \"delay_class\": \"logic_delay_bound\", \"tier\": \"tier1_violating_paths\"}",
+          "last_failed_iter": 3
+        },
+        "fanout_split": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "isp_int/demosaic_inst/linebuffer_inst/linebuffer_sdpram[3].sdpram/pipe_3_tvalid_reg"
+          ],
+          "target_fingerprint": "{\"candidates\": [{\"endpoint\": \"isp_int/colorgain_inst/pipe_2_tdata_reg[20]/S\", \"slack\": -0.904, \"startpoint\": \"isp_int/colorgain_inst/mult_result__0/DSP_A_B_DATA_INST/CLK\"}, {\"endpoint\": \"isp_int/colorgain_inst/pipe_2_tdata_reg[21]/S\", \"slack\": -0.904, \"startpoint\": \"isp_int/colorgain_inst/mult_result__0/DSP_A_B_DATA_INST/CLK\"}, {\"endpoint\": \"isp_int/colorgain_inst/pipe_2_tdata_reg[22]/S\", \"slack\": -0.904, \"startpoint\": \"isp_int/colorgain_inst/mult_result__0/DSP_A_B_DATA_INST/CLK\"}, {\"endpoint\": \"isp_int/colorgain_inst/pipe_2_tdata_reg[23]/S\", \"slack\": -0.904, \"startpoint\": \"isp_int/colorgain_inst/mult_result__0/DSP_A_B_DATA_INST/CLK\"}, {\"endpoint\": \"isp_int/colorgain_inst/pipe_2_tdata_reg[12]/S\", \"slack\": -0.901, \"startpoint\": \"isp_int/colorgain_inst/mult_result__0/DSP_A_B_DATA_INST/CLK\"}], \"delay_class\": \"logic_delay_bound\", \"tier\": \"tier1_violating_paths\"}",
+          "last_failed_iter": 4
+        },
+        "place_design_explore": {
+          "consecutive_no_action_failures": 2,
+          "failed_targets": [
+            "directive:Explore",
+            "directive:ExtraTimingOpt"
+          ],
+          "target_fingerprint": "{\"candidates\": [{\"endpoint\": \"isp_int/colorgain_inst/pipe_2_tdata_reg[20]/S\", \"slack\": -0.904, \"startpoint\": \"isp_int/colorgain_inst/mult_result__0/DSP_A_B_DATA_INST/CLK\"}, {\"endpoint\": \"isp_int/colorgain_inst/pipe_2_tdata_reg[21]/S\", \"slack\": -0.904, \"startpoint\": \"isp_int/colorgain_inst/mult_result__0/DSP_A_B_DATA_INST/CLK\"}, {\"endpoint\": \"isp_int/colorgain_inst/pipe_2_tdata_reg[22]/S\", \"slack\": -0.904, \"startpoint\": \"isp_int/colorgain_inst/mult_result__0/DSP_A_B_DATA_INST/CLK\"}, {\"endpoint\": \"isp_int/colorgain_inst/pipe_2_tdata_reg[23]/S\", \"slack\": -0.904, \"startpoint\": \"isp_int/colorgain_inst/mult_result__0/DSP_A_B_DATA_INST/CLK\"}, {\"endpoint\": \"isp_int/colorgain_inst/pipe_2_tdata_reg[12]/S\", \"slack\": -0.901, \"startpoint\": \"isp_int/colorgain_inst/mult_result__0/DSP_A_B_DATA_INST/CLK\"}], \"delay_class\": \"logic_delay_bound\", \"tier\": \"tier1_violating_paths\"}",
+          "last_failed_iter": 6
+        }
+      },
+      "action_failure_counts": {
+        "place_design_explore": 2,
+        "phys_opt_design": 2,
+        "phys_opt_design_retime": 1,
+        "fanout_split": 1
+      },
+      "llm_chosen_action": "phys_opt_design",
+      "endgame_polish": true,
+      "validation_result": "endgame_polish"
+    },
+    {
+      "iter": 8,
+      "recipe": "route_explore",
+      "batch_size": 1,
+      "targets": [
+        "directive:Explore"
+      ],
+      "wns_before": -0.904,
+      "wns_after": -0.904,
+      "fmax_before": 404.20371867421176,
+      "fmax_after": 404.20371867421176,
+      "delta_fmax": 0.0,
+      "vivado_runtime_s": 17.709950923919678,
+      "status": "no_improvement",
+      "checkpoint": "/home/fpl2026/dcp_optimizer_run-20260719_173238/checkpoints/iter_008.dcp",
+      "target_tier": "tier1_violating_paths",
+      "target_candidate_count": 20,
+      "path_delay_classification": "logic_delay_bound",
+      "path_delay_breakdown": {
+        "logic_pct": 0.82784,
+        "net_pct": 0.17216,
+        "logic_delay_ns": 1.925,
+        "net_delay_ns": 0.4
+      },
+      "clock_period_ns": 1.57,
+      "achieved_fmax_mhz": 404.20371867421176,
+      "no_improvement_count": 7,
+      "consecutive_no_improvement": 7,
+      "action_failure_memory": {
+        "phys_opt_design": {
+          "consecutive_no_action_failures": 2,
+          "failed_targets": [
+            "Explore"
+          ],
+          "target_fingerprint": "{\"candidates\": [{\"endpoint\": \"isp_int/colorgain_inst/pipe_2_tdata_reg[20]/S\", \"slack\": -0.904, \"startpoint\": \"isp_int/colorgain_inst/mult_result__0/DSP_A_B_DATA_INST/CLK\"}, {\"endpoint\": \"isp_int/colorgain_inst/pipe_2_tdata_reg[21]/S\", \"slack\": -0.904, \"startpoint\": \"isp_int/colorgain_inst/mult_result__0/DSP_A_B_DATA_INST/CLK\"}, {\"endpoint\": \"isp_int/colorgain_inst/pipe_2_tdata_reg[22]/S\", \"slack\": -0.904, \"startpoint\": \"isp_int/colorgain_inst/mult_result__0/DSP_A_B_DATA_INST/CLK\"}, {\"endpoint\": \"isp_int/colorgain_inst/pipe_2_tdata_reg[23]/S\", \"slack\": -0.904, \"startpoint\": \"isp_int/colorgain_inst/mult_result__0/DSP_A_B_DATA_INST/CLK\"}, {\"endpoint\": \"isp_int/colorgain_inst/pipe_2_tdata_reg[12]/S\", \"slack\": -0.901, \"startpoint\": \"isp_int/colorgain_inst/mult_result__0/DSP_A_B_DATA_INST/CLK\"}], \"delay_class\": \"logic_delay_bound\", \"tier\": \"tier1_violating_paths\"}",
+          "last_failed_iter": 7
+        },
+        "phys_opt_design_retime": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "Explore"
+          ],
+          "target_fingerprint": "{\"candidates\": [{\"endpoint\": \"isp_int/colorgain_inst/pipe_2_tdata_reg[20]/S\", \"slack\": -0.904, \"startpoint\": \"isp_int/colorgain_inst/mult_result__0/DSP_A_B_DATA_INST/CLK\"}, {\"endpoint\": \"isp_int/colorgain_inst/pipe_2_tdata_reg[21]/S\", \"slack\": -0.904, \"startpoint\": \"isp_int/colorgain_inst/mult_result__0/DSP_A_B_DATA_INST/CLK\"}, {\"endpoint\": \"isp_int/colorgain_inst/pipe_2_tdata_reg[22]/S\", \"slack\": -0.904, \"startpoint\": \"isp_int/colorgain_inst/mult_result__0/DSP_A_B_DATA_INST/CLK\"}, {\"endpoint\": \"isp_int/colorgain_inst/pipe_2_tdata_reg[23]/S\", \"slack\": -0.904, \"startpoint\": \"isp_int/colorgain_inst/mult_result__0/DSP_A_B_DATA_INST/CLK\"}, {\"endpoint\": \"isp_int/colorgain_inst/pipe_2_tdata_reg[12]/S\", \"slack\": -0.901, \"startpoint\": \"isp_int/colorgain_inst/mult_result__0/DSP_A_B_DATA_INST/CLK\"}], \"delay_class\": \"logic_delay_bound\", \"tier\": \"tier1_violating_paths\"}",
+          "last_failed_iter": 3
+        },
+        "fanout_split": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "isp_int/demosaic_inst/linebuffer_inst/linebuffer_sdpram[3].sdpram/pipe_3_tvalid_reg"
+          ],
+          "target_fingerprint": "{\"candidates\": [{\"endpoint\": \"isp_int/colorgain_inst/pipe_2_tdata_reg[20]/S\", \"slack\": -0.904, \"startpoint\": \"isp_int/colorgain_inst/mult_result__0/DSP_A_B_DATA_INST/CLK\"}, {\"endpoint\": \"isp_int/colorgain_inst/pipe_2_tdata_reg[21]/S\", \"slack\": -0.904, \"startpoint\": \"isp_int/colorgain_inst/mult_result__0/DSP_A_B_DATA_INST/CLK\"}, {\"endpoint\": \"isp_int/colorgain_inst/pipe_2_tdata_reg[22]/S\", \"slack\": -0.904, \"startpoint\": \"isp_int/colorgain_inst/mult_result__0/DSP_A_B_DATA_INST/CLK\"}, {\"endpoint\": \"isp_int/colorgain_inst/pipe_2_tdata_reg[23]/S\", \"slack\": -0.904, \"startpoint\": \"isp_int/colorgain_inst/mult_result__0/DSP_A_B_DATA_INST/CLK\"}, {\"endpoint\": \"isp_int/colorgain_inst/pipe_2_tdata_reg[12]/S\", \"slack\": -0.901, \"startpoint\": \"isp_int/colorgain_inst/mult_result__0/DSP_A_B_DATA_INST/CLK\"}], \"delay_class\": \"logic_delay_bound\", \"tier\": \"tier1_violating_paths\"}",
+          "last_failed_iter": 4
+        },
+        "place_design_explore": {
+          "consecutive_no_action_failures": 2,
+          "failed_targets": [
+            "directive:Explore",
+            "directive:ExtraTimingOpt"
+          ],
+          "target_fingerprint": "{\"candidates\": [{\"endpoint\": \"isp_int/colorgain_inst/pipe_2_tdata_reg[20]/S\", \"slack\": -0.904, \"startpoint\": \"isp_int/colorgain_inst/mult_result__0/DSP_A_B_DATA_INST/CLK\"}, {\"endpoint\": \"isp_int/colorgain_inst/pipe_2_tdata_reg[21]/S\", \"slack\": -0.904, \"startpoint\": \"isp_int/colorgain_inst/mult_result__0/DSP_A_B_DATA_INST/CLK\"}, {\"endpoint\": \"isp_int/colorgain_inst/pipe_2_tdata_reg[22]/S\", \"slack\": -0.904, \"startpoint\": \"isp_int/colorgain_inst/mult_result__0/DSP_A_B_DATA_INST/CLK\"}, {\"endpoint\": \"isp_int/colorgain_inst/pipe_2_tdata_reg[23]/S\", \"slack\": -0.904, \"startpoint\": \"isp_int/colorgain_inst/mult_result__0/DSP_A_B_DATA_INST/CLK\"}, {\"endpoint\": \"isp_int/colorgain_inst/pipe_2_tdata_reg[12]/S\", \"slack\": -0.901, \"startpoint\": \"isp_int/colorgain_inst/mult_result__0/DSP_A_B_DATA_INST/CLK\"}], \"delay_class\": \"logic_delay_bound\", \"tier\": \"tier1_violating_paths\"}",
+          "last_failed_iter": 6
+        },
+        "route_explore": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "directive:Explore"
+          ],
+          "target_fingerprint": "{\"candidates\": [{\"endpoint\": \"isp_int/colorgain_inst/pipe_2_tdata_reg[20]/S\", \"slack\": -0.904, \"startpoint\": \"isp_int/colorgain_inst/mult_result__0/DSP_A_B_DATA_INST/CLK\"}, {\"endpoint\": \"isp_int/colorgain_inst/pipe_2_tdata_reg[21]/S\", \"slack\": -0.904, \"startpoint\": \"isp_int/colorgain_inst/mult_result__0/DSP_A_B_DATA_INST/CLK\"}, {\"endpoint\": \"isp_int/colorgain_inst/pipe_2_tdata_reg[22]/S\", \"slack\": -0.904, \"startpoint\": \"isp_int/colorgain_inst/mult_result__0/DSP_A_B_DATA_INST/CLK\"}, {\"endpoint\": \"isp_int/colorgain_inst/pipe_2_tdata_reg[23]/S\", \"slack\": -0.904, \"startpoint\": \"isp_int/colorgain_inst/mult_result__0/DSP_A_B_DATA_INST/CLK\"}, {\"endpoint\": \"isp_int/colorgain_inst/pipe_2_tdata_reg[12]/S\", \"slack\": -0.901, \"startpoint\": \"isp_int/colorgain_inst/mult_result__0/DSP_A_B_DATA_INST/CLK\"}], \"delay_class\": \"logic_delay_bound\", \"tier\": \"tier1_violating_paths\"}",
+          "last_failed_iter": 8
+        }
+      },
+      "action_failure_counts": {
+        "place_design_explore": 2,
+        "phys_opt_design": 2,
+        "phys_opt_design_retime": 1,
+        "fanout_split": 1,
+        "route_explore": 1
+      },
+      "llm_chosen_action": "route_explore",
+      "endgame_polish": true,
+      "validation_result": "endgame_polish"
+    }
+  ],
+  "started_at_epoch_s": 1784482428.0827522,
+  "llm_cost_usd": 0.04477065,
+  "benchmark_score": {
+    "formula": "alpha - (0.1*alpha)*beta - (0.1*alpha)*gamma",
+    "alpha_delta_fmax_mhz": 97.07841154890463,
+    "beta_openrouter_cost_usd": 0.04477065,
+    "gamma_runtime_hours": 0.12523627784517077,
+    "wall_clock_runtime_s": 450.85060024261475,
+    "score": 95.42801129815278
+  }
+}

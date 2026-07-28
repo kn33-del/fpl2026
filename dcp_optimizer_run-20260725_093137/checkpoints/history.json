@@ -1,0 +1,944 @@
+{
+  "input_dcp": "/home/fpl2026/fpl26_contest_benchmarks/rosetta_spam-filter_2025.1.dcp",
+  "clock_name": "clk_fpl26contest",
+  "clock_period_ns": 1.6,
+  "baseline_wns": -0.686,
+  "baseline_fmax_mhz": 437.4453193350831,
+  "best_wns": -0.686,
+  "best_fmax_mhz": 437.4453193350831,
+  "best_checkpoint": "/home/fpl2026/fpl26_contest_benchmarks/rosetta_spam-filter_2025.1.dcp",
+  "current_iter": 7,
+  "stall_count": 7,
+  "cells_blacklisted": [],
+  "nets_blacklisted": [],
+  "iterations": [
+    {
+      "iter": 1,
+      "recipe": "rapidwright_fanout",
+      "batch_size": 1,
+      "targets": [
+        "grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_UPDATE_fu_577/SgdLR_ap_uint_64_ap_uint_32_ap_uint_64_bool_bool_theta_local_13_addr_reg_2714_pp0_iter7_reg_reg[1]__0_1"
+      ],
+      "wns_before": -0.686,
+      "wns_after": null,
+      "fmax_before": 437.4453193350831,
+      "fmax_after": null,
+      "delta_fmax": 0.0,
+      "vivado_runtime_s": 51.09826970100403,
+      "status": "failed",
+      "reason": "fanout_split produced a candidate with 2390 unplaced primitive cell(s) (tolerance 608); refusing to route or measure it.",
+      "error_type": "invalid_design_state",
+      "checkpoint": null,
+      "rapidwright_edit_summary": {
+        "action": "fanout_split",
+        "net_name": "grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_UPDATE_fu_577/SgdLR_ap_uint_64_ap_uint_32_ap_uint_64_bool_bool_theta_local_13_addr_reg_2714_pp0_iter7_reg_reg[1]__0_1",
+        "split_factor": 4,
+        "status": null,
+        "cells_moved": 0,
+        "nets_affected": 0,
+        "new_nets": null,
+        "replicas_created": null,
+        "message": null
+      },
+      "action_failure_memory": {},
+      "action_failure_counts": {},
+      "delay_class": "mixed",
+      "endpoint_type": "REGISTER",
+      "allowed_actions": [
+        "fanout_split",
+        "replicate_register",
+        "pblock_full_replace",
+        "place_design_explore",
+        "phys_opt_design_retime",
+        "phys_opt_design",
+        "route_explore",
+        "run_recipe",
+        "lut_opt",
+        "rapidwright_optimize_cell_placement",
+        "pblock"
+      ],
+      "forbidden_actions": [
+        "logic_restructure"
+      ],
+      "action_guidance": {
+        "rapidwright_optimize_cell_placement": "excessive_fanout (confidence 0.80) argues against this action: 1 cell(s) (['grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_4_reg_3127_reg[3]']) recur across 13/20 extracted candidates (65%) -- consistent with a shared high-fanout driver rather than independent placement issues.",
+        "pblock": "excessive_fanout (confidence 0.80) argues against this action: 1 cell(s) (['grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_4_reg_3127_reg[3]']) recur across 13/20 extracted candidates (65%) -- consistent with a shared high-fanout driver rather than independent placement issues."
+      },
+      "congestion_level": null,
+      "cluster_clock_regions": [
+        "X2Y2"
+      ],
+      "llm_chosen_action": "fanout_split",
+      "structural_override_active": false,
+      "stuck_iterations": 0,
+      "consecutive_no_improvement": 0,
+      "exhausted_actions": [],
+      "validation_result": "ok",
+      "reprompt_count": 0,
+      "why_not_top_forbidden_action": "replicate_register was skipped in favor of its higher-ranked sibling fanout_split which has explicit split_factor control for the 3 shared high-fanout nets.",
+      "raw_response": "{\n  \"delay_class_acknowledged\": \"mixed\",\n  \"endpoint_type_acknowledged\": \"REGISTER\",\n  \"chosen_action\": \"fanout_split\",\n  \"action_parameters\": {\n    \"split_factor\": 4\n  },\n  \"why_this_fits_delay_class\": \"fanout_split targets the diagnosed excessive_fanout (primary hypothesis, top nets 192-288) that contributes the net_pct=0.53198 portion of the mixed delay.\",\n  \"why_not_top_forbidden_action\": \"replicate_register was skipped in favor of its higher-ranked sibling fanout_split which has explicit split_factor control for the 3 shared high-fanout nets.\",\n  \"confidence\": 4\n}",
+      "cluster_count": 2,
+      "primary_diagnosis": "excessive_fanout",
+      "diagnosis_reasoning_trace": [
+        "normalized 20 timing-path candidate(s) from current_target_candidates",
+        "clustered into 2 cluster(s) via shared start/end cell name",
+        "primary cluster 'cluster_0' contains the current worst path (13 member(s), 1 cell(s) shared across all members)",
+        "scored hypotheses: excessive_fanout=0.80, localized_congestion=0.50, placement_already_compact=0.45, long_interconnect=0.25",
+        "primary hypothesis: excessive_fanout (confidence 0.80)",
+        "  + 1 cell(s) (['grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_4_reg_3127_reg[3]']) recur across 13/20 extracted candidates (65%) -- consistent with a shared high-fanout driver rather than independent placement issues."
+      ],
+      "diagnosis_action_adjustment": "excessive_fanout (confidence 0.80) demoted ['rapidwright_optimize_cell_placement', 'pblock']; excessive_fanout (confidence 0.80) prioritized ['fanout_split', 'replicate_register']"
+    },
+    {
+      "iter": 2,
+      "recipe": "rapidwright_cell_placement",
+      "batch_size": 10,
+      "targets": [
+        "grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_4_reg_3127_reg[3]",
+        "grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343",
+        "grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_14_reg_3172_reg[31]",
+        "grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_14_reg_3172_reg[29]",
+        "grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_14_reg_3172_reg[30]",
+        "grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_27_reg_3167_reg[12]",
+        "grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_29_reg_3177_reg[31]",
+        "grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_29_reg_3177_reg[29]",
+        "grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_14_reg_3172_reg[28]",
+        "grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_14_reg_3172_reg[27]"
+      ],
+      "wns_before": -0.686,
+      "wns_after": null,
+      "fmax_before": 437.4453193350831,
+      "fmax_after": null,
+      "delta_fmax": 0.0,
+      "vivado_runtime_s": 31.444496631622314,
+      "status": "failed",
+      "reason": "rapidwright_optimize_cell_placement produced a candidate with 2390 unplaced primitive cell(s) (tolerance 608); refusing to route or measure it.",
+      "error_type": "invalid_design_state",
+      "checkpoint": null,
+      "rapidwright_edit_summary": {
+        "action": "rapidwright_optimize_cell_placement",
+        "requested_cells": [
+          "grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_4_reg_3127_reg[3]",
+          "grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343",
+          "grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_14_reg_3172_reg[31]",
+          "grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_14_reg_3172_reg[29]",
+          "grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_14_reg_3172_reg[30]",
+          "grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_27_reg_3167_reg[12]",
+          "grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_29_reg_3177_reg[31]",
+          "grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_29_reg_3177_reg[29]",
+          "grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_14_reg_3172_reg[28]",
+          "grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_14_reg_3172_reg[27]"
+        ],
+        "cells_processed": 10,
+        "cells_moved": 9,
+        "moved_cells": [
+          "grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_4_reg_3127_reg[3]",
+          "grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_14_reg_3172_reg[31]",
+          "grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_14_reg_3172_reg[29]",
+          "grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_14_reg_3172_reg[30]",
+          "grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_27_reg_3167_reg[12]",
+          "grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_29_reg_3177_reg[31]",
+          "grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_29_reg_3177_reg[29]",
+          "grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_14_reg_3172_reg[28]",
+          "grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_14_reg_3172_reg[27]"
+        ],
+        "nets_affected": 10,
+        "results": [
+          {
+            "cell": "grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_4_reg_3127_reg[3]",
+            "status": "success",
+            "old_site": "SLICE_X82Y148",
+            "new_site": "SLICE_X83Y150",
+            "distance_moved": 3,
+            "affected_nets": 2,
+            "message": "Moved from SLICE_X82Y148 to SLICE_X83Y150"
+          },
+          {
+            "cell": "grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343",
+            "status": "error",
+            "message": "Cell 'grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343' not found"
+          },
+          {
+            "cell": "grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_14_reg_3172_reg[31]",
+            "status": "success",
+            "old_site": "SLICE_X80Y149",
+            "new_site": "SLICE_X78Y150",
+            "distance_moved": 2,
+            "affected_nets": 1,
+            "message": "Moved from SLICE_X80Y149 to SLICE_X78Y150"
+          },
+          {
+            "cell": "grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_14_reg_3172_reg[29]",
+            "status": "success",
+            "old_site": "SLICE_X80Y149",
+            "new_site": "SLICE_X77Y150",
+            "distance_moved": 3,
+            "affected_nets": 1,
+            "message": "Moved from SLICE_X80Y149 to SLICE_X77Y150"
+          },
+          {
+            "cell": "grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_14_reg_3172_reg[30]",
+            "status": "success",
+            "old_site": "SLICE_X80Y149",
+            "new_site": "SLICE_X77Y151",
+            "distance_moved": 4,
+            "affected_nets": 1,
+            "message": "Moved from SLICE_X80Y149 to SLICE_X77Y151"
+          },
+          {
+            "cell": "grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_27_reg_3167_reg[12]",
+            "status": "success",
+            "old_site": "SLICE_X62Y159",
+            "new_site": "SLICE_X62Y155",
+            "distance_moved": 4,
+            "affected_nets": 1,
+            "message": "Moved from SLICE_X62Y159 to SLICE_X62Y155"
+          },
+          {
+            "cell": "grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_29_reg_3177_reg[31]",
+            "status": "success",
+            "old_site": "SLICE_X60Y152",
+            "new_site": "SLICE_X66Y152",
+            "distance_moved": 4,
+            "affected_nets": 1,
+            "message": "Moved from SLICE_X60Y152 to SLICE_X66Y152"
+          },
+          {
+            "cell": "grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_29_reg_3177_reg[29]",
+            "status": "success",
+            "old_site": "SLICE_X60Y152",
+            "new_site": "SLICE_X65Y152",
+            "distance_moved": 3,
+            "affected_nets": 1,
+            "message": "Moved from SLICE_X60Y152 to SLICE_X65Y152"
+          },
+          {
+            "cell": "grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_14_reg_3172_reg[28]",
+            "status": "success",
+            "old_site": "SLICE_X80Y149",
+            "new_site": "SLICE_X78Y151",
+            "distance_moved": 3,
+            "affected_nets": 1,
+            "message": "Moved from SLICE_X80Y149 to SLICE_X78Y151"
+          },
+          {
+            "cell": "grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_14_reg_3172_reg[27]",
+            "status": "success",
+            "old_site": "SLICE_X80Y149",
+            "new_site": "SLICE_X76Y151",
+            "distance_moved": 4,
+            "affected_nets": 1,
+            "message": "Moved from SLICE_X80Y149 to SLICE_X76Y151"
+          }
+        ]
+      },
+      "action_failure_memory": {
+        "fanout_split": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_UPDATE_fu_577/SgdLR_ap_uint_64_ap_uint_32_ap_uint_64_bool_bool_theta_local_13_addr_reg_2714_pp0_iter7_reg_reg[1]__0_1"
+          ],
+          "last_failed_iter": 1,
+          "failed_on_current_targets": true
+        }
+      },
+      "action_failure_counts": {
+        "fanout_split": 1
+      },
+      "delay_class": "mixed",
+      "endpoint_type": "REGISTER",
+      "allowed_actions": [
+        "rapidwright_optimize_cell_placement",
+        "pblock",
+        "pblock_full_replace",
+        "place_design_explore",
+        "phys_opt_design_retime",
+        "phys_opt_design",
+        "route_explore",
+        "run_recipe",
+        "replicate_register",
+        "fanout_split",
+        "lut_opt"
+      ],
+      "forbidden_actions": [
+        "logic_restructure"
+      ],
+      "action_guidance": {},
+      "congestion_level": null,
+      "cluster_clock_regions": [
+        "X2Y2"
+      ],
+      "llm_chosen_action": "rapidwright_optimize_cell_placement",
+      "structural_override_active": false,
+      "stuck_iterations": 1,
+      "consecutive_no_improvement": 1,
+      "exhausted_actions": [],
+      "validation_result": "ok",
+      "reprompt_count": 0,
+      "why_not_top_forbidden_action": "pblock was not chosen because rapidwright_optimize_cell_placement ranks higher and offers finer per-cell control on the shared driver identified in the diagnosis.",
+      "raw_response": "{\n  \"delay_class_acknowledged\": \"mixed\",\n  \"endpoint_type_acknowledged\": \"REGISTER\",\n  \"chosen_action\": \"rapidwright_optimize_cell_placement\",\n  \"action_parameters\": {\n    \"max_candidates\": 30,\n    \"num_paths\": 20,\n    \"detour_threshold\": 1.3\n  },\n  \"why_this_fits_delay_class\": \"rapidwright_optimize_cell_placement directly addresses the net_pct=0.53198 portion by relocating the recurring high-fanout start cell that fanout_split could not fix.\",\n  \"why_not_top_forbidden_action\": \"pblock was not chosen because rapidwright_optimize_cell_placement ranks higher and offers finer per-cell control on the shared driver identified in the diagnosis.\",\n  \"confidence\": 3\n}",
+      "cluster_count": 2,
+      "primary_diagnosis": "excessive_fanout",
+      "diagnosis_reasoning_trace": [
+        "normalized 20 timing-path candidate(s) from current_target_candidates",
+        "clustered into 2 cluster(s) via shared start/end cell name",
+        "primary cluster 'cluster_0' contains the current worst path (13 member(s), 1 cell(s) shared across all members)",
+        "outcome history: excessive_fanout's own prescriptions scored 0 win(s) / 1 loss(es) this run -> confidence -0.08",
+        "scored hypotheses: excessive_fanout=0.72, localized_congestion=0.50, placement_already_compact=0.45, long_interconnect=0.25",
+        "primary hypothesis: excessive_fanout (confidence 0.72)",
+        "  + 1 cell(s) (['grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_4_reg_3127_reg[3]']) recur across 13/20 extracted candidates (65%) -- consistent with a shared high-fanout driver rather than independent placement issues.",
+        "  - outcome history: excessive_fanout's own prescriptions scored 0 win(s) / 1 loss(es) this run -> confidence -0.08"
+      ],
+      "diagnosis_action_adjustment": null
+    },
+    {
+      "iter": 3,
+      "recipe": "pblock",
+      "batch_size": 1,
+      "targets": [
+        "pblock_net_delay_003",
+        "SLICE_X76Y162:SLICE_X82Y214 DSP48E2_X9Y66:DSP48E2_X9Y85 RAMB18_X5Y66:RAMB18_X5Y85 RAMB36_X5Y33:RAMB36_X5Y42"
+      ],
+      "wns_before": -0.686,
+      "wns_after": -0.686,
+      "fmax_before": 437.4453193350831,
+      "fmax_after": 437.4453193350831,
+      "delta_fmax": 0.0,
+      "vivado_runtime_s": 86.68798732757568,
+      "status": "no_improvement",
+      "checkpoint": "/home/fpl2026/dcp_optimizer_run-20260725_093137/checkpoints/iter_003.dcp",
+      "target_tier": "tier1_violating_paths",
+      "target_candidate_count": 20,
+      "path_delay_classification": "mixed",
+      "path_delay_breakdown": {
+        "logic_pct": 0.46802,
+        "net_pct": 0.53198,
+        "logic_delay_ns": 1.062,
+        "net_delay_ns": 1.207
+      },
+      "clock_period_ns": 1.6,
+      "achieved_fmax_mhz": 437.4453193350831,
+      "no_improvement_count": 3,
+      "consecutive_no_improvement": 2,
+      "action_failure_memory": {
+        "fanout_split": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_UPDATE_fu_577/SgdLR_ap_uint_64_ap_uint_32_ap_uint_64_bool_bool_theta_local_13_addr_reg_2714_pp0_iter7_reg_reg[1]__0_1"
+          ],
+          "last_failed_iter": 1,
+          "failed_on_current_targets": true
+        },
+        "rapidwright_optimize_cell_placement": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_4_reg_3127_reg[3]",
+            "grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343",
+            "grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_14_reg_3172_reg[31]"
+          ],
+          "last_failed_iter": 2,
+          "failed_on_current_targets": true
+        }
+      },
+      "action_failure_counts": {
+        "fanout_split": 1,
+        "rapidwright_optimize_cell_placement": 1
+      },
+      "delay_class": "mixed",
+      "endpoint_type": "REGISTER",
+      "allowed_actions": [
+        "rapidwright_optimize_cell_placement",
+        "pblock",
+        "pblock_full_replace",
+        "place_design_explore",
+        "phys_opt_design_retime",
+        "phys_opt_design",
+        "route_explore",
+        "run_recipe",
+        "replicate_register",
+        "fanout_split",
+        "lut_opt"
+      ],
+      "forbidden_actions": [
+        "logic_restructure"
+      ],
+      "action_guidance": {},
+      "congestion_level": null,
+      "cluster_clock_regions": [
+        "X2Y2"
+      ],
+      "llm_chosen_action": "pblock",
+      "structural_override_active": false,
+      "stuck_iterations": 2,
+      "exhausted_actions": [],
+      "validation_result": "ok",
+      "reprompt_count": 0,
+      "why_not_top_forbidden_action": "rapidwright_optimize_cell_placement was skipped because it already failed twice with 2390 unplaced cells on the identical worst-path targets.",
+      "raw_response": "{\n  \"delay_class_acknowledged\": \"mixed\",\n  \"endpoint_type_acknowledged\": \"REGISTER\",\n  \"chosen_action\": \"pblock\",\n  \"action_parameters\": {\n    \"target_lut_count\": 400,\n    \"target_ff_count\": 800,\n    \"use_clock_regions\": false\n  },\n  \"why_this_fits_delay_class\": \"pblock constrains placement around the shared high-fanout driver, directly improving the net_pct=0.53198 component without replicating cells that destroy placement.\",\n  \"why_not_top_forbidden_action\": \"rapidwright_optimize_cell_placement was skipped because it already failed twice with 2390 unplaced cells on the identical worst-path targets.\",\n  \"confidence\": 4\n}",
+      "cluster_count": 2,
+      "primary_diagnosis": "excessive_fanout",
+      "diagnosis_reasoning_trace": [
+        "normalized 20 timing-path candidate(s) from current_target_candidates",
+        "clustered into 2 cluster(s) via shared start/end cell name",
+        "primary cluster 'cluster_0' contains the current worst path (13 member(s), 1 cell(s) shared across all members)",
+        "outcome history: excessive_fanout's own prescriptions scored 0 win(s) / 1 loss(es) this run -> confidence -0.08",
+        "scored hypotheses: excessive_fanout=0.72, localized_congestion=0.50, placement_already_compact=0.45, long_interconnect=0.25",
+        "primary hypothesis: excessive_fanout (confidence 0.72)",
+        "  + 1 cell(s) (['grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_4_reg_3127_reg[3]']) recur across 13/20 extracted candidates (65%) -- consistent with a shared high-fanout driver rather than independent placement issues.",
+        "  - outcome history: excessive_fanout's own prescriptions scored 0 win(s) / 1 loss(es) this run -> confidence -0.08"
+      ],
+      "diagnosis_action_adjustment": null,
+      "rapidwright_edit_summary": {
+        "action": "pblock",
+        "cells_moved": 58,
+        "nets_affected": 0,
+        "pblock_ranges": "SLICE_X57Y0:SLICE_X100Y378 DSP48E2_X9Y6:DSP48E2_X9Y145 RAMB18_X5Y6:RAMB18_X5Y145 RAMB36_X5Y5:RAMB36_X5Y70",
+        "fabric_region": {
+          "col_min": 313,
+          "col_max": 333,
+          "row_min": 88,
+          "row_max": 142,
+          "center_col": 334,
+          "center_row": 155,
+          "center_of_mass_col": 323,
+          "center_of_mass_row": 115,
+          "contiguous_columns": 21,
+          "contiguous_rows": 55
+        },
+        "target_lut_count": 400,
+        "target_ff_count": 800,
+        "site_counts": {
+          "SLICE": 371,
+          "DSP48E2": 20,
+          "RAMB18": 20,
+          "RAMB36": 10,
+          "URAM288": 0
+        },
+        "changed_design": true,
+        "pblock_name": "pblock_net_delay_003",
+        "apply_to": "current_design",
+        "is_soft": false,
+        "cells_matched": 58,
+        "cells_assigned": 58,
+        "resource_validation": {
+          "is_valid": true,
+          "primitive_count": 20594,
+          "cell_count": 58,
+          "resource_issues": {},
+          "errors": [],
+          "drc_output": "Copyright 1986-2022 Xilinx, Inc. All Rights Reserved. Copyright 2022-2025 Advanced Micro Devices, Inc. All Rights Reserved.\n---------------------------------------------------------------------------------------------------------------------------------------------\n| Tool Version : Vivado v.2025.1 (lin64) Build 6140274 Wed May 21 22:58:25 MDT 2025\n| Date         : Sat Jul 25 09:33:33 2026\n| Host         : 35ns7cfvpwajp9e9nht0kyrsvp running 64-bit Ubuntu 24.04.4 LTS\n| Command      : report_drc -checks {UTLZ-1 UTLZ-2} -file /home/fpl2026/VivadoMCP/drc_check_pblock_net_delay_003.rpt\n| Design       : xil_internal_svlib_SgdLR\n| Device       : xcvu3p-ffvc1517-2-e\n| Speed File   : -2\n| Design State : ignored\n---------------------------------------------------------------------------------------------------------------------------------------------\n\nReport DRC\n\nTable of Contents\n-----------------\n1. REPORT SUMMARY\n2. REPORT DETAILS\n\n1. REPORT SUMMARY\n-----------------\n            Netlist: netl"
+        }
+      }
+    },
+    {
+      "iter": 4,
+      "recipe": "place_design_explore",
+      "batch_size": 1,
+      "targets": [
+        "directive:Explore"
+      ],
+      "wns_before": -0.686,
+      "wns_after": null,
+      "fmax_before": 437.4453193350831,
+      "fmax_after": null,
+      "delta_fmax": 0.0,
+      "vivado_runtime_s": 19.03017234802246,
+      "status": "failed",
+      "reason": "place_design -directive Explore failed after unplace: Placement complete.\n\nCommand: place_design -directive Explore\r\nAttempting to get a license for feature 'Implementation' and/or device 'xcvu3p'\r\nINFO: [Common 17-349] Got license for feature 'Implementation' and/or device 'xcvu3p'\r\nINFO: [Common 17-83] Releasing license: Implementation\r\nINFO: [Vivado_Tcl 4-2302] The placer was invoked with the 'Explore' directive.\r\nRunning DRC as a precondition to command place_design\r\nINFO: [DRC 23-27] Running DRC with 8 threads\r\nWARNING: [DRC 23-814] Not all possible (connectivity based) DRCs may have been run because this design is seen as Out of Context.\r\nINFO: [Vivado_Tcl 4-198] DRC finished with 0 Errors\r\nINFO: [Vivado_Tcl 4-199] Please refer to the DRC report (report_drc) for more information.\r\nINFO: [Place 30-611] Multithreading enabled for place_design using a maximum of 8 CPUs\r\n\r\nStarting Placer Task\r\n\r\nPhase 1 Placer Initialization\r\n\r\nPhase 1.1 Placer Initialization Netlist Sorting\r\nNetlist sorting complete. Time (s): cpu = 00:00:00.01 ; elapsed = 00:00:00.01 . Memory (MB): peak = 5041.602 ; gain = 0.000 ; free physical = 13062 ; free virtual = 22810\r\nPhase 1.1 Placer Initialization Netlist Sorting | Checksum: 1a03eef6a\r\n\r\nTime (s): cpu = 00:00:00.01 ; elapsed = 00:00:00.01 . Memory (MB): peak = 5041.602 ; gain = 0.000 ; free physical = 13062 ; free virtual = 22810\r\nINFO: [Opt 31-138] Pushed 0 inverter(s) to 0 load pin(s).\r\nNetlist sorting complete. Time (s): cpu = 00:00:00.01 ; elapsed = 00:00:00.01 . Memory (MB): peak = 5041.602 ; gain = 0.000 ; free physical = 13054 ; free virtual = 22802\r\n\r\nPhase 1.2 IO Placement/ Clock Placement/ Build Placer Device\r\nINFO: [Timing 38-35] Done setting XDC timing constraints.\r\nPhase 1.2 IO Placement/ Clock Placement/ Build Placer Device | Checksum: b0ddb544\r\n\r\nTime (s): cpu = 00:00:17 ; elapsed = 00:00:06 . Memory (MB): peak = 5041.602 ; gain = 0.000 ; free physical = 13057 ; free virtual = 22805\r\n\r\nPhase 1.3 Build Placer Netlist Model\r\nPhase 1.3 Build Placer Netlist Model | Checksum: 1",
+      "error_type": "replace_place_failed",
+      "checkpoint": null,
+      "rapidwright_edit_summary": null,
+      "action_failure_memory": {
+        "fanout_split": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_UPDATE_fu_577/SgdLR_ap_uint_64_ap_uint_32_ap_uint_64_bool_bool_theta_local_13_addr_reg_2714_pp0_iter7_reg_reg[1]__0_1"
+          ],
+          "last_failed_iter": 1,
+          "failed_on_current_targets": true
+        },
+        "rapidwright_optimize_cell_placement": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_4_reg_3127_reg[3]",
+            "grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343",
+            "grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_14_reg_3172_reg[31]"
+          ],
+          "last_failed_iter": 2,
+          "failed_on_current_targets": true
+        },
+        "rapidwright_analyze_fabric_for_pblock": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "pblock_net_delay_003",
+            "SLICE_X76Y162:SLICE_X82Y214 DSP48E2_X9Y66:DSP48E2_X9Y85 RAMB18_X5Y66:RAMB18_X5Y85 RAMB36_X5Y33:RAMB36_X5Y42"
+          ],
+          "last_failed_iter": 3,
+          "failed_on_current_targets": true
+        },
+        "rapidwright_convert_fabric_region_to_pblock": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "pblock_net_delay_003",
+            "SLICE_X76Y162:SLICE_X82Y214 DSP48E2_X9Y66:DSP48E2_X9Y85 RAMB18_X5Y66:RAMB18_X5Y85 RAMB36_X5Y33:RAMB36_X5Y42"
+          ],
+          "last_failed_iter": 3,
+          "failed_on_current_targets": true
+        },
+        "pblock": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "pblock_net_delay_003",
+            "SLICE_X76Y162:SLICE_X82Y214 DSP48E2_X9Y66:DSP48E2_X9Y85 RAMB18_X5Y66:RAMB18_X5Y85 RAMB36_X5Y33:RAMB36_X5Y42"
+          ],
+          "last_failed_iter": 3,
+          "failed_on_current_targets": true
+        }
+      },
+      "action_failure_counts": {
+        "fanout_split": 1,
+        "rapidwright_optimize_cell_placement": 1,
+        "rapidwright_analyze_fabric_for_pblock": 1,
+        "rapidwright_convert_fabric_region_to_pblock": 1,
+        "pblock": 1
+      },
+      "delay_class": "mixed",
+      "endpoint_type": "REGISTER",
+      "allowed_actions": [
+        "rapidwright_optimize_cell_placement",
+        "pblock",
+        "pblock_full_replace",
+        "place_design_explore"
+      ],
+      "forbidden_actions": [
+        "logic_restructure"
+      ],
+      "action_guidance": {},
+      "congestion_level": 2,
+      "cluster_clock_regions": [
+        "X2Y2"
+      ],
+      "llm_chosen_action": "place_design_explore",
+      "structural_override_active": true,
+      "stuck_iterations": 3,
+      "consecutive_no_improvement": 3,
+      "exhausted_actions": [],
+      "validation_result": "ok",
+      "reprompt_count": 0,
+      "why_not_top_forbidden_action": "pblock_full_replace was bypassed because place_design_explore is the next untried directive-based placement that does not require a new LUT/FF budget specification.",
+      "raw_response": "{\n  \"delay_class_acknowledged\": \"mixed\",\n  \"endpoint_type_acknowledged\": \"REGISTER\",\n  \"chosen_action\": \"place_design_explore\",\n  \"action_parameters\": {\n    \"directive\": \"Explore\",\n    \"route_directive\": \"Explore\"\n  },\n  \"why_this_fits_delay_class\": \"place_design_explore can relocate the recurring high-fanout driver to improve the net_pct=0.53198 component after all prior cell-centric fixes failed.\",\n  \"why_not_top_forbidden_action\": \"pblock_full_replace was bypassed because place_design_explore is the next untried directive-based placement that does not require a new LUT/FF budget specification.\",\n  \"confidence\": 3\n}",
+      "cluster_count": 2,
+      "primary_diagnosis": "excessive_fanout",
+      "diagnosis_reasoning_trace": [
+        "normalized 20 timing-path candidate(s) from current_target_candidates",
+        "clustered into 2 cluster(s) via shared start/end cell name",
+        "primary cluster 'cluster_0' contains the current worst path (13 member(s), 1 cell(s) shared across all members)",
+        "outcome history: excessive_fanout's own prescriptions scored 0 win(s) / 1 loss(es) this run -> confidence -0.08",
+        "scored hypotheses: excessive_fanout=0.72, placement_already_compact=0.45, localized_congestion=0.30, long_interconnect=0.25",
+        "primary hypothesis: excessive_fanout (confidence 0.72)",
+        "  + 1 cell(s) (['grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_4_reg_3127_reg[3]']) recur across 13/20 extracted candidates (65%) -- consistent with a shared high-fanout driver rather than independent placement issues.",
+        "  - outcome history: excessive_fanout's own prescriptions scored 0 win(s) / 1 loss(es) this run -> confidence -0.08"
+      ],
+      "diagnosis_action_adjustment": null
+    },
+    {
+      "iter": 5,
+      "recipe": "pblock_full_replace",
+      "batch_size": 1,
+      "targets": [
+        "full_design",
+        "SLICE_X76Y162:SLICE_X82Y214 DSP48E2_X9Y66:DSP48E2_X9Y85 RAMB18_X5Y66:RAMB18_X5Y85 RAMB36_X5Y33:RAMB36_X5Y42"
+      ],
+      "wns_before": -0.686,
+      "wns_after": null,
+      "fmax_before": 437.4453193350831,
+      "fmax_after": null,
+      "delta_fmax": 0.0,
+      "vivado_runtime_s": 57.3428852558136,
+      "status": "failed",
+      "reason": "Whole-design pblock applied but placement failed: Placement complete.\n\nCommand: place_design -directive ExtraTimingOpt\r\nAttempting to get a license for feature 'Implementation' and/or device 'xcvu3p'\r\nINFO: [Common 17-349] Got license for feature 'Implementation' and/or device 'xcvu3p'\r\nINFO: [Common 17-83] Releasing license: Implementation\r\nINFO: [Vivado_Tcl 4-2302] The placer was invoked with the 'ExtraTimingOpt' directive.\r\nRunning DRC as a precondition to command place_design\r\nINFO: [DRC 23-27] Running DRC with 8 threads\r\nWARNING: [DRC 23-814] Not all possible (connectivity based) DRCs may have been run because this design is seen as Out of Context.\r\nINFO: [Vivado_Tcl 4-198] DRC finished with 0 Errors\r\nINFO: [Vivado_Tcl 4-199] Please refer to the DRC report (report_drc) for more information.\r\nINFO: [Place 30-611] Multithreading enabled for place_design using a maximum of 8 CPUs\r\n\r\nStarting Placer Task\r\n\r\nPhase 1 Placer Initialization\r\n\r\nPhase 1.1 Placer Initialization Netlist Sorting\r\nNetlist sorting complete. Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.01 . Memory (MB): peak = 5041.602 ; gain = 0.000 ; free physical = 13006 ; free virtual = 22755\r\nPhase 1.1 Placer Initialization Netlist Sorting | Checksum: 125bc9fbd\r\n\r\nTime (s): cpu = 00:00:00.02 ; elapsed = 00:00:00.01 . Memory (MB): peak = 5041.602 ; gain = 0.000 ; free physical = 13006 ; free virtual = 22755\r\nINFO: [Opt 31-138] Pushed 0 inverter(s) to 0 load pin(s).\r\nNetlist sorting complete. Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.01 . Memory (MB): peak = 5041.602 ; gain = 0.000 ; free physical = 13005 ; free virtual = 22754\r\n\r\nPhase 1.2 IO Placement/ Clock Placement/ Build Placer Device\r\nINFO: [Timing 38-35] Done setting XDC timing constraints.\r\nPhase 1.2 IO Placement/ Clock Placement/ Build Placer Device | Checksum: d5d8bbe2\r\n\r\nTime (s): cpu = 00:00:23 ; elapsed = 00:00:13 . Memory (MB): peak = 5156.406 ; gain = 114.805 ; free physical = 13542 ; free virtual = 23292\r\n\r\nPhase 1.3 Build Placer Netlist Model\r\nPhase 1.3 Build Placer Netlist Model | Checksum: 14394c4b3\r\n\r\nTime (s): cpu = 00:00:37 ; elapsed = 00:00:19 . Memory (MB): peak = 5188.422 ; gain = 146.820 ; free physical = 13303 ; free virtual = 23052\r\n\r\nPhase 1.4 Constrain Clocks/Macros\r\nPhase 1.4 Constrain Clocks/Macros | Checksum: 14394c4b3\r\n\r\nTime (s): cpu = 00:00:37 ; elapsed = 00:00:19 . Memory (MB): peak = 5188.422 ; gain = 146.820 ; free physical = 13302 ; free virtual = 23052\r\nPhase 1 Placer Initialization | Checksum: 14394c4b3\r\n\r\nTime (s): cpu = 00:00:38 ; elapsed = 00:00:20 . Memory (MB): peak = 5188.422 ; gain = 146.820 ; free physical = 13302 ; free virtual = 23052\r\n\r\nPhase 2 Global Placement\r\n\r\nPhase 2.1 Floorplanning\r\n\r\nPhase 2.1.1 Partition Driven Placement\r\n\r\nPhase 2.1.1.1 PBP: Partition Driven Placement\r\nPhase 2.1.1.1 PBP: Partition Driven Placement | Checksum: 1c3976055\r\n\r\nTime (s): cpu = 00:00:39 ; elapsed = 00:00:20 . Memory (MB): peak = 5188.422 ; gain = 146.820 ; free physical = 13308 ; free virtual = 23057\r\n\r\nPhase 2.1.1.2 PBP: Clock Region Placement\r\nINFO: [Place 30-3164] Check ILP status : ILP-based clock placer is skipped.\r\nERROR: [Constraints 18-11842] DSP capacity for constraint 1 (pblock_full_replace_005) is exceeded due to DSP cascade requirement.\r\nConstraint Type: pblock_full_replace_005\r\nMacro type: DSP\r\nDSP column height: 56. Column count in constraint region: 1\r\nDSP cascade size: 4. Cascade chain count in constraint region: 32\r\nDSP cascade size: 2. Cascade chain count in constraint region: 32\r\nDSP cascade size: 1. Cascade chain count in constraint region: 32\r\nResolution: Reduce DSP cascade length to fit column height of constraint region.\r\nPhase 2.1.1.2 PBP: Clock Region Placement | Checksum: 1c3976055\r\n\r\nTime (s): cpu = 00:00:39 ; elapsed = 00:00:20 . Memory (MB): peak = 5188.422 ; gain = 146.820 ; free physical = 13308 ; free virtual = 23057\r\nPhase 2.1.1 Partition Driven Placement | Checksum: 1c3976055\r\n\r\nTime (s): cpu = 00:00:39 ; elapsed = 00:00:20 . Memory (MB): peak = 5188.422 ; gain = 146.820 ; free physical = 1",
+      "error_type": "full_replace_place_failed",
+      "checkpoint": null,
+      "rapidwright_edit_summary": {
+        "action": "pblock_full_replace",
+        "cells_moved": 0,
+        "nets_affected": 0,
+        "pblock_ranges": "SLICE_X76Y162:SLICE_X82Y214 DSP48E2_X9Y66:DSP48E2_X9Y85 RAMB18_X5Y66:RAMB18_X5Y85 RAMB36_X5Y33:RAMB36_X5Y42",
+        "fabric_region": {
+          "col_min": 313,
+          "col_max": 333,
+          "row_min": 88,
+          "row_max": 142,
+          "center_col": 334,
+          "center_row": 155,
+          "center_of_mass_col": 323,
+          "center_of_mass_row": 115,
+          "contiguous_columns": 21,
+          "contiguous_rows": 55
+        }
+      },
+      "action_failure_memory": {
+        "fanout_split": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_UPDATE_fu_577/SgdLR_ap_uint_64_ap_uint_32_ap_uint_64_bool_bool_theta_local_13_addr_reg_2714_pp0_iter7_reg_reg[1]__0_1"
+          ],
+          "last_failed_iter": 1,
+          "failed_on_current_targets": true
+        },
+        "rapidwright_optimize_cell_placement": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_4_reg_3127_reg[3]",
+            "grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343",
+            "grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_14_reg_3172_reg[31]"
+          ],
+          "last_failed_iter": 2,
+          "failed_on_current_targets": true
+        },
+        "rapidwright_analyze_fabric_for_pblock": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "pblock_net_delay_003",
+            "SLICE_X76Y162:SLICE_X82Y214 DSP48E2_X9Y66:DSP48E2_X9Y85 RAMB18_X5Y66:RAMB18_X5Y85 RAMB36_X5Y33:RAMB36_X5Y42"
+          ],
+          "last_failed_iter": 3,
+          "failed_on_current_targets": true
+        },
+        "rapidwright_convert_fabric_region_to_pblock": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "pblock_net_delay_003",
+            "SLICE_X76Y162:SLICE_X82Y214 DSP48E2_X9Y66:DSP48E2_X9Y85 RAMB18_X5Y66:RAMB18_X5Y85 RAMB36_X5Y33:RAMB36_X5Y42"
+          ],
+          "last_failed_iter": 3,
+          "failed_on_current_targets": true
+        },
+        "pblock": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "pblock_net_delay_003",
+            "SLICE_X76Y162:SLICE_X82Y214 DSP48E2_X9Y66:DSP48E2_X9Y85 RAMB18_X5Y66:RAMB18_X5Y85 RAMB36_X5Y33:RAMB36_X5Y42"
+          ],
+          "last_failed_iter": 3,
+          "failed_on_current_targets": true
+        },
+        "place_design_explore": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "directive:Explore"
+          ],
+          "last_failed_iter": 4,
+          "failed_on_current_targets": true
+        }
+      },
+      "action_failure_counts": {
+        "fanout_split": 1,
+        "rapidwright_optimize_cell_placement": 1,
+        "rapidwright_analyze_fabric_for_pblock": 1,
+        "rapidwright_convert_fabric_region_to_pblock": 1,
+        "pblock": 1,
+        "place_design_explore": 1
+      },
+      "delay_class": "mixed",
+      "endpoint_type": "REGISTER",
+      "allowed_actions": [
+        "rapidwright_optimize_cell_placement",
+        "pblock",
+        "pblock_full_replace",
+        "place_design_explore"
+      ],
+      "forbidden_actions": [
+        "logic_restructure"
+      ],
+      "action_guidance": {},
+      "congestion_level": 2,
+      "cluster_clock_regions": [
+        "X2Y2"
+      ],
+      "llm_chosen_action": "pblock_full_replace",
+      "structural_override_active": true,
+      "stuck_iterations": 4,
+      "consecutive_no_improvement": 4,
+      "exhausted_actions": [],
+      "validation_result": "ok",
+      "reprompt_count": 0,
+      "why_not_top_forbidden_action": "rapidwright_optimize_cell_placement was not chosen because every prior attempt produced >2300 unplaced cells on the exact same start/end cells of the worst path.",
+      "raw_response": "{\n  \"delay_class_acknowledged\": \"mixed\",\n  \"endpoint_type_acknowledged\": \"REGISTER\",\n  \"chosen_action\": \"pblock_full_replace\",\n  \"action_parameters\": {\n    \"target_lut_count\": 12000,\n    \"target_ff_count\": 24000,\n    \"place_directive\": \"ExtraTimingOpt\",\n    \"route_directive\": \"Explore\"\n  },\n  \"why_this_fits_delay_class\": \"pblock_full_replace applies a fresh constrained placement that can reduce the net_pct=0.53198 component by improving proximity for the recurring high-fanout driver cells.\",\n  \"why_not_top_forbidden_action\": \"rapidwright_optimize_cell_placement was not chosen because every prior attempt produced >2300 unplaced cells on the exact same start/end cells of the worst path.\",\n  \"confidence\": 3\n}",
+      "cluster_count": 2,
+      "primary_diagnosis": "excessive_fanout",
+      "diagnosis_reasoning_trace": [
+        "normalized 20 timing-path candidate(s) from current_target_candidates",
+        "clustered into 2 cluster(s) via shared start/end cell name",
+        "primary cluster 'cluster_0' contains the current worst path (13 member(s), 1 cell(s) shared across all members)",
+        "outcome history: excessive_fanout's own prescriptions scored 0 win(s) / 1 loss(es) this run -> confidence -0.08",
+        "scored hypotheses: excessive_fanout=0.72, placement_already_compact=0.45, localized_congestion=0.30, long_interconnect=0.25",
+        "primary hypothesis: excessive_fanout (confidence 0.72)",
+        "  + 1 cell(s) (['grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_4_reg_3127_reg[3]']) recur across 13/20 extracted candidates (65%) -- consistent with a shared high-fanout driver rather than independent placement issues.",
+        "  - outcome history: excessive_fanout's own prescriptions scored 0 win(s) / 1 loss(es) this run -> confidence -0.08"
+      ],
+      "diagnosis_action_adjustment": null
+    },
+    {
+      "iter": 6,
+      "recipe": "vivado_phys_opt",
+      "batch_size": 1,
+      "targets": [
+        "Explore"
+      ],
+      "wns_before": -0.686,
+      "wns_after": -0.686,
+      "fmax_before": 437.4453193350831,
+      "fmax_after": 437.4453193350831,
+      "delta_fmax": 0.0,
+      "vivado_runtime_s": 159.2698256969452,
+      "status": "no_improvement",
+      "checkpoint": "/home/fpl2026/dcp_optimizer_run-20260725_093137/checkpoints/iter_006.dcp",
+      "target_tier": "tier1_violating_paths",
+      "target_candidate_count": 20,
+      "path_delay_classification": "mixed",
+      "path_delay_breakdown": {
+        "logic_pct": 0.46802,
+        "net_pct": 0.53198,
+        "logic_delay_ns": 1.062,
+        "net_delay_ns": 1.207
+      },
+      "clock_period_ns": 1.6,
+      "achieved_fmax_mhz": 437.4453193350831,
+      "no_improvement_count": 6,
+      "consecutive_no_improvement": 6,
+      "action_failure_memory": {
+        "fanout_split": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_UPDATE_fu_577/SgdLR_ap_uint_64_ap_uint_32_ap_uint_64_bool_bool_theta_local_13_addr_reg_2714_pp0_iter7_reg_reg[1]__0_1"
+          ],
+          "target_fingerprint": "{\"candidates\": [{\"endpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_14_reg_3172_reg[31]/D\", \"slack\": -0.686, \"startpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_4_reg_3127_reg[3]/C\"}, {\"endpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_14_reg_3172_reg[29]/D\", \"slack\": -0.685, \"startpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_4_reg_3127_reg[3]/C\"}, {\"endpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_14_reg_3172_reg[30]/D\", \"slack\": -0.673, \"startpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_4_reg_3127_reg[3]/C\"}, {\"endpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_29_reg_3177_reg[31]/D\", \"slack\": -0.66, \"startpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_27_reg_3167_reg[12]/C\"}, {\"endpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_29_reg_3177_reg[29]/D\", \"slack\": -0.659, \"startpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_27_reg_3167_reg[12]/C\"}], \"delay_class\": \"mixed\", \"tier\": \"tier1_violating_paths\"}",
+          "last_failed_iter": 1
+        },
+        "rapidwright_optimize_cell_placement": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_4_reg_3127_reg[3]",
+            "grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343",
+            "grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_14_reg_3172_reg[31]",
+            "grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_14_reg_3172_reg[29]",
+            "grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_14_reg_3172_reg[30]",
+            "grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_27_reg_3167_reg[12]",
+            "grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_29_reg_3177_reg[31]",
+            "grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_29_reg_3177_reg[29]",
+            "grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_14_reg_3172_reg[28]",
+            "grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_14_reg_3172_reg[27]"
+          ],
+          "target_fingerprint": "{\"candidates\": [{\"endpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_14_reg_3172_reg[31]/D\", \"slack\": -0.686, \"startpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_4_reg_3127_reg[3]/C\"}, {\"endpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_14_reg_3172_reg[29]/D\", \"slack\": -0.685, \"startpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_4_reg_3127_reg[3]/C\"}, {\"endpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_14_reg_3172_reg[30]/D\", \"slack\": -0.673, \"startpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_4_reg_3127_reg[3]/C\"}, {\"endpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_29_reg_3177_reg[31]/D\", \"slack\": -0.66, \"startpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_27_reg_3167_reg[12]/C\"}, {\"endpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_29_reg_3177_reg[29]/D\", \"slack\": -0.659, \"startpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_27_reg_3167_reg[12]/C\"}], \"delay_class\": \"mixed\", \"tier\": \"tier1_violating_paths\"}",
+          "last_failed_iter": 2
+        },
+        "rapidwright_analyze_fabric_for_pblock": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "pblock_net_delay_003",
+            "SLICE_X76Y162:SLICE_X82Y214 DSP48E2_X9Y66:DSP48E2_X9Y85 RAMB18_X5Y66:RAMB18_X5Y85 RAMB36_X5Y33:RAMB36_X5Y42"
+          ],
+          "target_fingerprint": "{\"candidates\": [{\"endpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_14_reg_3172_reg[31]/D\", \"slack\": -0.686, \"startpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_4_reg_3127_reg[3]/C\"}, {\"endpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_14_reg_3172_reg[29]/D\", \"slack\": -0.685, \"startpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_4_reg_3127_reg[3]/C\"}, {\"endpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_14_reg_3172_reg[30]/D\", \"slack\": -0.673, \"startpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_4_reg_3127_reg[3]/C\"}, {\"endpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_29_reg_3177_reg[31]/D\", \"slack\": -0.66, \"startpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_27_reg_3167_reg[12]/C\"}, {\"endpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_29_reg_3177_reg[29]/D\", \"slack\": -0.659, \"startpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_27_reg_3167_reg[12]/C\"}], \"delay_class\": \"mixed\", \"tier\": \"tier1_violating_paths\"}",
+          "last_failed_iter": 3
+        },
+        "rapidwright_convert_fabric_region_to_pblock": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "pblock_net_delay_003",
+            "SLICE_X76Y162:SLICE_X82Y214 DSP48E2_X9Y66:DSP48E2_X9Y85 RAMB18_X5Y66:RAMB18_X5Y85 RAMB36_X5Y33:RAMB36_X5Y42"
+          ],
+          "target_fingerprint": "{\"candidates\": [{\"endpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_14_reg_3172_reg[31]/D\", \"slack\": -0.686, \"startpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_4_reg_3127_reg[3]/C\"}, {\"endpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_14_reg_3172_reg[29]/D\", \"slack\": -0.685, \"startpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_4_reg_3127_reg[3]/C\"}, {\"endpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_14_reg_3172_reg[30]/D\", \"slack\": -0.673, \"startpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_4_reg_3127_reg[3]/C\"}, {\"endpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_29_reg_3177_reg[31]/D\", \"slack\": -0.66, \"startpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_27_reg_3167_reg[12]/C\"}, {\"endpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_29_reg_3177_reg[29]/D\", \"slack\": -0.659, \"startpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_27_reg_3167_reg[12]/C\"}], \"delay_class\": \"mixed\", \"tier\": \"tier1_violating_paths\"}",
+          "last_failed_iter": 3
+        },
+        "pblock": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "pblock_net_delay_003",
+            "SLICE_X76Y162:SLICE_X82Y214 DSP48E2_X9Y66:DSP48E2_X9Y85 RAMB18_X5Y66:RAMB18_X5Y85 RAMB36_X5Y33:RAMB36_X5Y42"
+          ],
+          "target_fingerprint": "{\"candidates\": [{\"endpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_14_reg_3172_reg[31]/D\", \"slack\": -0.686, \"startpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_4_reg_3127_reg[3]/C\"}, {\"endpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_14_reg_3172_reg[29]/D\", \"slack\": -0.685, \"startpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_4_reg_3127_reg[3]/C\"}, {\"endpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_14_reg_3172_reg[30]/D\", \"slack\": -0.673, \"startpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_4_reg_3127_reg[3]/C\"}, {\"endpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_29_reg_3177_reg[31]/D\", \"slack\": -0.66, \"startpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_27_reg_3167_reg[12]/C\"}, {\"endpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_29_reg_3177_reg[29]/D\", \"slack\": -0.659, \"startpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_27_reg_3167_reg[12]/C\"}], \"delay_class\": \"mixed\", \"tier\": \"tier1_violating_paths\"}",
+          "last_failed_iter": 3
+        },
+        "place_design_explore": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "directive:Explore"
+          ],
+          "target_fingerprint": "{\"candidates\": [{\"endpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_14_reg_3172_reg[31]/D\", \"slack\": -0.686, \"startpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_4_reg_3127_reg[3]/C\"}, {\"endpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_14_reg_3172_reg[29]/D\", \"slack\": -0.685, \"startpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_4_reg_3127_reg[3]/C\"}, {\"endpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_14_reg_3172_reg[30]/D\", \"slack\": -0.673, \"startpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_4_reg_3127_reg[3]/C\"}, {\"endpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_29_reg_3177_reg[31]/D\", \"slack\": -0.66, \"startpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_27_reg_3167_reg[12]/C\"}, {\"endpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_29_reg_3177_reg[29]/D\", \"slack\": -0.659, \"startpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_27_reg_3167_reg[12]/C\"}], \"delay_class\": \"mixed\", \"tier\": \"tier1_violating_paths\"}",
+          "last_failed_iter": 4
+        },
+        "pblock_full_replace": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "full_design",
+            "SLICE_X76Y162:SLICE_X82Y214 DSP48E2_X9Y66:DSP48E2_X9Y85 RAMB18_X5Y66:RAMB18_X5Y85 RAMB36_X5Y33:RAMB36_X5Y42"
+          ],
+          "target_fingerprint": "{\"candidates\": [{\"endpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_14_reg_3172_reg[31]/D\", \"slack\": -0.686, \"startpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_4_reg_3127_reg[3]/C\"}, {\"endpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_14_reg_3172_reg[29]/D\", \"slack\": -0.685, \"startpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_4_reg_3127_reg[3]/C\"}, {\"endpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_14_reg_3172_reg[30]/D\", \"slack\": -0.673, \"startpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_4_reg_3127_reg[3]/C\"}, {\"endpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_29_reg_3177_reg[31]/D\", \"slack\": -0.66, \"startpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_27_reg_3167_reg[12]/C\"}, {\"endpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_29_reg_3177_reg[29]/D\", \"slack\": -0.659, \"startpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_27_reg_3167_reg[12]/C\"}], \"delay_class\": \"mixed\", \"tier\": \"tier1_violating_paths\"}",
+          "last_failed_iter": 5
+        },
+        "phys_opt_design": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "Explore"
+          ],
+          "target_fingerprint": "{\"candidates\": [{\"endpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_14_reg_3172_reg[31]/D\", \"slack\": -0.686, \"startpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_4_reg_3127_reg[3]/C\"}, {\"endpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_14_reg_3172_reg[29]/D\", \"slack\": -0.685, \"startpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_4_reg_3127_reg[3]/C\"}, {\"endpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_14_reg_3172_reg[30]/D\", \"slack\": -0.673, \"startpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_4_reg_3127_reg[3]/C\"}, {\"endpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_29_reg_3177_reg[31]/D\", \"slack\": -0.66, \"startpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_27_reg_3167_reg[12]/C\"}, {\"endpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_29_reg_3177_reg[29]/D\", \"slack\": -0.659, \"startpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_27_reg_3167_reg[12]/C\"}], \"delay_class\": \"mixed\", \"tier\": \"tier1_violating_paths\"}",
+          "last_failed_iter": 6
+        }
+      },
+      "action_failure_counts": {
+        "fanout_split": 1,
+        "rapidwright_optimize_cell_placement": 1,
+        "rapidwright_analyze_fabric_for_pblock": 1,
+        "rapidwright_convert_fabric_region_to_pblock": 1,
+        "pblock": 1,
+        "place_design_explore": 1,
+        "pblock_full_replace": 1,
+        "phys_opt_design": 1
+      },
+      "llm_chosen_action": "phys_opt_design",
+      "endgame_polish": true,
+      "validation_result": "endgame_polish"
+    },
+    {
+      "iter": 7,
+      "recipe": "route_explore",
+      "batch_size": 1,
+      "targets": [
+        "directive:Explore"
+      ],
+      "wns_before": -0.686,
+      "wns_after": -0.686,
+      "fmax_before": 437.4453193350831,
+      "fmax_after": 437.4453193350831,
+      "delta_fmax": 0.0,
+      "vivado_runtime_s": 45.75945258140564,
+      "status": "no_improvement",
+      "checkpoint": "/home/fpl2026/dcp_optimizer_run-20260725_093137/checkpoints/iter_007.dcp",
+      "target_tier": "tier1_violating_paths",
+      "target_candidate_count": 20,
+      "path_delay_classification": "mixed",
+      "path_delay_breakdown": {
+        "logic_pct": 0.46802,
+        "net_pct": 0.53198,
+        "logic_delay_ns": 1.062,
+        "net_delay_ns": 1.207
+      },
+      "clock_period_ns": 1.6,
+      "achieved_fmax_mhz": 437.4453193350831,
+      "no_improvement_count": 7,
+      "consecutive_no_improvement": 7,
+      "action_failure_memory": {
+        "fanout_split": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_UPDATE_fu_577/SgdLR_ap_uint_64_ap_uint_32_ap_uint_64_bool_bool_theta_local_13_addr_reg_2714_pp0_iter7_reg_reg[1]__0_1"
+          ],
+          "target_fingerprint": "{\"candidates\": [{\"endpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_14_reg_3172_reg[31]/D\", \"slack\": -0.686, \"startpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_4_reg_3127_reg[3]/C\"}, {\"endpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_14_reg_3172_reg[29]/D\", \"slack\": -0.685, \"startpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_4_reg_3127_reg[3]/C\"}, {\"endpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_14_reg_3172_reg[30]/D\", \"slack\": -0.673, \"startpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_4_reg_3127_reg[3]/C\"}, {\"endpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_29_reg_3177_reg[31]/D\", \"slack\": -0.66, \"startpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_27_reg_3167_reg[12]/C\"}, {\"endpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_29_reg_3177_reg[29]/D\", \"slack\": -0.659, \"startpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_27_reg_3167_reg[12]/C\"}], \"delay_class\": \"mixed\", \"tier\": \"tier1_violating_paths\"}",
+          "last_failed_iter": 1
+        },
+        "rapidwright_optimize_cell_placement": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_4_reg_3127_reg[3]",
+            "grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343",
+            "grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_14_reg_3172_reg[31]",
+            "grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_14_reg_3172_reg[29]",
+            "grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_14_reg_3172_reg[30]",
+            "grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_27_reg_3167_reg[12]",
+            "grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_29_reg_3177_reg[31]",
+            "grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_29_reg_3177_reg[29]",
+            "grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_14_reg_3172_reg[28]",
+            "grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_14_reg_3172_reg[27]"
+          ],
+          "target_fingerprint": "{\"candidates\": [{\"endpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_14_reg_3172_reg[31]/D\", \"slack\": -0.686, \"startpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_4_reg_3127_reg[3]/C\"}, {\"endpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_14_reg_3172_reg[29]/D\", \"slack\": -0.685, \"startpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_4_reg_3127_reg[3]/C\"}, {\"endpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_14_reg_3172_reg[30]/D\", \"slack\": -0.673, \"startpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_4_reg_3127_reg[3]/C\"}, {\"endpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_29_reg_3177_reg[31]/D\", \"slack\": -0.66, \"startpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_27_reg_3167_reg[12]/C\"}, {\"endpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_29_reg_3177_reg[29]/D\", \"slack\": -0.659, \"startpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_27_reg_3167_reg[12]/C\"}], \"delay_class\": \"mixed\", \"tier\": \"tier1_violating_paths\"}",
+          "last_failed_iter": 2
+        },
+        "rapidwright_analyze_fabric_for_pblock": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "pblock_net_delay_003",
+            "SLICE_X76Y162:SLICE_X82Y214 DSP48E2_X9Y66:DSP48E2_X9Y85 RAMB18_X5Y66:RAMB18_X5Y85 RAMB36_X5Y33:RAMB36_X5Y42"
+          ],
+          "target_fingerprint": "{\"candidates\": [{\"endpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_14_reg_3172_reg[31]/D\", \"slack\": -0.686, \"startpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_4_reg_3127_reg[3]/C\"}, {\"endpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_14_reg_3172_reg[29]/D\", \"slack\": -0.685, \"startpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_4_reg_3127_reg[3]/C\"}, {\"endpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_14_reg_3172_reg[30]/D\", \"slack\": -0.673, \"startpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_4_reg_3127_reg[3]/C\"}, {\"endpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_29_reg_3177_reg[31]/D\", \"slack\": -0.66, \"startpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_27_reg_3167_reg[12]/C\"}, {\"endpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_29_reg_3177_reg[29]/D\", \"slack\": -0.659, \"startpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_27_reg_3167_reg[12]/C\"}], \"delay_class\": \"mixed\", \"tier\": \"tier1_violating_paths\"}",
+          "last_failed_iter": 3
+        },
+        "rapidwright_convert_fabric_region_to_pblock": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "pblock_net_delay_003",
+            "SLICE_X76Y162:SLICE_X82Y214 DSP48E2_X9Y66:DSP48E2_X9Y85 RAMB18_X5Y66:RAMB18_X5Y85 RAMB36_X5Y33:RAMB36_X5Y42"
+          ],
+          "target_fingerprint": "{\"candidates\": [{\"endpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_14_reg_3172_reg[31]/D\", \"slack\": -0.686, \"startpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_4_reg_3127_reg[3]/C\"}, {\"endpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_14_reg_3172_reg[29]/D\", \"slack\": -0.685, \"startpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_4_reg_3127_reg[3]/C\"}, {\"endpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_14_reg_3172_reg[30]/D\", \"slack\": -0.673, \"startpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_4_reg_3127_reg[3]/C\"}, {\"endpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_29_reg_3177_reg[31]/D\", \"slack\": -0.66, \"startpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_27_reg_3167_reg[12]/C\"}, {\"endpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_29_reg_3177_reg[29]/D\", \"slack\": -0.659, \"startpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_27_reg_3167_reg[12]/C\"}], \"delay_class\": \"mixed\", \"tier\": \"tier1_violating_paths\"}",
+          "last_failed_iter": 3
+        },
+        "pblock": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "pblock_net_delay_003",
+            "SLICE_X76Y162:SLICE_X82Y214 DSP48E2_X9Y66:DSP48E2_X9Y85 RAMB18_X5Y66:RAMB18_X5Y85 RAMB36_X5Y33:RAMB36_X5Y42"
+          ],
+          "target_fingerprint": "{\"candidates\": [{\"endpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_14_reg_3172_reg[31]/D\", \"slack\": -0.686, \"startpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_4_reg_3127_reg[3]/C\"}, {\"endpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_14_reg_3172_reg[29]/D\", \"slack\": -0.685, \"startpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_4_reg_3127_reg[3]/C\"}, {\"endpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_14_reg_3172_reg[30]/D\", \"slack\": -0.673, \"startpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_4_reg_3127_reg[3]/C\"}, {\"endpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_29_reg_3177_reg[31]/D\", \"slack\": -0.66, \"startpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_27_reg_3167_reg[12]/C\"}, {\"endpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_29_reg_3177_reg[29]/D\", \"slack\": -0.659, \"startpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_27_reg_3167_reg[12]/C\"}], \"delay_class\": \"mixed\", \"tier\": \"tier1_violating_paths\"}",
+          "last_failed_iter": 3
+        },
+        "place_design_explore": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "directive:Explore"
+          ],
+          "target_fingerprint": "{\"candidates\": [{\"endpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_14_reg_3172_reg[31]/D\", \"slack\": -0.686, \"startpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_4_reg_3127_reg[3]/C\"}, {\"endpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_14_reg_3172_reg[29]/D\", \"slack\": -0.685, \"startpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_4_reg_3127_reg[3]/C\"}, {\"endpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_14_reg_3172_reg[30]/D\", \"slack\": -0.673, \"startpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_4_reg_3127_reg[3]/C\"}, {\"endpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_29_reg_3177_reg[31]/D\", \"slack\": -0.66, \"startpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_27_reg_3167_reg[12]/C\"}, {\"endpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_29_reg_3177_reg[29]/D\", \"slack\": -0.659, \"startpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_27_reg_3167_reg[12]/C\"}], \"delay_class\": \"mixed\", \"tier\": \"tier1_violating_paths\"}",
+          "last_failed_iter": 4
+        },
+        "pblock_full_replace": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "full_design",
+            "SLICE_X76Y162:SLICE_X82Y214 DSP48E2_X9Y66:DSP48E2_X9Y85 RAMB18_X5Y66:RAMB18_X5Y85 RAMB36_X5Y33:RAMB36_X5Y42"
+          ],
+          "target_fingerprint": "{\"candidates\": [{\"endpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_14_reg_3172_reg[31]/D\", \"slack\": -0.686, \"startpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_4_reg_3127_reg[3]/C\"}, {\"endpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_14_reg_3172_reg[29]/D\", \"slack\": -0.685, \"startpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_4_reg_3127_reg[3]/C\"}, {\"endpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_14_reg_3172_reg[30]/D\", \"slack\": -0.673, \"startpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_4_reg_3127_reg[3]/C\"}, {\"endpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_29_reg_3177_reg[31]/D\", \"slack\": -0.66, \"startpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_27_reg_3167_reg[12]/C\"}, {\"endpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_29_reg_3177_reg[29]/D\", \"slack\": -0.659, \"startpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_27_reg_3167_reg[12]/C\"}], \"delay_class\": \"mixed\", \"tier\": \"tier1_violating_paths\"}",
+          "last_failed_iter": 5
+        },
+        "phys_opt_design": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "Explore"
+          ],
+          "target_fingerprint": "{\"candidates\": [{\"endpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_14_reg_3172_reg[31]/D\", \"slack\": -0.686, \"startpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_4_reg_3127_reg[3]/C\"}, {\"endpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_14_reg_3172_reg[29]/D\", \"slack\": -0.685, \"startpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_4_reg_3127_reg[3]/C\"}, {\"endpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_14_reg_3172_reg[30]/D\", \"slack\": -0.673, \"startpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_4_reg_3127_reg[3]/C\"}, {\"endpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_29_reg_3177_reg[31]/D\", \"slack\": -0.66, \"startpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_27_reg_3167_reg[12]/C\"}, {\"endpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_29_reg_3177_reg[29]/D\", \"slack\": -0.659, \"startpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_27_reg_3167_reg[12]/C\"}], \"delay_class\": \"mixed\", \"tier\": \"tier1_violating_paths\"}",
+          "last_failed_iter": 6
+        },
+        "route_explore": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "directive:Explore"
+          ],
+          "target_fingerprint": "{\"candidates\": [{\"endpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_14_reg_3172_reg[31]/D\", \"slack\": -0.686, \"startpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_4_reg_3127_reg[3]/C\"}, {\"endpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_14_reg_3172_reg[29]/D\", \"slack\": -0.685, \"startpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_4_reg_3127_reg[3]/C\"}, {\"endpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_14_reg_3172_reg[30]/D\", \"slack\": -0.673, \"startpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_4_reg_3127_reg[3]/C\"}, {\"endpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_29_reg_3177_reg[31]/D\", \"slack\": -0.66, \"startpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_27_reg_3167_reg[12]/C\"}, {\"endpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_29_reg_3177_reg[29]/D\", \"slack\": -0.659, \"startpoint\": \"grp_dataflow_parent_loop_proc_fu_200/dataflow_in_loop_TRAINING_INST_U0/compute4_U0/grp_compute4_Pipeline_DOT_fu_343/add_ln45_27_reg_3167_reg[12]/C\"}], \"delay_class\": \"mixed\", \"tier\": \"tier1_violating_paths\"}",
+          "last_failed_iter": 7
+        }
+      },
+      "action_failure_counts": {
+        "fanout_split": 1,
+        "rapidwright_optimize_cell_placement": 1,
+        "rapidwright_analyze_fabric_for_pblock": 1,
+        "rapidwright_convert_fabric_region_to_pblock": 1,
+        "pblock": 1,
+        "place_design_explore": 1,
+        "pblock_full_replace": 1,
+        "phys_opt_design": 1,
+        "route_explore": 1
+      },
+      "llm_chosen_action": "route_explore",
+      "endgame_polish": true,
+      "validation_result": "endgame_polish"
+    }
+  ],
+  "started_at_epoch_s": 1784971923.6909063,
+  "llm_cost_usd": 0.0544495,
+  "benchmark_score": {
+    "formula": "alpha - (0.1*alpha)*beta - (0.1*alpha)*gamma",
+    "alpha_delta_fmax_mhz": 0.0,
+    "beta_openrouter_cost_usd": 0.0544495,
+    "gamma_runtime_hours": 0.11367933405770196,
+    "wall_clock_runtime_s": 409.24560260772705,
+    "score": 0.0
+  }
+}
