@@ -8,8 +8,9 @@ fpl_env/
 .venv/
 dcp_optimizer_run-*/*
 !dcp_optimizer_run-*/checkpoints/
-dcp_optimizer_run-*/checkpoints/*
+dcp_optimizer_run-*/checkpoints/**
 !dcp_optimizer_run-*/checkpoints/history.jsons
+!dcp_optimizer_run-*/checkpoints/history.json
 
 .Xil/
 
