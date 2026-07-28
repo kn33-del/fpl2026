@@ -281,6 +281,16 @@ UNPLACED_CELLS_BENIGN_MAX = 25
 # against a separate, much larger cap instead.
 CHEAP_FAILURE_RUNTIME_S = 60
 STALL_LIMIT_CHEAP_FAILURES = 15
+# --- Failure-message capture (pipeline audit 2026-07-28) ---
+# Vivado's own console output for a failed place/route/pblock command often
+# runs several KB of phase-by-phase progress before its actual error line, so
+# a plain head-slice (the old [:2000]/[:4000] behavior) reliably cut every
+# long failure message off mid-log, before the real explanation -- confirmed
+# empirically: every pblock_route_failed record in the 07-19..07-28 run
+# window was truncated at the exact same offset, always mid "Phase 4.1
+# Initial Net Routing Pass". Keep the TAIL instead: Vivado's actual failure
+# line is almost always the last thing it printed before giving up.
+FAILURE_MESSAGE_CAPTURE_CHARS = 6000
 # --- Cost model (2026-07-12) ---
 # Motivating incident: on a large design, place_design -directive Explore took
 # 15.5 min and the following route Explore was killed by the remaining-budget
@@ -1370,6 +1380,39 @@ class DCPOptimizer(DCPOptimizerBase):
                     logger.error(f"{tool_name} returned an MCP error, not Vivado output: {result_text[:500]}")
                     raise VivadoToolCallError(tool_name, result_text)
 
+            # Vivado hang/crash auto-recovery (pipeline audit 2026-07-28): a
+            # timed-out or crashed Vivado command comes back as a normal
+            # (non-isError) text result telling the caller to call
+            # restart_vivado -- the server catches pexpect.TIMEOUT/EOF
+            # internally and never restarts itself. Nothing ever called it
+            # automatically, so one hang/crash silently failed every
+            # remaining Vivado call for the rest of the run (boom_soc and
+            # ispd16_example2's 07-19/07-20 runs each burned their whole
+            # remaining budget this way after a single place/route timeout).
+            # The server's own error text always names "restart_vivado" as
+            # the fix, on every failure mode that needs it (timeout, crash,
+            # pty desync) -- restart right here, at the single choke point
+            # every vivado_ call passes through, then raise the existing
+            # VivadoToolCallError so optimize()'s established recovery path
+            # (reopen best checkpoint, resync RapidWright, continue the run)
+            # picks up from a live session instead of a dead one.
+            if (
+                tool_name.startswith("vivado_")
+                and tool_name != "vivado_restart_vivado"
+                and "restart_vivado" in result_text
+            ):
+                logger.error(
+                    "Vivado hang/crash detected in %s output; restarting Vivado "
+                    "and resyncing instead of losing the rest of the run's budget.",
+                    tool_name,
+                )
+                try:
+                    restart_result = await self.call_tool("vivado_restart_vivado", {}, internal=True)
+                    logger.info("restart_vivado result: %s", restart_result[:200])
+                except Exception as restart_exc:
+                    logger.error("restart_vivado itself failed: %s", restart_exc)
+                raise VivadoToolCallError(tool_name, result_text)
+
             self._update_design_state(tool_name, arguments, result_text)
 
             # Track WNS from timing reports and get_wns calls -- but only when
@@ -1932,6 +1975,35 @@ class DCPOptimizer(DCPOptimizerBase):
                 "command": default_command,
                 "message": text.strip(),
             }
+        # Pipeline audit 2026-07-28: route_design can return cleanly (no
+        # "ERROR:" line at all) while leaving most of the design unrouted --
+        # rosetta_optical-flow/vtr_mcml/rosetta_spam-filter-scale runs left
+        # 28k-70k+ nets unrouted with a clean-looking return, only ever
+        # caught later by _verify_routed_state()'s separate
+        # report_route_status round-trip, after also paying for a
+        # report_timing_summary call on the broken design in between.
+        # route_design's own console output already prints a "Number of
+        # Unrouted/Failed Nets" summary once per phase checkpoint (0 during
+        # early phases, the real count at completion) -- read the LAST
+        # occurrence so an all-zero early-phase snapshot can't mask a bad
+        # final one, and catch the failure for free off text already in
+        # hand instead of a second Vivado call.
+        unrouted = re.findall(r"Number of Unrouted Nets\s*=\s*(\d+)", text)
+        failed_nets = re.findall(r"Number of Failed Nets\s*=\s*(\d+)", text)
+        if unrouted or failed_nets:
+            unrouted_n = int(unrouted[-1]) if unrouted else 0
+            failed_n = int(failed_nets[-1]) if failed_nets else 0
+            if unrouted_n > 0 or failed_n > 0:
+                return {
+                    "success": False,
+                    "error_type": "route_incomplete",
+                    "command": default_command,
+                    "message": (
+                        f"route_design's own summary reports {unrouted_n} unrouted "
+                        f"net(s) and {failed_n} failed net(s) -- routing did not "
+                        f"actually complete even though no ERROR: line was printed."
+                    ),
+                }
         return {}
 
     async def _check_implementation_license(self) -> bool:
@@ -2019,6 +2091,35 @@ class DCPOptimizer(DCPOptimizerBase):
         this tolerance -- and unrouted nets besides."""
         baseline = self.baseline_unplaced_cells or 0
         return max(UNPLACED_CELLS_BENIGN_MAX, baseline + 10)
+
+    async def _retry_incremental_place_for_unplaced(self, action: str, unplaced: int) -> int:
+        """RapidWright ECO edits (fanout_split, rapidwright_optimize_cell_
+        placement) legitimately create/orphan cells in an unplaced state as
+        part of the edit -- an ECO flow expects a follow-up placement pass,
+        which neither dispatch handler ever ran before this fix (pipeline
+        audit 2026-07-28: both went 0-for-24, always rejected on unplaced-
+        cell overflow with no attempt to actually place the strays first).
+        Give Vivado's own incremental placer one shot: place_design with no
+        -unplace is incremental over the existing (partial) placement, never
+        a full re-place, so it only has to seat the cells RapidWright left
+        stranded. Returns the (possibly improved) unplaced-cell count."""
+        logger.info(
+            "%s left %d unplaced cell(s); attempting one incremental place_design "
+            "before rejecting the candidate.", action, unplaced,
+        )
+        place_retry = await self.call_tool(
+            "vivado_place_design",
+            {"directive": "Default", "timeout": self._implementation_timeout_s(kind="place")},
+            internal=True,
+        )
+        if self._action_failure(place_retry, default_command="vivado_place_design"):
+            logger.warning(
+                "%s: incremental re-place attempt failed; keeping original unplaced count.",
+                action,
+            )
+            return unplaced
+        recovered = await self._count_unplaced_cells()
+        return recovered if recovered is not None else unplaced
 
     async def _verify_routed_state(self) -> tuple[bool, str]:
         """Ask Vivado (not just our client-side tracker) whether the design is
@@ -3300,14 +3401,26 @@ class DCPOptimizer(DCPOptimizerBase):
                     "from a winning state lost 50-120 MHz far more often than they won",
                 )
 
-        # Item 4 (expensive-action cap): on a large design, full re-places
-        # past the per-run cap are demoted here with the reason; dispatch
-        # additionally hard-refuses them (execute_validated_action), so a
-        # rebuttal cannot burn half the budget on a third re-roll.
+        # Item 4 (expensive-action cap): once a large design's full-replace
+        # cap trips, remove the capped action from `allowed` outright instead
+        # of demoting it to the end of the ranking. Demotion still let the
+        # LLM pick it, pay for an LLM call, and get rejected in dispatch on a
+        # cap decision that had already been made -- boom_soc's 07-19 run
+        # spent 3 of its 11 iterations re-proposing place_design_explore/
+        # pblock_full_replace after the cap had already fired (each rejected
+        # in well under a second by dispatch, but each still cost a full LLM
+        # round-trip and an iteration slot that could have tried something
+        # else). The reason is still recorded in last_action_guidance for
+        # forensic visibility even though the action is no longer offered.
         for capped_action in ("place_design_explore", "pblock_full_replace"):
             cap_reason = self._full_replace_blocked_reason(capped_action)
             if cap_reason:
-                allowed = self._demote_actions(allowed, [capped_action], cap_reason)
+                if capped_action in allowed:
+                    allowed.remove(capped_action)
+                existing = self.last_action_guidance.get(capped_action)
+                self.last_action_guidance[capped_action] = (
+                    f"{existing}; {cap_reason}" if existing else cap_reason
+                )
 
         # Item 3 (affordability): an action that probably cannot finish inside
         # the remaining budget is demoted at 1.3x its estimated cost (and
@@ -3325,6 +3438,26 @@ class DCPOptimizer(DCPOptimizerBase):
                         f"costs ~{cost / 60.0:.0f} min, {max(remaining_budget, 0) / 60.0:.0f} min "
                         f"remain -- pick a refinement that fits",
                     )
+
+        # Empirical kill switch (pipeline audit 2026-07-28, runs 07-19 through
+        # 07-28): fanout_split and rapidwright_optimize_cell_placement went
+        # 0-for-24 across every run in that window and every design tried --
+        # fanout_split either had no valid high-fanout net to act on or its
+        # RapidWright edit left hundreds-to-thousands of cells unplaced;
+        # rapidwright_optimize_cell_placement did the same or moved zero
+        # cells. Demotion alone doesn't stop them: the excessive_fanout
+        # hypothesis (analysis_layer.py) recommends fanout_split specifically
+        # and never attaches a discouraging reason to it, so the LLM kept
+        # picking a 0%-win action with no warning at all. Remove both from
+        # the normal menu outright. rapidwright_optimize_cell_placement is
+        # restored below as the sole action when the Vivado Implementation
+        # license is unavailable, since it is the only action that needs no
+        # such license -- actions_for() (analysis_layer.py) already filters
+        # its recommended/veto lists against `allowed`, so removing these
+        # here safely no-ops any downstream reference to them.
+        for dead_action in ("fanout_split", "rapidwright_optimize_cell_placement"):
+            if dead_action in allowed:
+                allowed.remove(dead_action)
 
         if self.implementation_license_available is False:
             implementation_actions = set(VIVADO_INCREMENTAL_IMPLEMENTATION_ACTIONS) | {"fanout_split"}
@@ -3938,15 +4071,34 @@ class DCPOptimizer(DCPOptimizerBase):
 
             # --- Fix #2b: reject regions that would be packed too densely. ---
             site_counts = range_payload.get("site_counts") or {}
-            utilization_error = self._check_pblock_utilization(
+            utilization_failure = self._check_pblock_utilization(
                 site_counts, target_lut_count, target_ff_count,
                 target_dsp_count, target_bram_count,
             )
-            if not utilization_error:
+            if not utilization_failure:
                 last_error = None
                 break
 
+            failing_label, utilization_error = utilization_failure
             last_error = utilization_error
+            # Pipeline audit 2026-07-28: BRAM/DSP demand comes from actual
+            # hard-block cells that must be in the region
+            # (self.pblock_hard_block_demand), not a resizable estimate like
+            # LUT/FF -- shrinking target_lut_count/target_ff_count below has
+            # zero effect on it, so retrying on a BRAM/DSP overshoot just
+            # repeats the identical failure for free (boom_soc: "projected
+            # BRAM utilization 464%... gave up after 4 sizing attempts", all
+            # 4 identical since none of them touched the BRAM target). Fail
+            # immediately instead of burning the remaining sizing attempts.
+            if failing_label in ("BRAM", "DSP"):
+                last_error = (
+                    f"{utilization_error} This is hard-block demand from cells that must "
+                    f"be in the region, not a resizable estimate -- retrying with a smaller "
+                    f"LUT/FF target cannot fix it; reduce the number of {failing_label} "
+                    f"cells being clustered instead."
+                )
+                break
+
             if size_attempt < PBLOCK_SIZE_SHRINK_MAX_RETRIES:
                 size_attempt += 1
                 logger.warning(
@@ -4056,8 +4208,15 @@ class DCPOptimizer(DCPOptimizerBase):
         target_ff_count: int,
         target_dsp_count: int,
         target_bram_count: int,
-    ) -> Optional[str]:
-        """Return an error string if the requested targets would over-pack the region, else None."""
+    ) -> Optional[tuple[str, str]]:
+        """Return (label, error message) if the requested targets would
+        over-pack the region, else None. The label lets the caller decide
+        whether shrinking the request can actually fix this (pipeline audit
+        2026-07-28: it couldn't tell BRAM/DSP overshoot from LUT/FF overshoot,
+        so it kept shrinking target_lut_count/target_ff_count for THREE more
+        retries on a BRAM/DSP failure those targets have no effect on --
+        "Rejected pblock region: projected BRAM utilization 464%... gave up
+        after 4 sizing attempts" on boom_soc, always failing the same way)."""
         if not site_counts:
             # No capacity data returned -- nothing to validate against, let it through.
             return None
@@ -4104,7 +4263,7 @@ class DCPOptimizer(DCPOptimizerBase):
                 continue
             utilization = requested / float(capacity)
             if utilization > PBLOCK_MAX_UTILIZATION_FRACTION:
-                return (
+                return label, (
                     f"Rejected pblock region: projected {label} utilization "
                     f"{utilization:.0%} exceeds the {PBLOCK_MAX_UTILIZATION_FRACTION:.0%} "
                     f"congestion-safety limit ({requested} requested vs {capacity} available). "
@@ -4275,7 +4434,7 @@ class DCPOptimizer(DCPOptimizerBase):
             await _restore_best_after_failure()
             return self._failure_json(
                 "full_replace_unplace_failed",
-                f"place_design -unplace failed: {unplace_result[:4000]}",
+                f"place_design -unplace failed: {unplace_result[-FAILURE_MESSAGE_CAPTURE_CHARS:]}",
                 command="pblock_full_replace",
             )
 
@@ -4308,7 +4467,7 @@ class DCPOptimizer(DCPOptimizerBase):
             await _restore_best_after_failure()
             return self._failure_json(
                 apply_payload.get("error_type", "full_replace_pblock_failed"),
-                apply_payload.get("message", apply_result[:4000]),
+                apply_payload.get("message", apply_result[-FAILURE_MESSAGE_CAPTURE_CHARS:]),
                 command="pblock_full_replace",
             )
 
@@ -4345,7 +4504,7 @@ class DCPOptimizer(DCPOptimizerBase):
             await _restore_best_after_failure()
             return self._failure_json(
                 "full_replace_place_failed",
-                f"Whole-design pblock applied but placement failed: {place_result[:4000]}",
+                f"Whole-design pblock applied but placement failed: {place_result[-FAILURE_MESSAGE_CAPTURE_CHARS:]}",
                 command="pblock_full_replace",
             )
         # Item 5: re-check the budget now that the place has been paid for.
@@ -4362,7 +4521,7 @@ class DCPOptimizer(DCPOptimizerBase):
             await _restore_best_after_failure()
             return self._failure_json(
                 "full_replace_route_failed",
-                f"Whole-design pblock placed but routing failed: {route_result[:4000]}",
+                f"Whole-design pblock placed but routing failed: {route_result[-FAILURE_MESSAGE_CAPTURE_CHARS:]}",
                 command="pblock_full_replace",
             )
         self._register_applied_pblock(region, pblock_name)
@@ -5420,14 +5579,14 @@ class DCPOptimizer(DCPOptimizerBase):
             if self._vivado_output_has_error(unplace_result):
                 return self._failure_json(
                     "replace_unplace_failed",
-                    f"place_design -unplace failed: {unplace_result[:2000]}",
+                    f"place_design -unplace failed: {unplace_result[-FAILURE_MESSAGE_CAPTURE_CHARS:]}",
                     command="place_design_explore",
                 )
             place = await self.call_tool("vivado_place_design", {"directive": directive, "timeout": self._implementation_timeout_s(kind="place")})
             if self._action_failure(place, default_command="vivado_place_design"):
                 return self._failure_json(
                     "replace_place_failed",
-                    f"place_design -directive {directive} failed after unplace: {place[:2000]}",
+                    f"place_design -directive {directive} failed after unplace: {place[-FAILURE_MESSAGE_CAPTURE_CHARS:]}",
                     command="place_design_explore",
                 )
             # Item 5 (adaptive route directive): the place just consumed real
@@ -5440,7 +5599,7 @@ class DCPOptimizer(DCPOptimizerBase):
             if self._action_failure(route, default_command="vivado_route_design"):
                 return self._failure_json(
                     "replace_route_failed",
-                    f"route_design -directive {route_directive} failed after re-place: {route[:2000]}",
+                    f"route_design -directive {route_directive} failed after re-place: {route[-FAILURE_MESSAGE_CAPTURE_CHARS:]}",
                     command="place_design_explore",
                 )
             return place + "\n\n" + route
@@ -5474,7 +5633,7 @@ class DCPOptimizer(DCPOptimizerBase):
             if self._action_failure(route, default_command="vivado_route_design"):
                 return self._failure_json(
                     "route_explore_failed",
-                    f"route_design -directive {directive} failed: {route[:2000]}",
+                    f"route_design -directive {directive} failed: {route[-FAILURE_MESSAGE_CAPTURE_CHARS:]}",
                     command="route_explore",
                 )
             return route
@@ -5518,7 +5677,7 @@ class DCPOptimizer(DCPOptimizerBase):
                 logger.error(f"pblock_assignment_failed - full result:\n{result}")
                 return self._failure_json(
                     payload.get("error_type", "pblock_assignment_failed"),
-                    payload.get("message", result[:4000]),
+                    payload.get("message", result[-FAILURE_MESSAGE_CAPTURE_CHARS:]),
                     command="pblock",
                 )
             self.last_rapidwright_edit_summary = self._summarize_pblock_assignment(payload, params)
@@ -5602,7 +5761,7 @@ class DCPOptimizer(DCPOptimizerBase):
                 logger.error(f"pblock_place_failed - full place_design output:\n{place_result}")
                 return self._failure_json(
                     "pblock_place_failed",
-                    f"Pblock applied but re-placement failed: {place_result[:4000]}",
+                    f"Pblock applied but re-placement failed: {place_result[-FAILURE_MESSAGE_CAPTURE_CHARS:]}",
                     command="pblock",
                 )
             route_result = await self.call_tool(
@@ -5612,7 +5771,7 @@ class DCPOptimizer(DCPOptimizerBase):
                 logger.error(f"pblock_route_failed - full route_design output:\n{route_result}")
                 return self._failure_json(
                     "pblock_route_failed",
-                    f"Pblock applied and re-placed but routing failed: {route_result[:4000]}",
+                    f"Pblock applied and re-placed but routing failed: {route_result[-FAILURE_MESSAGE_CAPTURE_CHARS:]}",
                     command="pblock",
                 )
             # Fix #2: only now, after placement + routing succeeded, register
@@ -5837,12 +5996,15 @@ class DCPOptimizer(DCPOptimizerBase):
             # post-route provenance gate re-verifies with route status).
             candidate_unplaced = await self._count_unplaced_cells()
             if candidate_unplaced and candidate_unplaced > self._unplaced_tolerance():
+                candidate_unplaced = await self._retry_incremental_place_for_unplaced(action, candidate_unplaced)
+            if candidate_unplaced and candidate_unplaced > self._unplaced_tolerance():
                 return self._failure_json(
                     "invalid_design_state",
                     (
                         f"rapidwright_optimize_cell_placement produced a candidate with "
                         f"{candidate_unplaced} unplaced primitive cell(s) (tolerance "
-                        f"{self._unplaced_tolerance()}); refusing to route or measure it."
+                        f"{self._unplaced_tolerance()}) even after an incremental re-place "
+                        f"attempt; refusing to route or measure it."
                     ),
                     command=action,
                 )
@@ -5886,12 +6048,14 @@ class DCPOptimizer(DCPOptimizerBase):
             # Same tolerance-aware fail-fast as the cell-placement flow.
             candidate_unplaced = await self._count_unplaced_cells()
             if candidate_unplaced and candidate_unplaced > self._unplaced_tolerance():
+                candidate_unplaced = await self._retry_incremental_place_for_unplaced(action, candidate_unplaced)
+            if candidate_unplaced and candidate_unplaced > self._unplaced_tolerance():
                 return self._failure_json(
                     "invalid_design_state",
                     (
                         f"fanout_split produced a candidate with {candidate_unplaced} unplaced "
-                        f"primitive cell(s) (tolerance {self._unplaced_tolerance()}); refusing "
-                        f"to route or measure it."
+                        f"primitive cell(s) (tolerance {self._unplaced_tolerance()}) even after "
+                        f"an incremental re-place attempt; refusing to route or measure it."
                     ),
                     command=action,
                 )
@@ -6005,7 +6169,7 @@ class DCPOptimizer(DCPOptimizerBase):
             if self._action_failure(phys, default_command="vivado_phys_opt_design"):
                 return self._failure_json(
                     "qor_suggestions_failed",
-                    f"phys_opt after QoR suggestions failed (RQS and fallback): {phys[:2000]}",
+                    f"phys_opt after QoR suggestions failed (RQS and fallback): {phys[-FAILURE_MESSAGE_CAPTURE_CHARS:]}",
                     command="qor_suggestions",
                 )
 
@@ -6018,7 +6182,7 @@ class DCPOptimizer(DCPOptimizerBase):
         if self._action_failure(route, default_command="vivado_route_design"):
             return self._failure_json(
                 "qor_suggestions_failed",
-                f"route after QoR suggestions failed: {route[:2000]}",
+                f"route after QoR suggestions failed: {route[-FAILURE_MESSAGE_CAPTURE_CHARS:]}",
                 command="qor_suggestions",
             )
         return "\n\n".join(part for part in (gen, phys, route) if part)

@@ -1754,8 +1754,23 @@ def optimize_cell_placement(
                         break
 
             if new_site is None or new_bel is None:
-                results.append({"cell": cell_name, "status": "error",
-                                "message": "No available site near centroid"})
+                # Step 1 already called fullyUnplaceCell -- without a
+                # restore, this cell is abandoned unplaced in the written
+                # checkpoint. That was the likely source of the "produced a
+                # candidate with N unplaced primitive cell(s)" rejections
+                # (pipeline audit 2026-07-28): every cell that can't find a
+                # legal site within max_move_distance stays permanently
+                # unplaced instead of just not moving. Put it back at its
+                # original site instead -- a no-op move is a valid outcome,
+                # an orphaned cell is not.
+                try:
+                    design.placeCell(cell, old_site, old_bel)
+                    cell.getSiteInst().routeSite()
+                    results.append({"cell": cell_name, "status": "skipped",
+                                    "message": "No available site near centroid; restored to original site"})
+                except Exception as restore_exc:
+                    results.append({"cell": cell_name, "status": "error",
+                                    "message": f"No available site near centroid; restore to original site also failed: {restore_exc}"})
                 continue
 
             # 4. Place cell at new site and route the intra-site wiring
@@ -1763,8 +1778,19 @@ def optimize_cell_placement(
                 design.placeCell(cell, new_site, new_bel)
                 cell.getSiteInst().routeSite()
             except Exception as e:
-                results.append({"cell": cell_name, "status": "error",
-                                "message": f"Placement failed: {e}"})
+                # Same reasoning as above: the cell is unplaced at this
+                # point (the failed placeCell did not leave it placed), so
+                # try to restore it to its original site rather than orphan
+                # it -- best-effort, and no worse than the old behavior if
+                # the restore itself also fails.
+                try:
+                    design.placeCell(cell, old_site, old_bel)
+                    cell.getSiteInst().routeSite()
+                    results.append({"cell": cell_name, "status": "error",
+                                    "message": f"Placement failed: {e}; restored to original site"})
+                except Exception as restore_exc:
+                    results.append({"cell": cell_name, "status": "error",
+                                    "message": f"Placement failed: {e}; restore to original site also failed: {restore_exc}"})
                 continue
 
             new_placement = str(new_site.getName())

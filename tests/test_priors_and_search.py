@@ -62,9 +62,14 @@ def test_net_delay_bound_discourages_instead_of_forbidding(opt):
     allowed, forbidden = opt._allowed_forbidden_actions(
         "net_delay_bound", "REGISTER", 0.82, 134.0, -0.978)
     # Previously-forbidden logic actions are now allowed, ranked last, with reasons.
-    assert "fanout_split" in allowed
+    # fanout_split is the exception: the 2026-07-28 pipeline audit found it
+    # 0-for-11 across every run, so it's removed from the menu outright
+    # rather than merely demoted (see _allowed_forbidden_actions).
+    assert "fanout_split" not in allowed
     assert "lut_opt" in allowed
     assert forbidden == ["logic_restructure"]
+    # The net_delay_bound demotion reason is still recorded even though the
+    # action is no longer offered -- harmless, and useful forensic context.
     assert "fanout_split" in opt.last_action_guidance
     assert "net_delay_bound" in opt.last_action_guidance["fanout_split"]
     # Demoted actions rank below the structural ones.
@@ -408,8 +413,12 @@ def test_crossrun_priors_roundtrip_and_demotion(opt, tmp_path):
         "net_delay_bound", "REGISTER", 0.82, 112.0, -0.978)
     assert "rapidwright_optimize_cell_placement" in opt2.last_action_guidance
     assert "previous runs" in opt2.last_action_guidance["rapidwright_optimize_cell_placement"]
-    assert allowed[-1] == "rapidwright_optimize_cell_placement" or \
-        allowed.index("rapidwright_optimize_cell_placement") > allowed.index("pblock")
+    # The 2026-07-28 pipeline audit found rapidwright_optimize_cell_placement
+    # 0-for-19 across every run since 07-19, so it's removed from the normal
+    # menu outright now (see _allowed_forbidden_actions) rather than merely
+    # demoted to the end -- the crossrun-priors guidance above still fires
+    # first and is preserved for forensic visibility.
+    assert "rapidwright_optimize_cell_placement" not in allowed
 
 
 def test_long_interconnect_recommends_global_replace_first():
