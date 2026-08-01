@@ -372,10 +372,9 @@ def get_design_info() -> Dict[str, Any]:
         # above -- 2026-08-01 large-design audit: a design with a genuinely
         # high DSP/BRAM count relative to a huge LUT/FF count could have those
         # types pushed out of "top 10" entirely, silently zeroing out the one
-        # signal a device-utilization check needs). Bucketed by standard
-        # UltraScale+ primitive naming so callers can compute LUT/FF/DSP/BRAM
-        # utilization against known device capacity without a second pass
-        # over every cell.
+        # signal a device-utilization check needs). LUT/FF are counted by
+        # cell type name, which is accurate: LUT6/FDRE-style primitives are
+        # genuinely 1:1 with physical resources.
         resource_summary = {"LUT": 0, "FF": 0, "DSP": 0, "BRAM": 0, "CARRY": 0, "OTHER": 0}
         for cell_type, count in cell_types.items():
             upper = cell_type.upper()
@@ -383,14 +382,32 @@ def get_design_info() -> Dict[str, Any]:
                 resource_summary["LUT"] += count
             elif upper.startswith("FD") or upper.startswith("LD"):
                 resource_summary["FF"] += count
-            elif "DSP" in upper:
-                resource_summary["DSP"] += count
-            elif "RAMB" in upper or "URAM" in upper:
-                resource_summary["BRAM"] += count
             elif "CARRY" in upper:
                 resource_summary["CARRY"] += count
-            else:
+            elif "DSP" not in upper and "RAMB" not in upper and "URAM" not in upper:
                 resource_summary["OTHER"] += count
+            # DSP/BRAM cell-type-name matches are deliberately NOT counted
+            # here -- see the site-based count below.
+
+        # DSP/BRAM: 2026-08-01 bugfix. A single physical DSP48E2/RAMB36E2
+        # SITE can be represented as SEVERAL separate Cell objects
+        # internally -- this design's own pblock DRC output names
+        # "DSP_A_B_DATA_INST" as one sub-component of a single DSP48E2
+        # macro. Counting cells whose type name merely contains "DSP"
+        # overcounted by roughly 8x on ispd16_example2 (200 real DSP48E2
+        # sites came out as ~70% of the device's 2280 DSP capacity instead
+        # of the correct 8.8%, which would have wrongly blocked full
+        # re-place on designs that don't actually need it). Count unique
+        # OCCUPIED SITES of each hard-block type instead -- one DSP48E2 or
+        # RAMB36E2/RAMB18E2 site is exactly one physical resource, no matter
+        # how many Cells are packed into it -- matching how
+        # analyze_fabric_for_pblock already measures device-side capacity.
+        for site_inst in design.getSiteInsts():
+            site_type_str = str(site_inst.getSiteTypeEnum()).upper()
+            if "DSP" in site_type_str:
+                resource_summary["DSP"] += 1
+            elif "RAMB" in site_type_str or "URAM" in site_type_str:
+                resource_summary["BRAM"] += 1
 
         return {
             "status": "success",
