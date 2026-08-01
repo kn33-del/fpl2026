@@ -240,7 +240,12 @@ def _rule_localized_congestion(cluster: FailureCluster, evidence: dict) -> RootC
     # global congestion demotion on the pblock family).
     recommended = ["pblock"]
     if congestion_level is not None and congestion_level >= _congestion_high_threshold():
-        recommended = ["place_design_explore", "fanout_split"]
+        # fanout_split dropped (pipeline audit 2026-07-28): removed from the
+        # menu outright (dcp_optimizer._allowed_forbidden_actions) after
+        # going 0-for-11, so actions_for()'s `[a for a in recommended if a
+        # in allowed]` filter would have silently dropped it here anyway --
+        # naming it in a confidence-scored recommendation was misleading.
+        recommended = ["place_design_explore"]
 
     return RootCauseHypothesis(
         name="localized_congestion",
@@ -371,7 +376,15 @@ def _rule_excessive_fanout(cluster: FailureCluster, evidence: dict) -> RootCause
         confidence=max(0.0, min(1.0, confidence)),
         supporting_evidence=supporting,
         contradicting_evidence=contradicting,
-        recommended_actions=["fanout_split", "replicate_register"],
+        # fanout_split dropped (pipeline audit 2026-07-28): this was the
+        # single worst diagnosis/action pairing in the whole 07-19..07-28
+        # dataset -- excessive_fanout fired on half of all diagnosed
+        # iterations and fanout_split converted 0/11 of them, vs.
+        # replicate_register's 1 improved/2 marginal/0 failed. fanout_split
+        # is now removed from the menu outright, so naming it here was
+        # already a no-op via actions_for()'s allowed-filter; replicate_
+        # register is the one response to this diagnosis with a real record.
+        recommended_actions=["replicate_register"],
         evidence_requests=["fanout_hotspots", "total_candidates"],
         # design doc section 3: excessive_fanout should suppress
         # clustering-based pblock/placement actions, since moving one

@@ -240,7 +240,7 @@ run_optimizer:
 		fi; \
 	fi; \
 	echo ""; \
-	$(PYTHON) dcp_optimizer.py "$(DCP)" 
+	$(PYTHON) dcp_optimizer.py "$(DCP)" $(if $(BUDGET),--budget-seconds $(BUDGET))
 
 # Run test mode: Run dcp_optimizer.py with --test flag (no LLM required)
 run_test:

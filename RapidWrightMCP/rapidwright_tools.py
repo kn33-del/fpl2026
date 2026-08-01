@@ -364,10 +364,34 @@ def get_design_info() -> Dict[str, Any]:
         for cell in design.getCells():
             cell_type = str(cell.getType())
             cell_types[cell_type] = cell_types.get(cell_type, 0) + 1
-        
+
         # Get top 10 most common cell types
         top_types = sorted(cell_types.items(), key=lambda x: x[1], reverse=True)[:10]
-        
+
+        # Resource-category totals over ALL cell types (not just the top 10
+        # above -- 2026-08-01 large-design audit: a design with a genuinely
+        # high DSP/BRAM count relative to a huge LUT/FF count could have those
+        # types pushed out of "top 10" entirely, silently zeroing out the one
+        # signal a device-utilization check needs). Bucketed by standard
+        # UltraScale+ primitive naming so callers can compute LUT/FF/DSP/BRAM
+        # utilization against known device capacity without a second pass
+        # over every cell.
+        resource_summary = {"LUT": 0, "FF": 0, "DSP": 0, "BRAM": 0, "CARRY": 0, "OTHER": 0}
+        for cell_type, count in cell_types.items():
+            upper = cell_type.upper()
+            if upper.startswith("LUT"):
+                resource_summary["LUT"] += count
+            elif upper.startswith("FD") or upper.startswith("LD"):
+                resource_summary["FF"] += count
+            elif "DSP" in upper:
+                resource_summary["DSP"] += count
+            elif "RAMB" in upper or "URAM" in upper:
+                resource_summary["BRAM"] += count
+            elif "CARRY" in upper:
+                resource_summary["CARRY"] += count
+            else:
+                resource_summary["OTHER"] += count
+
         return {
             "status": "success",
             "design_name": str(design.getName()),
@@ -376,6 +400,7 @@ def get_design_info() -> Dict[str, Any]:
             "cell_count": design.getCells().size(),
             "net_count": design.getNets().size(),
             "top_cell_types": dict(top_types),
+            "resource_summary": resource_summary,
             "is_netlist_encrypted": design.getNetlist().hasEncryptedCells()
         }
         

@@ -62,6 +62,14 @@ DECISION_NET_DELAY_BOUND_THRESHOLD = 0.70
 DECISION_LOGIC_DELAY_BOUND_THRESHOLD = 0.70
 DECISION_SPREAD_NET_THRESHOLD = 0.60
 DECISION_SPREAD_TILE_THRESHOLD = 30
+# --- BRAM/DSP bottleneck gate (2026-07-28) ---
+# The old hard-block sizing trigger inflated target_bram_count/
+# target_dsp_count the moment ANY current candidate touched a BRAM/DSP cell
+# name -- one stray candidate among 20 was enough. Same dominance-fraction
+# bar as analysis_layer.FANOUT_DOMINANCE_FRACTION: a cause needs to show up
+# in a meaningful share of the candidates before it's treated as the actual
+# bottleneck, not just present.
+BRAM_DSP_BOTTLENECK_FRACTION_THRESHOLD = 0.30
 PHYS_OPT_MIN_USEFUL_WNS_NS = -0.5
 WNS_SANITY_ABS_LIMIT_NS = 50.0
 WNS_SANITY_POSITIVE_CLOCK_FRACTION = 0.10
@@ -303,6 +311,22 @@ FAILURE_MESSAGE_CAPTURE_CHARS = 6000
 # run) to exceed this, or the primitive count does:
 LARGE_DESIGN_PLACE_DURATION_S = 300
 LARGE_DESIGN_PRIMITIVE_COUNT = 100_000
+# --- Device resource capacity (2026-08-01 large-design audit) ---
+# Contest device is fixed (AMD UltraScale+ xcvu3p, see
+# TIMING_DECISION_SYSTEM_PROMPT) -- these are its published LUT/FF/DSP/BRAM
+# totals, used to turn a design's raw cell counts into a utilization
+# fraction. A design near capacity on ANY resource leaves the placer little
+# free space to legalize into during a full re-place -- ispd16_example2
+# (298k/394k = 76% LUT utilization) timed out identically on place_design in
+# three separate runs (07-20, 07-21, 08-01), never once completing. Unlike
+# the cross-run kill switch in _maybe_warm_start_replace, utilization is a
+# forward-looking signal: it flags the risk on the FIRST run of a design
+# never seen before, not only after it has already failed here.
+XCVU3P_LUT_CAPACITY = 394_080
+XCVU3P_FF_CAPACITY = 788_160
+XCVU3P_DSP_CAPACITY = 2_280
+XCVU3P_BRAM_CAPACITY = 720
+HIGH_UTILIZATION_FRACTION = 0.70
 # An action is demoted when the remaining budget is below 1.3x its estimated
 # cost, and dispatch is hard-refused below 1.0x -- a cheap recorded failure
 # always beats a half-finished expensive action.
@@ -317,6 +341,17 @@ CHEAP_ACTION_COST_S = 120
 # at most one more, and none once elapsed time passes this budget fraction.
 FULL_REPLACE_LARGE_DESIGN_CAP = 2
 FULL_REPLACE_BUDGET_FRACTION_CUTOFF = 0.5
+# Warm-start kill switch (2026-08-01 ispd16_example2 incident): the
+# deterministic warm start's whole-design re-place is a bet with a bounded
+# downside ONLY when failure is cheap (rolled back in seconds). On this
+# design, place_design_explore hung/timed out on this exact warm-start call
+# twice across prior runs (07-20, 07-21) with zero recorded wins, then did so
+# again before this check existed, burning ~20 minutes of a ~58-minute budget
+# on a place_design call that has never once completed here. Lower than the
+# main loop's cross-run demotion bar (bad >= 3 in _allowed_forbidden_actions)
+# on purpose: an uncompleted full re-place is a much worse failure mode than
+# a completed-but-losing one, so it should be believed sooner.
+WARM_START_SKIP_AFTER_LOSSES = 2
 # After place completes inside a re-place recipe, the requested route
 # directive is downgraded to Default when the remaining budget is below this
 # multiple of the estimated route duration -- a completed Default route
@@ -1111,12 +1146,19 @@ class DCPOptimizer(DCPOptimizerBase):
         api_key: str,
         model: str = DEFAULT_MODEL,
         debug: bool = False,
-        run_dir: Optional[Path] = None
+        run_dir: Optional[Path] = None,
+        hard_limit_seconds: Optional[int] = None,
     ):
         super().__init__(debug=debug, run_dir=run_dir)
-        
+
         self.api_key = api_key
         self.model = model
+        # 2026-08-01: override for exploratory/offline runs (e.g. "let a
+        # large design run overnight to see if a full re-place ever
+        # converges"). None keeps CheckpointManager's contest-safe 3500 s
+        # default -- this must never silently change what a real contest
+        # submission run does. See --budget-seconds in main().
+        self.hard_limit_seconds_override = hard_limit_seconds
         self.tools: list[dict] = []
         self.messages: list[dict] = []
         
@@ -1310,6 +1352,11 @@ class DCPOptimizer(DCPOptimizerBase):
         # arrives (cross-run priors at load, primitive count after
         # rapidwright_read_checkpoint, measured place after the warm start).
         self.design_scale: str = "unknown"
+        # Design resource counts vs. known xcvu3p device capacity, keyed
+        # "LUT"/"FF"/"DSP"/"BRAM" -> fraction (2026-08-01 large-design
+        # audit). Populated by _compute_resource_utilization during Phase 0
+        # diagnostics; empty until then. See HIGH_UTILIZATION_FRACTION.
+        self.resource_utilization: dict = {}
         # Full re-places dispatched this run (place_design_explore +
         # pblock_full_replace, warm start and run_recipe stages included).
         # Capped on large designs -- see _full_replace_blocked_reason.
@@ -1577,6 +1624,13 @@ class DCPOptimizer(DCPOptimizerBase):
             input_dcp=str(input_dcp.resolve()),
             clock_name=clock_name,
         )
+        if self.hard_limit_seconds_override is not None:
+            logger.warning(
+                "Overriding contest budget: hard_limit_seconds=%d (exploratory run, not "
+                "contest-compliant).",
+                self.hard_limit_seconds_override,
+            )
+            self.checkpoint_manager.hard_limit_seconds = int(self.hard_limit_seconds_override)
         self.checkpoint_manager.start_baseline(self.initial_wns, self.clock_period)
 
         self.vivado_adapter = VivadoMCPAdapter(self)
@@ -2445,6 +2499,31 @@ class DCPOptimizer(DCPOptimizerBase):
         except (TypeError, ValueError):
             return None
 
+    def _compute_resource_utilization(self, design_info: dict) -> dict:
+        """Design resource counts (from rapidwright_get_design_info's
+        resource_summary) as a fraction of known xcvu3p device capacity.
+
+        This is a forward-looking companion to the cross-run kill switch in
+        _maybe_warm_start_replace: that one only protects a design AFTER it
+        has already hung here once, which does nothing for a design seen for
+        the first time. Utilization is computable on iteration 0, before any
+        action has been attempted -- ispd16_example2's 76% LUT utilization
+        was visible from the moment the checkpoint was read, well before its
+        first (and every subsequent) place_design call timed out."""
+        summary = (design_info or {}).get("resource_summary") or {}
+        capacities = {
+            "LUT": XCVU3P_LUT_CAPACITY,
+            "FF": XCVU3P_FF_CAPACITY,
+            "DSP": XCVU3P_DSP_CAPACITY,
+            "BRAM": XCVU3P_BRAM_CAPACITY,
+        }
+        utilization = {}
+        for resource, capacity in capacities.items():
+            count = summary.get(resource)
+            if isinstance(count, (int, float)) and capacity:
+                utilization[resource] = round(count / capacity, 4)
+        return utilization
+
     def _refresh_design_scale(self) -> None:
         """Classify the design's scale from whatever evidence exists so far.
         "large" flips on the full re-place cap and pessimistic pricing of
@@ -2454,8 +2533,14 @@ class DCPOptimizer(DCPOptimizerBase):
             cell_count = int(self.last_design_info.get("cell_count") or 0)
         except (TypeError, ValueError):
             cell_count = 0
-        if (place_s is not None and place_s > LARGE_DESIGN_PLACE_DURATION_S) or (
-            cell_count > LARGE_DESIGN_PRIMITIVE_COUNT
+        high_utilization = any(
+            fraction >= HIGH_UTILIZATION_FRACTION
+            for fraction in (self.resource_utilization or {}).values()
+        )
+        if (
+            (place_s is not None and place_s > LARGE_DESIGN_PLACE_DURATION_S)
+            or cell_count > LARGE_DESIGN_PRIMITIVE_COUNT
+            or high_utilization
         ):
             self.design_scale = "large"
         elif place_s is not None or cell_count > 0:
@@ -2510,6 +2595,30 @@ class DCPOptimizer(DCPOptimizerBase):
             return None
         if self.design_scale != "large" or self.checkpoint_manager is None:
             return None
+        # 2026-08-01: a design at high device utilization has almost no free
+        # space for the placer to legalize into during a full re-place --
+        # this is not a timeout-tuning problem, it's a budget-vs-convergence-
+        # time mismatch that no cap short of zero fixes. ispd16_example2
+        # (76% LUT utilization) hung identically on its first full re-place
+        # attempt in three separate runs, each eating the full 20-minute
+        # unmeasured-timeout ceiling -- a third of the entire ~58-minute
+        # contest budget for zero result. Allow none at all here (not the
+        # normal FULL_REPLACE_LARGE_DESIGN_CAP of 2); refinement-only
+        # actions (phys_opt_design, phys_opt_design_retime, route_explore,
+        # locally-scoped pblock) work directly on the input's own -- already
+        # legal -- placement instead of discarding it.
+        over_threshold = {
+            resource: f"{fraction:.0%}"
+            for resource, fraction in (self.resource_utilization or {}).items()
+            if fraction >= HIGH_UTILIZATION_FRACTION
+        }
+        if over_threshold:
+            return (
+                f"device utilization {over_threshold} leaves too little free space for a "
+                f"full re-place to reliably legalize within any contest-realistic timeout; "
+                f"refine the input's existing placement instead (phys_opt_design, "
+                f"phys_opt_design_retime, route_explore, local pblock)"
+            )
         elapsed = time.time() - self.checkpoint_manager.started_at_epoch_s
         budget = float(self.checkpoint_manager.hard_limit_seconds)
         if self.full_replace_attempts >= 1 and elapsed > FULL_REPLACE_BUDGET_FRACTION_CUTOFF * budget:
@@ -3863,6 +3972,70 @@ class DCPOptimizer(DCPOptimizerBase):
             raise RuntimeError(f"Could not extract critical path pins: {result[:300]}")
         return output_file
 
+    def _bram_dsp_bottleneck_evidence(self) -> dict:
+        """Is BRAM/DSP hard-block placement actually the bottleneck right
+        now, or just present among the candidates?
+
+        Two independent signals, both required:
+        1. dominance -- what FRACTION of current_target_candidates touch a
+           BRAM/DSP cell (by start/endpoint name), not just whether at least
+           one does. One stray BRAM candidate among 20 net-delay-bound LUT
+           paths is noise, not evidence the hard block is the problem.
+        2. fixability -- delay on those paths has to actually be placement/
+           routing-driven for a BRAM/DSP-aware region to help at all. On a
+           logic_delay_bound path (_classify_worst_path_delay already logs
+           "skipping pblock" for exactly this reason), no region -- however
+           well chosen -- reduces logic depth.
+
+        Used to gate target_bram_count/target_dsp_count sizing in
+        _compute_pblock_ranges so hard-block capacity is only requested (and
+        therefore only ever fast-failed by _check_pblock_utilization) when
+        there's real evidence it matters, not on a single incidental name
+        match."""
+        candidates = self.current_target_candidates or []
+        total = len(candidates)
+        bram_cells: set[str] = set()
+        dsp_cells: set[str] = set()
+        hard_block_candidates = 0
+        for candidate in candidates:
+            touches_hard_block = False
+            for key in ("startpoint", "endpoint"):
+                name = str(candidate.get(key) or "").lower()
+                cell = name.rsplit("/", 1)[0] if "/" in name else name
+                if any(k in cell for k in ("ram_reg", "_bram", "ramb", "uram")):
+                    bram_cells.add(cell)
+                    touches_hard_block = True
+                if "dsp" in cell:
+                    dsp_cells.add(cell)
+                    touches_hard_block = True
+            if touches_hard_block:
+                hard_block_candidates += 1
+
+        fraction = (hard_block_candidates / total) if total else 0.0
+        dominant = fraction >= BRAM_DSP_BOTTLENECK_FRACTION_THRESHOLD
+        fixable = self.path_delay_classification != "logic_delay_bound"
+        is_bottleneck = dominant and fixable and bool(bram_cells or dsp_cells)
+
+        if bram_cells or dsp_cells:
+            reason = (
+                f"{hard_block_candidates}/{total} candidates ({fraction:.0%}) touch a "
+                f"BRAM/DSP cell, delay_class={self.path_delay_classification!r}"
+            )
+            if not dominant:
+                reason += f" -- below the {BRAM_DSP_BOTTLENECK_FRACTION_THRESHOLD:.0%} dominance bar"
+            if not fixable:
+                reason += " -- logic-delay-bound, placement cannot fix this regardless"
+        else:
+            reason = "no candidate touches a BRAM/DSP cell"
+
+        return {
+            "is_bottleneck": is_bottleneck,
+            "fraction": fraction,
+            "bram_cells": bram_cells,
+            "dsp_cells": dsp_cells,
+            "reason": reason,
+        }
+
     async def _compute_pblock_ranges(self, params: dict, timing_context: dict) -> tuple[Optional[dict], Optional[str]]:
         """Compute Vivado pblock ranges through RapidWright fabric analysis."""
         if params.get("ranges"):
@@ -3925,21 +4098,29 @@ class DCPOptimizer(DCPOptimizerBase):
         # start/endpoints say when BRAM/DSP cells are being clustered --
         # request sites for them (x2 margin: the server-side cell matching
         # expands beyond the named candidates).
+        #
+        # Gated on _bram_dsp_bottleneck_evidence (2026-07-28): the original
+        # version inflated these targets the moment ANY candidate touched a
+        # BRAM/DSP name, even a single stray one among 20 LUT-path
+        # candidates. Requesting hard-block capacity that isn't actually
+        # needed only exposes the region to a BRAM/DSP utilization rejection
+        # (_check_pblock_utilization) for a resource that was never the real
+        # bottleneck -- wasted risk for zero benefit.
         if not target_bram_count or not target_dsp_count:
-            bram_cells: set[str] = set()
-            dsp_cells: set[str] = set()
-            for candidate in self.current_target_candidates:
-                for key in ("startpoint", "endpoint"):
-                    name = str(candidate.get(key) or "").lower()
-                    cell = name.rsplit("/", 1)[0] if "/" in name else name
-                    if any(k in cell for k in ("ram_reg", "_bram", "ramb", "uram")):
-                        bram_cells.add(cell)
-                    if "dsp" in cell:
-                        dsp_cells.add(cell)
-            if bram_cells and not target_bram_count:
-                target_bram_count = 2 * len(bram_cells)
-            if dsp_cells and not target_dsp_count:
-                target_dsp_count = 2 * len(dsp_cells)
+            evidence = self._bram_dsp_bottleneck_evidence()
+            bram_cells = evidence["bram_cells"]
+            dsp_cells = evidence["dsp_cells"]
+            if bram_cells or dsp_cells:
+                if evidence["is_bottleneck"]:
+                    if bram_cells and not target_bram_count:
+                        target_bram_count = 2 * len(bram_cells)
+                    if dsp_cells and not target_dsp_count:
+                        target_dsp_count = 2 * len(dsp_cells)
+                else:
+                    logger.info(
+                        "BRAM/DSP bottleneck gate: not requesting hard-block capacity (%s).",
+                        evidence["reason"],
+                    )
         # A previous pblock abort's DRC measured the REAL hard-block demand
         # (server-side cell expansion included); it always outranks the
         # candidate-name estimate above.
@@ -6652,6 +6833,33 @@ class DCPOptimizer(DCPOptimizerBase):
         except Exception as exc:
             logger.warning("Phase 0 QoR suggestions probe failed (skipped): %s", exc)
 
+        # (d) Device resource utilization -- cheap (pure RapidWright, no
+        # Vivado round-trip) and the earliest possible warning that a full
+        # re-place is risky on THIS design, independent of whether it has
+        # ever been seen before (see _compute_resource_utilization).
+        try:
+            design_info_text = await self.call_tool("rapidwright_get_design_info", {}, internal=True)
+            design_info = self._parse_json_result(design_info_text)
+            if not self._result_has_error(design_info):
+                self.resource_utilization = self._compute_resource_utilization(design_info)
+                if self.resource_utilization:
+                    signature["resource_utilization"] = self.resource_utilization
+                    self._refresh_design_scale()
+                    over_threshold = {
+                        resource: fraction
+                        for resource, fraction in self.resource_utilization.items()
+                        if fraction >= HIGH_UTILIZATION_FRACTION
+                    }
+                    if over_threshold:
+                        logger.warning(
+                            "High device utilization detected (%s); full re-places on this "
+                            "design carry real hang/non-convergence risk (limited legalization "
+                            "headroom), independent of this design's own run history.",
+                            {k: f"{v:.0%}" for k, v in over_threshold.items()},
+                        )
+        except Exception as exc:
+            logger.warning("Phase 0 resource utilization probe failed (skipped): %s", exc)
+
         self.design_signature = signature
         if signature:
             logger.info(
@@ -6683,6 +6891,51 @@ class DCPOptimizer(DCPOptimizerBase):
                 "Warm start skipped: delay class is '%s', not net_delay_bound; "
                 "the input placement is not the demonstrated bottleneck.",
                 classification,
+            )
+            return False
+
+        # Utilization kill switch (2026-08-01 large-design audit): the
+        # forward-looking sibling of the cross-run check below. This one
+        # doesn't need the design to have already failed here -- ANY design
+        # whose LUT/FF/DSP/BRAM usage leaves the device this full carries
+        # real legalization risk on a full re-place, known from the moment
+        # the checkpoint is read (see _compute_resource_utilization). The
+        # normal LLM loop's full-replace path has its own per-action
+        # affordability check (_estimated_action_cost_s); the deterministic
+        # warm start has none, so it's the one place a bare bet on an
+        # untested, unbounded-risk design is not appropriate.
+        over_threshold = {
+            resource: fraction
+            for resource, fraction in (self.resource_utilization or {}).items()
+            if fraction >= HIGH_UTILIZATION_FRACTION
+        }
+        if over_threshold:
+            logger.warning(
+                "Warm start skipped: device utilization %s -- limited legalization headroom "
+                "makes a full re-place's hang/non-convergence risk too high to spend the "
+                "un-budget-checked opening move on it.",
+                {k: f"{v:.0%}" for k, v in over_threshold.items()},
+            )
+            return False
+
+        # Cross-run kill switch: don't bet 15-20+ minutes on a full re-place
+        # that cross-run history already shows never completes or helps on
+        # this exact design (see WARM_START_SKIP_AFTER_LOSSES). The main
+        # loop's own full-replace gating (_full_replace_blocked_reason,
+        # cross-run action demotion) still applies from here on, so this
+        # isn't giving up on full re-places for this design -- just refusing
+        # to spend the deterministic, un-budget-checked opening move on one
+        # that's already proven itself a guaranteed loss.
+        place_record = (self.crossrun_priors or {}).get("actions", {}).get("place_design_explore") or {}
+        if (
+            int(place_record.get("good", 0)) == 0
+            and int(place_record.get("bad", 0)) >= WARM_START_SKIP_AFTER_LOSSES
+        ):
+            logger.warning(
+                "Warm start skipped: place_design_explore has 0 wins / %d loss(es) on this "
+                "design across previous runs -- a full re-place has never once completed or "
+                "helped here.",
+                place_record.get("bad", 0),
             )
             return False
 
@@ -6789,7 +7042,20 @@ class DCPOptimizer(DCPOptimizerBase):
         if self.initial_wns is not None and self.initial_wns >= 0:
             print("✓ Design meets timing; continuing with Tier 2 worst-slack optimization and clock tightening.\n")
             logger.info("Design meets timing; entering Fmax-push flow")
-            await self._run_clock_bisection_after_closure(self.initial_wns)
+            try:
+                await self._run_clock_bisection_after_closure(self.initial_wns)
+            except VivadoToolCallError as e:
+                # Same class of gap as the warm-start guard above: this runs
+                # place/route cycles before the main loop's try/except
+                # exists, so a hang here would otherwise crash the whole run
+                # instead of recovering. Fall back to the pristine input
+                # checkpoint and proceed into the normal loop.
+                logger.error(
+                    "Clock bisection failed with a Vivado-side error (%s); restoring "
+                    "the input checkpoint and proceeding into the normal loop without it.",
+                    e,
+                )
+                await self._restore_best_state("clock bisection failed with a Vivado tool error")
         
         # Initialize conversation with analysis results
         self.messages = [
@@ -6818,7 +7084,25 @@ Proceed by selecting exactly one validated action per timing-context turn."""
         # docstring). Consumes iteration 1 when it runs; the LLM loop then
         # continues from iteration 2 with the warm start's outcome in its
         # history, directive-sweep memory, and conversation.
-        await self._maybe_warm_start_replace()
+        try:
+            await self._maybe_warm_start_replace()
+        except VivadoToolCallError as e:
+            # 2026-08-01 ispd16_example2 incident: a place_design hang during
+            # warm start crashed the whole run with an unhandled
+            # VivadoToolCallError. call_tool's hang/crash auto-recovery
+            # already restarted the Vivado PROCESS before raising this, but
+            # this call site sits entirely outside the main loop below --
+            # nothing here reopens a design into the fresh session, and
+            # nothing catches the exception. Fall back to the pristine input
+            # checkpoint (best_checkpoint before any iteration has recorded)
+            # and let the main loop proceed normally -- a skipped warm start
+            # is a minor optimization loss, not a reason to abort the run.
+            logger.error(
+                "Warm start failed with a Vivado-side error (%s); restoring the "
+                "input checkpoint and proceeding into the normal loop without it.",
+                e,
+            )
+            await self._restore_best_state("warm start failed with a Vivado tool error")
 
         max_iterations = 50  # Safety limit
 
@@ -8175,6 +8459,18 @@ Examples:
         help="OpenRouter API key (default: OPENROUTER_API_KEY env var)"
     )
     parser.add_argument(
+        "--budget-seconds",
+        type=int,
+        default=None,
+        help=(
+            "Override the run's wall-clock budget (default: 3500 s, the contest limit). "
+            "For exploratory/offline runs only -- e.g. letting a large design run "
+            "overnight (--budget-seconds 36000) to see whether a full re-place ever "
+            "converges given real time. NOT contest-compliant; never set this for an "
+            "actual submission run."
+        ),
+    )
+    parser.add_argument(
         "--model",
         type=str,
         default=DEFAULT_MODEL,
@@ -8266,7 +8562,8 @@ Examples:
         api_key=args.api_key,
         model=args.model,
         debug=args.debug,
-        run_dir=run_dir
+        run_dir=run_dir,
+        hard_limit_seconds=args.budget_seconds,
     )
     
     try:
