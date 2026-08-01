@@ -1,0 +1,147 @@
+{
+  "input_dcp": "/home/fpl2026/fpl26_contest_benchmarks/boom_soc_2025.1.dcp",
+  "clock_name": "clk_fpl26contest",
+  "clock_period_ns": 1.569,
+  "baseline_wns": -19.162,
+  "baseline_fmax_mhz": 48.23693984853601,
+  "best_wns": -9.548,
+  "best_fmax_mhz": 89.95232526760816,
+  "best_checkpoint": "/home/fpl2026/dcp_optimizer_run-20260728_124706/checkpoints/iter_002.dcp",
+  "current_iter": 2,
+  "stall_count": 0,
+  "cells_blacklisted": [],
+  "nets_blacklisted": [],
+  "iterations": [
+    {
+      "iter": 1,
+      "recipe": "place_design_explore",
+      "batch_size": 1,
+      "targets": [
+        "directive:Explore"
+      ],
+      "wns_before": -19.162,
+      "wns_after": -10.256,
+      "fmax_before": 48.23693984853601,
+      "fmax_after": 84.56659619450318,
+      "delta_fmax": 36.329656345967166,
+      "vivado_runtime_s": 1713.4634997844696,
+      "status": "improved",
+      "checkpoint": "/home/fpl2026/dcp_optimizer_run-20260728_124706/checkpoints/iter_001.dcp",
+      "target_tier": "tier1_violating_paths",
+      "target_candidate_count": 20,
+      "path_delay_classification": "net_delay_bound",
+      "path_delay_breakdown": {
+        "logic_pct": 0.09774,
+        "net_pct": 0.90226,
+        "logic_delay_ns": 2.001,
+        "net_delay_ns": 18.471
+      },
+      "clock_period_ns": 1.569,
+      "achieved_fmax_mhz": 84.56659619450318,
+      "no_improvement_count": 0,
+      "consecutive_no_improvement": 0,
+      "action_failure_memory": {},
+      "action_failure_counts": {},
+      "llm_chosen_action": "place_design_explore",
+      "warm_start": true,
+      "validation_result": "warm_start"
+    },
+    {
+      "iter": 2,
+      "recipe": "route_explore",
+      "batch_size": 1,
+      "targets": [
+        "directive:Explore"
+      ],
+      "wns_before": -10.256,
+      "wns_after": -9.548,
+      "fmax_before": 84.56659619450318,
+      "fmax_after": 89.95232526760816,
+      "delta_fmax": 5.385729073104983,
+      "vivado_runtime_s": 797.2252810001373,
+      "status": "improved",
+      "checkpoint": "/home/fpl2026/dcp_optimizer_run-20260728_124706/checkpoints/iter_002.dcp",
+      "target_tier": "tier1_violating_paths",
+      "target_candidate_count": 20,
+      "path_delay_classification": "net_delay_bound",
+      "path_delay_breakdown": {
+        "logic_pct": 0.28708,
+        "net_pct": 0.71292,
+        "logic_delay_ns": 3.228,
+        "net_delay_ns": 8.016
+      },
+      "clock_period_ns": 1.569,
+      "achieved_fmax_mhz": 89.95232526760816,
+      "no_improvement_count": 0,
+      "consecutive_no_improvement": 0,
+      "action_failure_memory": {},
+      "action_failure_counts": {},
+      "delay_class": "net_delay_bound",
+      "endpoint_type": "BRAM_CONTROL",
+      "allowed_actions": [
+        "route_explore",
+        "run_recipe",
+        "lut_opt",
+        "replicate_register",
+        "phys_opt_design",
+        "phys_opt_design_retime",
+        "pblock",
+        "qor_suggestions",
+        "pblock_full_replace",
+        "place_design_explore"
+      ],
+      "forbidden_actions": [
+        "logic_restructure"
+      ],
+      "action_guidance": {
+        "fanout_split": "delay class is net_delay_bound (net_pct=0.71292); logic-side changes rarely fix routing-bound paths; endpoint is a BRAM_CONTROL pin; routing to a hard-block control pin needs physical proximity, not net splitting",
+        "lut_opt": "delay class is net_delay_bound (net_pct=0.71292); logic-side changes rarely fix routing-bound paths",
+        "replicate_register": "WNS -10.256 ns is below -0.500 ns; incremental phys_opt cannot close that gap while structural actions remain",
+        "phys_opt_design": "WNS -10.256 ns is below -0.500 ns; incremental phys_opt cannot close that gap while structural actions remain",
+        "phys_opt_design_retime": "WNS -10.256 ns is below -0.500 ns; incremental phys_opt cannot close that gap while structural actions remain",
+        "pblock": "0 wins / 9 losses across previous runs on this design",
+        "rapidwright_optimize_cell_placement": "0 wins / 7 losses across previous runs on this design",
+        "qor_suggestions": "0 wins / 5 losses across previous runs on this design",
+        "place_design_explore": "directives with losing cross-run records on this design (never improved): AggressiveExplore (0/4) -- do not re-try these; this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won; costs ~26 min, 31 min remain -- pick a refinement that fits",
+        "pblock_full_replace": "this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won; costs ~26 min, 31 min remain -- pick a refinement that fits"
+      },
+      "congestion_level": 1,
+      "cluster_clock_regions": [
+        "X4Y1",
+        "X4Y2",
+        "X5Y1",
+        "X5Y4"
+      ],
+      "llm_chosen_action": "route_explore",
+      "structural_override_active": false,
+      "stuck_iterations": 0,
+      "exhausted_actions": [],
+      "validation_result": "ok",
+      "reprompt_count": 0,
+      "why_not_top_forbidden_action": "pblock is the next-highest structural option but carries 0/9 cross-run record and guidance explicitly says refine the current best rather than gamble on structural moves.",
+      "raw_response": "{\n  \"delay_class_acknowledged\": \"net_delay_bound\",\n  \"endpoint_type_acknowledged\": \"BRAM_CONTROL\",\n  \"chosen_action\": \"route_explore\",\n  \"action_parameters\": {\n    \"directive\": \"Explore\"\n  },\n  \"why_this_fits_delay_class\": \"net_pct=0.71292 on a net_delay_bound path so a low-cost routing refinement (route_explore) can still reduce remaining interconnect delay without touching placement.\",\n  \"why_not_top_forbidden_action\": \"pblock is the next-highest structural option but carries 0/9 cross-run record and guidance explicitly says refine the current best rather than gamble on structural moves.\",\n  \"confidence\": 4\n}",
+      "cluster_count": 2,
+      "primary_diagnosis": "long_interconnect",
+      "diagnosis_reasoning_trace": [
+        "normalized 20 timing-path candidate(s) from current_target_candidates",
+        "clustered into 2 cluster(s) via shared start/end cell name",
+        "primary cluster 'cluster_0' contains the current worst path (19 member(s), 1 cell(s) shared across all members)",
+        "scored hypotheses: long_interconnect=0.90, excessive_fanout=0.80, placement_already_compact=0.25, localized_congestion=0.10",
+        "primary hypothesis: long_interconnect (confidence 0.90)",
+        "  + avg spread 222.0 tiles exceeds 30 on a net-delay-bound cluster (71% net delay) -- cells are genuinely far apart, not just congested.",
+        "  + cluster cells span 4 clock regions (['X4Y1', 'X4Y2', 'X5Y1', 'X5Y4']) -- crossings confirm real physical distance."
+      ],
+      "diagnosis_action_adjustment": null
+    }
+  ],
+  "started_at_epoch_s": 1785242919.1252472,
+  "llm_cost_usd": 0.00779715,
+  "benchmark_score": {
+    "formula": "alpha - (0.1*alpha)*beta - (0.1*alpha)*gamma",
+    "alpha_delta_fmax_mhz": 41.71538541907215,
+    "beta_openrouter_cost_usd": 0.00779715,
+    "gamma_runtime_hours": 0.6889325468407737,
+    "wall_clock_runtime_s": 2480.1571686267853,
+    "score": 38.80895063540953
+  }
+}
