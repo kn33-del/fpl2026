@@ -1,0 +1,511 @@
+{
+  "input_dcp": "/home/fpl2026/fpl26_contest_benchmarks/boom_soc_2025.1.dcp",
+  "clock_name": "clk_fpl26contest",
+  "clock_period_ns": 1.569,
+  "baseline_wns": -19.162,
+  "baseline_fmax_mhz": 48.23693984853601,
+  "best_wns": -9.302,
+  "best_fmax_mhz": 91.98785760279644,
+  "best_checkpoint": "/home/fpl2026/dcp_optimizer_run-20260801_061009/checkpoints/iter_003.dcp",
+  "current_iter": 6,
+  "stall_count": 3,
+  "cells_blacklisted": [],
+  "nets_blacklisted": [],
+  "iterations": [
+    {
+      "iter": 1,
+      "recipe": "place_design_explore",
+      "batch_size": 1,
+      "targets": [
+        "directive:Explore"
+      ],
+      "wns_before": -19.162,
+      "wns_after": -10.256,
+      "fmax_before": 48.23693984853601,
+      "fmax_after": 84.56659619450318,
+      "delta_fmax": 36.329656345967166,
+      "vivado_runtime_s": 1739.2575538158417,
+      "status": "improved",
+      "checkpoint": "/home/fpl2026/dcp_optimizer_run-20260801_061009/checkpoints/iter_001.dcp",
+      "target_tier": "tier1_violating_paths",
+      "target_candidate_count": 20,
+      "path_delay_classification": "net_delay_bound",
+      "path_delay_breakdown": {
+        "logic_pct": 0.09774,
+        "net_pct": 0.90226,
+        "logic_delay_ns": 2.001,
+        "net_delay_ns": 18.471
+      },
+      "clock_period_ns": 1.569,
+      "achieved_fmax_mhz": 84.56659619450318,
+      "no_improvement_count": 0,
+      "consecutive_no_improvement": 0,
+      "action_failure_memory": {},
+      "action_failure_counts": {},
+      "llm_chosen_action": "place_design_explore",
+      "warm_start": true,
+      "validation_result": "warm_start"
+    },
+    {
+      "iter": 2,
+      "recipe": "route_explore",
+      "batch_size": 1,
+      "targets": [
+        "directive:Explore"
+      ],
+      "wns_before": -10.256,
+      "wns_after": -9.548,
+      "fmax_before": 84.56659619450318,
+      "fmax_after": 89.95232526760816,
+      "delta_fmax": 5.385729073104983,
+      "vivado_runtime_s": 794.777229309082,
+      "status": "improved",
+      "checkpoint": "/home/fpl2026/dcp_optimizer_run-20260801_061009/checkpoints/iter_002.dcp",
+      "target_tier": "tier1_violating_paths",
+      "target_candidate_count": 20,
+      "path_delay_classification": "net_delay_bound",
+      "path_delay_breakdown": {
+        "logic_pct": 0.28708,
+        "net_pct": 0.71292,
+        "logic_delay_ns": 3.228,
+        "net_delay_ns": 8.016
+      },
+      "clock_period_ns": 1.569,
+      "achieved_fmax_mhz": 89.95232526760816,
+      "no_improvement_count": 0,
+      "consecutive_no_improvement": 0,
+      "action_failure_memory": {},
+      "action_failure_counts": {},
+      "delay_class": "net_delay_bound",
+      "endpoint_type": "BRAM_CONTROL",
+      "allowed_actions": [
+        "route_explore",
+        "run_recipe",
+        "lut_opt",
+        "replicate_register",
+        "phys_opt_design",
+        "phys_opt_design_retime",
+        "pblock",
+        "qor_suggestions",
+        "pblock_full_replace",
+        "place_design_explore"
+      ],
+      "forbidden_actions": [
+        "logic_restructure"
+      ],
+      "action_guidance": {
+        "fanout_split": "delay class is net_delay_bound (net_pct=0.71292); logic-side changes rarely fix routing-bound paths; endpoint is a BRAM_CONTROL pin; routing to a hard-block control pin needs physical proximity, not net splitting",
+        "lut_opt": "delay class is net_delay_bound (net_pct=0.71292); logic-side changes rarely fix routing-bound paths",
+        "replicate_register": "WNS -10.256 ns is below -0.500 ns; incremental phys_opt cannot close that gap while structural actions remain",
+        "phys_opt_design": "WNS -10.256 ns is below -0.500 ns; incremental phys_opt cannot close that gap while structural actions remain",
+        "phys_opt_design_retime": "WNS -10.256 ns is below -0.500 ns; incremental phys_opt cannot close that gap while structural actions remain",
+        "pblock": "0 wins / 9 losses across previous runs on this design",
+        "rapidwright_optimize_cell_placement": "0 wins / 7 losses across previous runs on this design",
+        "qor_suggestions": "0 wins / 5 losses across previous runs on this design",
+        "place_design_explore": "directives with losing cross-run records on this design (never improved): AggressiveExplore (0/4) -- do not re-try these; this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won; costs ~26 min, 30 min remain -- pick a refinement that fits",
+        "pblock_full_replace": "this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won; costs ~26 min, 30 min remain -- pick a refinement that fits"
+      },
+      "congestion_level": 1,
+      "cluster_clock_regions": [
+        "X4Y1",
+        "X4Y2",
+        "X5Y1",
+        "X5Y4"
+      ],
+      "llm_chosen_action": "route_explore",
+      "structural_override_active": false,
+      "stuck_iterations": 0,
+      "exhausted_actions": [],
+      "validation_result": "ok",
+      "reprompt_count": 0,
+      "why_not_top_forbidden_action": "route_explore is the highest-ranked allowed action; pblock (next tempting) has 0/9 cross-run record and explicit guidance to refine instead of structural moves.",
+      "raw_response": "{\n  \"delay_class_acknowledged\": \"net_delay_bound\",\n  \"endpoint_type_acknowledged\": \"BRAM_CONTROL\",\n  \"chosen_action\": \"route_explore\",\n  \"action_parameters\": {\n    \"directive\": \"Explore\"\n  },\n  \"why_this_fits_delay_class\": \"net_pct=0.71292 confirms routing-bound paths; route_explore refines the winning placement from iteration 1 without discarding measured gains.\",\n  \"why_not_top_forbidden_action\": \"route_explore is the highest-ranked allowed action; pblock (next tempting) has 0/9 cross-run record and explicit guidance to refine instead of structural moves.\",\n  \"confidence\": 4\n}",
+      "cluster_count": 2,
+      "primary_diagnosis": "long_interconnect",
+      "diagnosis_reasoning_trace": [
+        "normalized 20 timing-path candidate(s) from current_target_candidates",
+        "clustered into 2 cluster(s) via shared start/end cell name",
+        "primary cluster 'cluster_0' contains the current worst path (19 member(s), 1 cell(s) shared across all members)",
+        "scored hypotheses: long_interconnect=0.90, excessive_fanout=0.80, placement_already_compact=0.25, localized_congestion=0.10",
+        "primary hypothesis: long_interconnect (confidence 0.90)",
+        "  + avg spread 222.0 tiles exceeds 30 on a net-delay-bound cluster (71% net delay) -- cells are genuinely far apart, not just congested.",
+        "  + cluster cells span 4 clock regions (['X4Y1', 'X4Y2', 'X5Y1', 'X5Y4']) -- crossings confirm real physical distance."
+      ],
+      "diagnosis_action_adjustment": null
+    },
+    {
+      "iter": 3,
+      "recipe": "route_explore",
+      "batch_size": 1,
+      "targets": [
+        "directive:Explore"
+      ],
+      "wns_before": -9.548,
+      "wns_after": -9.302,
+      "fmax_before": 89.95232526760816,
+      "fmax_after": 91.98785760279644,
+      "delta_fmax": 2.035532335188279,
+      "vivado_runtime_s": 512.4115672111511,
+      "status": "improved",
+      "checkpoint": "/home/fpl2026/dcp_optimizer_run-20260801_061009/checkpoints/iter_003.dcp",
+      "target_tier": "tier1_violating_paths",
+      "target_candidate_count": 20,
+      "path_delay_classification": "net_delay_bound",
+      "path_delay_breakdown": {
+        "logic_pct": 0.17762,
+        "net_pct": 0.82238,
+        "logic_delay_ns": 1.911,
+        "net_delay_ns": 8.848
+      },
+      "clock_period_ns": 1.569,
+      "achieved_fmax_mhz": 91.98785760279644,
+      "no_improvement_count": 0,
+      "consecutive_no_improvement": 0,
+      "action_failure_memory": {},
+      "action_failure_counts": {},
+      "delay_class": "net_delay_bound",
+      "endpoint_type": "BRAM_CONTROL",
+      "allowed_actions": [
+        "run_recipe",
+        "lut_opt",
+        "replicate_register",
+        "phys_opt_design",
+        "phys_opt_design_retime",
+        "pblock",
+        "qor_suggestions",
+        "route_explore"
+      ],
+      "forbidden_actions": [
+        "logic_restructure"
+      ],
+      "action_guidance": {
+        "fanout_split": "delay class is net_delay_bound (net_pct=0.82238); logic-side changes rarely fix routing-bound paths; endpoint is a BRAM_CONTROL pin; routing to a hard-block control pin needs physical proximity, not net splitting",
+        "lut_opt": "delay class is net_delay_bound (net_pct=0.82238); logic-side changes rarely fix routing-bound paths",
+        "replicate_register": "WNS -9.548 ns is below -0.500 ns; incremental phys_opt cannot close that gap while structural actions remain",
+        "phys_opt_design": "WNS -9.548 ns is below -0.500 ns; incremental phys_opt cannot close that gap while structural actions remain",
+        "phys_opt_design_retime": "WNS -9.548 ns is below -0.500 ns; incremental phys_opt cannot close that gap while structural actions remain",
+        "pblock": "0 wins / 9 losses across previous runs on this design",
+        "rapidwright_optimize_cell_placement": "0 wins / 7 losses across previous runs on this design",
+        "qor_suggestions": "0 wins / 5 losses across previous runs on this design",
+        "place_design_explore": "directives with losing cross-run records on this design (never improved): AggressiveExplore (0/4) -- do not re-try these; this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won; large design, 42 of 58 budget minutes elapsed (past the 50% cutoff) with 1 full re-place(s) already spent; no further full re-places this run -- refine the best result instead",
+        "pblock_full_replace": "this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won; large design, 42 of 58 budget minutes elapsed (past the 50% cutoff) with 1 full re-place(s) already spent; no further full re-places this run -- refine the best result instead",
+        "route_explore": "costs ~13 min, 17 min remain -- pick a refinement that fits"
+      },
+      "congestion_level": 1,
+      "cluster_clock_regions": [
+        "X4Y2",
+        "X5Y2"
+      ],
+      "llm_chosen_action": "route_explore",
+      "structural_override_active": false,
+      "stuck_iterations": 0,
+      "exhausted_actions": [],
+      "validation_result": "ok",
+      "reprompt_count": 0,
+      "why_not_top_forbidden_action": "run_recipe is the highest-ranked allowed action but chains up to six sequential stages that risk overrunning the remaining budget on this large design after only one prior full replace.",
+      "raw_response": "{\n  \"delay_class_acknowledged\": \"net_delay_bound\",\n  \"endpoint_type_acknowledged\": \"BRAM_CONTROL\",\n  \"chosen_action\": \"route_explore\",\n  \"action_parameters\": {\n    \"directive\": \"Explore\"\n  },\n  \"why_this_fits_delay_class\": \"net_pct=0.82238 confirms routing-bound paths; route_explore produced the measured WNS improvement from -10.256 ns to -9.548 ns on the current placement and fits inside the 1003 s budget (measured route duration 781 s).\",\n  \"why_not_top_forbidden_action\": \"run_recipe is the highest-ranked allowed action but chains up to six sequential stages that risk overrunning the remaining budget on this large design after only one prior full replace.\",\n  \"confidence\": 3\n}",
+      "cluster_count": 9,
+      "primary_diagnosis": "long_interconnect",
+      "diagnosis_reasoning_trace": [
+        "normalized 20 timing-path candidate(s) from current_target_candidates",
+        "clustered into 9 cluster(s) via shared start/end cell name",
+        "primary cluster 'cluster_0' contains the current worst path (4 member(s), 1 cell(s) shared across all members)",
+        "scored hypotheses: long_interconnect=0.90, excessive_fanout=0.40, placement_already_compact=0.25, localized_congestion=0.10",
+        "primary hypothesis: long_interconnect (confidence 0.90)",
+        "  + avg spread 39.0 tiles exceeds 30 on a net-delay-bound cluster (82% net delay) -- cells are genuinely far apart, not just congested.",
+        "  + cluster cells span 2 clock regions (['X4Y2', 'X5Y2']) -- crossings confirm real physical distance."
+      ],
+      "diagnosis_action_adjustment": null
+    },
+    {
+      "iter": 4,
+      "recipe": "qor_suggestions",
+      "batch_size": 1,
+      "targets": [
+        "qor_suggestions"
+      ],
+      "wns_before": -9.302,
+      "wns_after": null,
+      "fmax_before": 91.98785760279644,
+      "fmax_after": null,
+      "delta_fmax": 0.0,
+      "vivado_runtime_s": 151.77475786209106,
+      "status": "failed",
+      "reason": "route_explore is estimated to cost ~13 min but only 0 min of budget remain; choose a cheaper refinement action that fits.",
+      "error_type": "insufficient_budget",
+      "checkpoint": null,
+      "rapidwright_edit_summary": null,
+      "action_failure_memory": {},
+      "action_failure_counts": {},
+      "delay_class": "net_delay_bound",
+      "endpoint_type": "BRAM_CONTROL",
+      "allowed_actions": [
+        "route_explore",
+        "run_recipe",
+        "lut_opt",
+        "replicate_register",
+        "phys_opt_design",
+        "phys_opt_design_retime",
+        "pblock",
+        "qor_suggestions"
+      ],
+      "forbidden_actions": [
+        "logic_restructure"
+      ],
+      "action_guidance": {
+        "fanout_split": "delay class is net_delay_bound (net_pct=0.8238800000000001); logic-side changes rarely fix routing-bound paths; endpoint is a BRAM_CONTROL pin; routing to a hard-block control pin needs physical proximity, not net splitting; costs ~2 min, 0 min remain -- pick a refinement that fits",
+        "lut_opt": "delay class is net_delay_bound (net_pct=0.8238800000000001); logic-side changes rarely fix routing-bound paths; costs ~2 min, 0 min remain -- pick a refinement that fits",
+        "replicate_register": "WNS -9.302 ns is below -0.500 ns; incremental phys_opt cannot close that gap while structural actions remain; costs ~4 min, 0 min remain -- pick a refinement that fits",
+        "phys_opt_design": "WNS -9.302 ns is below -0.500 ns; incremental phys_opt cannot close that gap while structural actions remain; costs ~4 min, 0 min remain -- pick a refinement that fits",
+        "phys_opt_design_retime": "WNS -9.302 ns is below -0.500 ns; incremental phys_opt cannot close that gap while structural actions remain; costs ~4 min, 0 min remain -- pick a refinement that fits",
+        "pblock": "0 wins / 9 losses across previous runs on this design; costs ~2 min, 0 min remain -- pick a refinement that fits",
+        "rapidwright_optimize_cell_placement": "0 wins / 7 losses across previous runs on this design; costs ~2 min, 0 min remain -- pick a refinement that fits",
+        "qor_suggestions": "0 wins / 5 losses across previous runs on this design; costs ~2 min, 0 min remain -- pick a refinement that fits",
+        "place_design_explore": "directives with losing cross-run records on this design (never improved): AggressiveExplore (0/4) -- do not re-try these; this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won; large design, 60 of 58 budget minutes elapsed (past the 50% cutoff) with 1 full re-place(s) already spent; no further full re-places this run -- refine the best result instead",
+        "pblock_full_replace": "this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won; large design, 60 of 58 budget minutes elapsed (past the 50% cutoff) with 1 full re-place(s) already spent; no further full re-places this run -- refine the best result instead",
+        "route_explore": "costs ~13 min, 0 min remain -- pick a refinement that fits",
+        "run_recipe": "costs ~2 min, 0 min remain -- pick a refinement that fits"
+      },
+      "congestion_level": 1,
+      "cluster_clock_regions": [
+        "X4Y2",
+        "X5Y1",
+        "X5Y2"
+      ],
+      "llm_chosen_action": "route_explore",
+      "structural_override_active": false,
+      "stuck_iterations": 0,
+      "consecutive_no_improvement": 0,
+      "exhausted_actions": [],
+      "validation_result": "ok",
+      "reprompt_count": 0,
+      "why_not_top_forbidden_action": "run_recipe is the highest-ranked allowed action but chains multiple stages whose measured durations exceed the remaining budget on this large design.",
+      "raw_response": "{\n  \"delay_class_acknowledged\": \"net_delay_bound\",\n  \"endpoint_type_acknowledged\": \"BRAM_CONTROL\",\n  \"chosen_action\": \"route_explore\",\n  \"action_parameters\": {\n    \"directive\": \"Explore\"\n  },\n  \"why_this_fits_delay_class\": \"net_pct=0.82388 confirms routing-bound paths; measured route duration of 781 s on prior Explore run delivered WNS improvement and is the only refinement whose observed cost can be compared against the remaining budget on the current placement.\",\n  \"why_not_top_forbidden_action\": \"run_recipe is the highest-ranked allowed action but chains multiple stages whose measured durations exceed the remaining budget on this large design.\",\n  \"confidence\": 2\n}",
+      "cluster_count": 3,
+      "primary_diagnosis": "long_interconnect",
+      "diagnosis_reasoning_trace": [
+        "normalized 20 timing-path candidate(s) from current_target_candidates",
+        "clustered into 3 cluster(s) via shared start/end cell name",
+        "primary cluster 'cluster_0' contains the current worst path (11 member(s), 1 cell(s) shared across all members)",
+        "scored hypotheses: long_interconnect=0.90, excessive_fanout=0.80, placement_already_compact=0.25, localized_congestion=0.10",
+        "primary hypothesis: long_interconnect (confidence 0.90)",
+        "  + avg spread 79.0 tiles exceeds 30 on a net-delay-bound cluster (82% net delay) -- cells are genuinely far apart, not just congested.",
+        "  + cluster cells span 3 clock regions (['X4Y2', 'X5Y1', 'X5Y2']) -- crossings confirm real physical distance."
+      ],
+      "diagnosis_action_adjustment": null
+    },
+    {
+      "iter": 5,
+      "recipe": "qor_suggestions",
+      "batch_size": 1,
+      "targets": [
+        "qor_suggestions"
+      ],
+      "wns_before": -9.302,
+      "wns_after": null,
+      "fmax_before": 91.98785760279644,
+      "fmax_after": null,
+      "delta_fmax": 0.0,
+      "vivado_runtime_s": 1.9811856746673584,
+      "status": "failed",
+      "reason": "pblock is estimated to cost ~2 min but only 0 min of budget remain; choose a cheaper refinement action that fits.",
+      "error_type": "insufficient_budget",
+      "checkpoint": null,
+      "rapidwright_edit_summary": null,
+      "action_failure_memory": {
+        "route_explore": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "qor_suggestions"
+          ],
+          "last_failed_iter": 5,
+          "failed_on_current_targets": true
+        }
+      },
+      "action_failure_counts": {
+        "route_explore": 1
+      },
+      "delay_class": "net_delay_bound",
+      "endpoint_type": "BRAM_CONTROL",
+      "allowed_actions": [
+        "route_explore",
+        "run_recipe",
+        "lut_opt",
+        "replicate_register",
+        "phys_opt_design",
+        "phys_opt_design_retime",
+        "pblock",
+        "qor_suggestions"
+      ],
+      "forbidden_actions": [
+        "logic_restructure"
+      ],
+      "action_guidance": {
+        "fanout_split": "delay class is net_delay_bound (net_pct=0.8238800000000001); logic-side changes rarely fix routing-bound paths; endpoint is a BRAM_CONTROL pin; routing to a hard-block control pin needs physical proximity, not net splitting; costs ~2 min, 0 min remain -- pick a refinement that fits",
+        "lut_opt": "delay class is net_delay_bound (net_pct=0.8238800000000001); logic-side changes rarely fix routing-bound paths; costs ~2 min, 0 min remain -- pick a refinement that fits",
+        "replicate_register": "WNS -9.302 ns is below -0.500 ns; incremental phys_opt cannot close that gap while structural actions remain; costs ~4 min, 0 min remain -- pick a refinement that fits",
+        "phys_opt_design": "WNS -9.302 ns is below -0.500 ns; incremental phys_opt cannot close that gap while structural actions remain; costs ~4 min, 0 min remain -- pick a refinement that fits",
+        "phys_opt_design_retime": "WNS -9.302 ns is below -0.500 ns; incremental phys_opt cannot close that gap while structural actions remain; costs ~4 min, 0 min remain -- pick a refinement that fits",
+        "pblock": "0 wins / 9 losses across previous runs on this design; costs ~2 min, 0 min remain -- pick a refinement that fits",
+        "rapidwright_optimize_cell_placement": "0 wins / 7 losses across previous runs on this design; costs ~2 min, 0 min remain -- pick a refinement that fits",
+        "qor_suggestions": "0 wins / 5 losses across previous runs on this design; costs ~2 min, 0 min remain -- pick a refinement that fits",
+        "place_design_explore": "directives with losing cross-run records on this design (never improved): AggressiveExplore (0/4) -- do not re-try these; this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won; large design, 60 of 58 budget minutes elapsed (past the 50% cutoff) with 1 full re-place(s) already spent; no further full re-places this run -- refine the best result instead",
+        "pblock_full_replace": "this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won; large design, 60 of 58 budget minutes elapsed (past the 50% cutoff) with 1 full re-place(s) already spent; no further full re-places this run -- refine the best result instead",
+        "route_explore": "costs ~13 min, 0 min remain -- pick a refinement that fits",
+        "run_recipe": "costs ~2 min, 0 min remain -- pick a refinement that fits"
+      },
+      "congestion_level": 1,
+      "cluster_clock_regions": [
+        "X4Y2",
+        "X5Y1",
+        "X5Y2"
+      ],
+      "llm_chosen_action": "pblock",
+      "structural_override_active": false,
+      "stuck_iterations": 1,
+      "consecutive_no_improvement": 1,
+      "exhausted_actions": [],
+      "validation_result": "ok",
+      "reprompt_count": 0,
+      "why_not_top_forbidden_action": "route_explore is the highest-ranked allowed action but already failed this iteration on the exact same targets due to insufficient budget and must not be repeated.",
+      "raw_response": "{\n  \"delay_class_acknowledged\": \"net_delay_bound\",\n  \"endpoint_type_acknowledged\": \"BRAM_CONTROL\",\n  \"chosen_action\": \"pblock\",\n  \"action_parameters\": {\n    \"target_lut_count\": 500,\n    \"target_ff_count\": 500,\n    \"use_clock_regions\": false\n  },\n  \"why_this_fits_delay_class\": \"net_pct=0.82388 confirms routing-bound paths with 79-tile spread on BRAM_CONTROL endpoint; pblock directly addresses long_interconnect after route_explore failed on budget (last_action_failure: insufficient_budget).\",\n  \"why_not_top_forbidden_action\": \"route_explore is the highest-ranked allowed action but already failed this iteration on the exact same targets due to insufficient budget and must not be repeated.\",\n  \"confidence\": 2\n}",
+      "cluster_count": 3,
+      "primary_diagnosis": "long_interconnect",
+      "diagnosis_reasoning_trace": [
+        "normalized 20 timing-path candidate(s) from current_target_candidates",
+        "clustered into 3 cluster(s) via shared start/end cell name",
+        "primary cluster 'cluster_0' contains the current worst path (11 member(s), 1 cell(s) shared across all members)",
+        "scored hypotheses: long_interconnect=0.90, excessive_fanout=0.80, placement_already_compact=0.25, localized_congestion=0.10",
+        "primary hypothesis: long_interconnect (confidence 0.90)",
+        "  + avg spread 79.0 tiles exceeds 30 on a net-delay-bound cluster (82% net delay) -- cells are genuinely far apart, not just congested.",
+        "  + cluster cells span 3 clock regions (['X4Y2', 'X5Y1', 'X5Y2']) -- crossings confirm real physical distance."
+      ],
+      "diagnosis_action_adjustment": null
+    },
+    {
+      "iter": 6,
+      "recipe": "qor_suggestions",
+      "batch_size": 1,
+      "targets": [
+        "qor_suggestions"
+      ],
+      "wns_before": -9.302,
+      "wns_after": null,
+      "fmax_before": 91.98785760279644,
+      "fmax_after": null,
+      "delta_fmax": 0.0,
+      "vivado_runtime_s": 1.9687085151672363,
+      "status": "failed",
+      "reason": "qor_suggestions is estimated to cost ~2 min but only 0 min of budget remain; choose a cheaper refinement action that fits.",
+      "error_type": "insufficient_budget",
+      "checkpoint": null,
+      "rapidwright_edit_summary": null,
+      "action_failure_memory": {
+        "route_explore": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "qor_suggestions"
+          ],
+          "last_failed_iter": 5,
+          "failed_on_current_targets": true
+        },
+        "pblock": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "qor_suggestions"
+          ],
+          "last_failed_iter": 6,
+          "failed_on_current_targets": true
+        },
+        "rapidwright_analyze_fabric_for_pblock": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "qor_suggestions"
+          ],
+          "last_failed_iter": 6,
+          "failed_on_current_targets": true
+        },
+        "rapidwright_convert_fabric_region_to_pblock": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "qor_suggestions"
+          ],
+          "last_failed_iter": 6,
+          "failed_on_current_targets": true
+        }
+      },
+      "action_failure_counts": {
+        "route_explore": 1,
+        "pblock": 1,
+        "rapidwright_analyze_fabric_for_pblock": 1,
+        "rapidwright_convert_fabric_region_to_pblock": 1
+      },
+      "delay_class": "net_delay_bound",
+      "endpoint_type": "BRAM_CONTROL",
+      "allowed_actions": [
+        "route_explore",
+        "run_recipe",
+        "lut_opt",
+        "replicate_register",
+        "phys_opt_design",
+        "phys_opt_design_retime",
+        "pblock",
+        "qor_suggestions"
+      ],
+      "forbidden_actions": [
+        "logic_restructure"
+      ],
+      "action_guidance": {
+        "fanout_split": "delay class is net_delay_bound (net_pct=0.8238800000000001); logic-side changes rarely fix routing-bound paths; endpoint is a BRAM_CONTROL pin; routing to a hard-block control pin needs physical proximity, not net splitting; costs ~2 min, 0 min remain -- pick a refinement that fits",
+        "lut_opt": "delay class is net_delay_bound (net_pct=0.8238800000000001); logic-side changes rarely fix routing-bound paths; costs ~2 min, 0 min remain -- pick a refinement that fits",
+        "replicate_register": "WNS -9.302 ns is below -0.500 ns; incremental phys_opt cannot close that gap while structural actions remain; costs ~4 min, 0 min remain -- pick a refinement that fits",
+        "phys_opt_design": "WNS -9.302 ns is below -0.500 ns; incremental phys_opt cannot close that gap while structural actions remain; costs ~4 min, 0 min remain -- pick a refinement that fits",
+        "phys_opt_design_retime": "WNS -9.302 ns is below -0.500 ns; incremental phys_opt cannot close that gap while structural actions remain; costs ~4 min, 0 min remain -- pick a refinement that fits",
+        "pblock": "0 wins / 9 losses across previous runs on this design; costs ~2 min, 0 min remain -- pick a refinement that fits",
+        "rapidwright_optimize_cell_placement": "0 wins / 7 losses across previous runs on this design; costs ~2 min, 0 min remain -- pick a refinement that fits",
+        "qor_suggestions": "0 wins / 5 losses across previous runs on this design; costs ~2 min, 0 min remain -- pick a refinement that fits",
+        "place_design_explore": "directives with losing cross-run records on this design (never improved): AggressiveExplore (0/4) -- do not re-try these; this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won; large design, 60 of 58 budget minutes elapsed (past the 50% cutoff) with 1 full re-place(s) already spent; no further full re-places this run -- refine the best result instead",
+        "pblock_full_replace": "this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won; large design, 60 of 58 budget minutes elapsed (past the 50% cutoff) with 1 full re-place(s) already spent; no further full re-places this run -- refine the best result instead",
+        "route_explore": "costs ~13 min, 0 min remain -- pick a refinement that fits",
+        "run_recipe": "costs ~2 min, 0 min remain -- pick a refinement that fits"
+      },
+      "congestion_level": 1,
+      "cluster_clock_regions": [
+        "X4Y2",
+        "X5Y1",
+        "X5Y2"
+      ],
+      "llm_chosen_action": "qor_suggestions",
+      "structural_override_active": false,
+      "stuck_iterations": 2,
+      "consecutive_no_improvement": 2,
+      "exhausted_actions": [],
+      "validation_result": "ok",
+      "reprompt_count": 0,
+      "why_not_top_forbidden_action": "route_explore is the highest-ranked allowed action but already failed on the same targets due to insufficient_budget.",
+      "raw_response": "{\n  \"delay_class_acknowledged\": \"net_delay_bound\",\n  \"endpoint_type_acknowledged\": \"BRAM_CONTROL\",\n  \"chosen_action\": \"qor_suggestions\",\n  \"action_parameters\": {},\n  \"why_this_fits_delay_class\": \"net_pct=0.82388 confirms routing-bound paths; qor_suggestions is the bounded refinement previously identified when larger actions exceeded the (now negative) budget.\",\n  \"why_not_top_forbidden_action\": \"route_explore is the highest-ranked allowed action but already failed on the same targets due to insufficient_budget.\",\n  \"confidence\": 2\n}",
+      "cluster_count": 3,
+      "primary_diagnosis": "long_interconnect",
+      "diagnosis_reasoning_trace": [
+        "normalized 20 timing-path candidate(s) from current_target_candidates",
+        "clustered into 3 cluster(s) via shared start/end cell name",
+        "primary cluster 'cluster_0' contains the current worst path (11 member(s), 1 cell(s) shared across all members)",
+        "scored hypotheses: long_interconnect=0.90, excessive_fanout=0.80, placement_already_compact=0.25, localized_congestion=0.10",
+        "primary hypothesis: long_interconnect (confidence 0.90)",
+        "  + avg spread 79.0 tiles exceeds 30 on a net-delay-bound cluster (82% net delay) -- cells are genuinely far apart, not just congested.",
+        "  + cluster cells span 3 clock regions (['X4Y2', 'X5Y1', 'X5Y2']) -- crossings confirm real physical distance."
+      ],
+      "diagnosis_action_adjustment": null
+    }
+  ],
+  "started_at_epoch_s": 1785564710.9330063,
+  "llm_cost_usd": 0.06428525,
+  "benchmark_score": {
+    "formula": "alpha - (0.1*alpha)*beta - (0.1*alpha)*gamma",
+    "alpha_delta_fmax_mhz": 43.75091775426043,
+    "beta_openrouter_cost_usd": 0.06428525,
+    "gamma_runtime_hours": 1.0186841431591245,
+    "wall_clock_runtime_s": 3667.2629153728485,
+    "score": 39.01282726921181
+  }
+}
