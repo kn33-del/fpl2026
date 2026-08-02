@@ -767,25 +767,38 @@ def analyze_fabric_for_pblock(
     target_ff_count: int,
     target_dsp_count: int = 0,
     target_bram_count: int = 0,
-    device_name: Optional[str] = None
+    device_name: Optional[str] = None,
+    target_cell_names: Optional[list] = None,
 ) -> Dict[str, Any]:
     """
     Analyze the FPGA fabric to find the best contiguous region for a pblock.
-    
+
     Identifies regions that:
     1. Have enough resources (SLICEs, DSPs, BRAMs) for the target utilization
     2. Minimize crossing of delay-heavy columns (URAM, IO, etc.)
     3. Are as contiguous as possible
-    
+
     Args:
         target_lut_count: Required number of LUTs (1.5x current usage)
         target_ff_count: Required number of FFs (1.5x current usage)
         target_dsp_count: Required number of DSPs (1.5x current usage)
         target_bram_count: Required number of BRAMs (1.5x current usage)
         device_name: Device name (uses loaded design's device if omitted)
-        
+        target_cell_names: Cell names of the actual critical-path cluster this
+            pblock is meant to help. When provided, the region is anchored to
+            THEIR center of mass instead of the whole design's -- 2026-08-01
+            multi-candidate audit: the old whole-design centroid could sit far
+            from the actual target cluster (History(16): a recommended region
+            landed in CLOCKREGION_X5Y0:X5Y1 while the critical cluster was in
+            X1Y4/X2Y4), which is exactly the kind of unpredictable-looking
+            placement outcome a resource-density-only, cluster-blind search
+            produces.
+
     Returns:
-        Dictionary with recommended pblock ranges and analysis
+        Dictionary with recommended_region (best candidate, kept for
+        backward compatibility) and candidate_regions (that region plus two
+        alternates offset along rows, so a caller whose first choice fails
+        resource validation has real fallbacks instead of giving up).
     """
     if not _initialized:
         return {"error": "RapidWright not initialized. Call initialize_rapidwright first."}
@@ -816,21 +829,38 @@ def analyze_fabric_for_pblock(
         # Map tile columns/rows to resource counts and types
         column_info = {}  # col -> {good_tiles, bad_tiles, resources}
         row_info = {}     # row -> {good_tiles, bad_tiles, resources}
-        
+
+        # 2026-08-01 fix: hard-block tile COORDINATES, independent of the
+        # column/row good/bad aggregates below. column_info/row_info are 1D
+        # aggregates across the FULL orthogonal dimension (a column's tally
+        # sums every row, a row's tally sums every column), so a column that
+        # is mostly SLICE with one URAM288 tile still looks "good" in
+        # aggregate, and so does the row that URAM288 tile sits in -- their
+        # 2D INTERSECTION (the actual selected region) can still land
+        # squarely on that URAM288 tile even though neither 1D aggregate
+        # flagged it. fir_systolic_transposed: a 100-240 LUT/FF-only pblock
+        # request (target_dsp_count=target_bram_count=0) still got handed a
+        # region spanning a full URAM288 column, and Vivado's router hit a
+        # fatal '13HDPLException' trying to route around/through it. Track
+        # exact (col, row) positions here so build_region() below can check
+        # the ACTUAL selected box for unwanted hard blocks, not just the
+        # column/row it was carved from.
+        hard_block_tiles: list[tuple[int, int, str]] = []
+
         min_col, max_col = float('inf'), 0
         min_row, max_row = float('inf'), 0
-        
+
         for tile in tiles:
             tile_type = tile.getTileTypeEnum()
             col = tile.getColumn()
             row = tile.getRow()
-            
+
             # Track column/row bounds
             min_col = min(min_col, col)
             max_col = max(max_col, col)
             min_row = min(min_row, row)
             max_row = max(max_row, row)
-            
+
             # Initialize column/row info
             if col not in column_info:
                 column_info[col] = {
@@ -840,7 +870,7 @@ def analyze_fabric_for_pblock(
                     "dsp_sites": 0,
                     "bram_sites": 0
                 }
-            
+
             if row not in row_info:
                 row_info[row] = {
                     "good_tiles": 0,
@@ -849,23 +879,35 @@ def analyze_fabric_for_pblock(
                     "dsp_sites": 0,
                     "bram_sites": 0
                 }
-            
+
+            # Record hard-block tile coordinates unconditionally (even for
+            # tiles classified "bad" below, like URAM) -- this pass exists
+            # specifically to catch what the good/bad aggregates miss.
+            for site in (tile.getSites() or []):
+                site_type_str = str(site.getSiteTypeEnum())
+                if "DSP" in site_type_str:
+                    hard_block_tiles.append((col, row, "DSP"))
+                elif "RAMB" in site_type_str or "BRAM" in site_type_str:
+                    hard_block_tiles.append((col, row, "BRAM"))
+                elif "URAM" in site_type_str:
+                    hard_block_tiles.append((col, row, "BRAM"))
+
             # Categorize tile
             is_bad = is_delay_heavy_tile(tile_type)
-            
+
             if is_bad:
                 column_info[col]["bad_tiles"] += 1
                 row_info[row]["bad_tiles"] += 1
             else:
                 column_info[col]["good_tiles"] += 1
                 row_info[row]["good_tiles"] += 1
-                
+
                 # Count resources in this tile
                 sites = tile.getSites()
                 if sites:
                     for site in sites:
                         site_type_str = str(site.getSiteTypeEnum())
-                        
+
                         if "SLICE" in site_type_str:
                             # Each SLICE has ~4 LUTs and ~8 FFs
                             column_info[col]["slice_sites"] += 1
@@ -980,11 +1022,34 @@ def analyze_fabric_for_pblock(
         # Each SLICE column has ~300 slices, each SLICE has ~4 LUTs and ~8 FFs
         required_slices = max(target_lut_count // 4, target_ff_count // 8)
         
-        # Find actual placed cells to determine center of mass
+        # Find actual placed cells to determine center of mass. Prefer the
+        # caller's target_cell_names (the actual critical-path cluster this
+        # pblock is meant to help) -- falling back to every placed cell in
+        # the design is the bug this parameter fixes: on a large design the
+        # whole-design centroid can be tile-columns away from where the
+        # target cluster actually lives.
         center_of_mass_col = col_center
         center_of_mass_row = row_center
-        
-        if _current_design:
+
+        if target_cell_names and _current_design:
+            placed_cols = []
+            placed_rows = []
+            for cell_name in target_cell_names:
+                cell = _current_design.getCell(str(cell_name))
+                if cell is not None and cell.isPlaced():
+                    site = cell.getSite()
+                    if site:
+                        tile = site.getTile()
+                        placed_cols.append(tile.getColumn())
+                        placed_rows.append(tile.getRow())
+            if placed_cols:
+                center_of_mass_col = sum(placed_cols) // len(placed_cols)
+                center_of_mass_row = sum(placed_rows) // len(placed_rows)
+                logger.info(
+                    f"Center of mass from {len(placed_cols)} target cluster cell(s): "
+                    f"col={center_of_mass_col}, row={center_of_mass_row}"
+                )
+        elif _current_design:
             placed_cols = []
             placed_rows = []
             for cell in _current_design.getCells():
@@ -994,7 +1059,7 @@ def analyze_fabric_for_pblock(
                         tile = site.getTile()
                         placed_cols.append(tile.getColumn())
                         placed_rows.append(tile.getRow())
-            
+
             if placed_cols:
                 center_of_mass_col = sum(placed_cols) // len(placed_cols)
                 center_of_mass_row = sum(placed_rows) // len(placed_rows)
@@ -1030,26 +1095,99 @@ def analyze_fabric_for_pblock(
         # Grow from center of mass
         col_start_idx = next((i for i, c in enumerate(best_col_range) if c >= center_of_mass_col), len(best_col_range) // 2)
         row_start_idx = next((i for i, r in enumerate(best_row_range) if r >= center_of_mass_row), len(best_row_range) // 2)
-        
+
         # Expand symmetrically from center
         col_left_idx = max(0, col_start_idx - cols_needed // 2)
         col_right_idx = min(len(best_col_range) - 1, col_start_idx + cols_needed // 2)
-        row_bottom_idx = max(0, row_start_idx - rows_needed // 2)
-        row_top_idx = min(len(best_row_range) - 1, row_start_idx + rows_needed // 2)
-        
-        final_col_min = best_col_range[col_left_idx]
-        final_col_max = best_col_range[col_right_idx]
-        final_row_min = best_row_range[row_bottom_idx]
-        final_row_max = best_row_range[row_top_idx]
-        
-        # Count resources in selected region (approximate)
-        selected_cols = col_right_idx - col_left_idx + 1
-        selected_rows = row_top_idx - row_bottom_idx + 1
-        
-        est_slice_sites = int(best_col_resources["slices"] * selected_cols / len(best_col_range))
-        est_dsp_sites = int(best_col_resources["dsps"] * selected_cols / len(best_col_range))
-        est_bram_sites = int(best_col_resources["brams"] * selected_cols / len(best_col_range))
-        
+
+        def build_region(row_center_idx: int) -> dict:
+            """One candidate window: columns fixed (anchored on the best
+            contiguous resource-dense range), rows centered on
+            row_center_idx. Kept as a closure so the three offsets below
+            share identical resource-estimate math instead of copy-pasted
+            arithmetic that could drift out of sync."""
+            row_bottom_idx = max(0, row_center_idx - rows_needed // 2)
+            row_top_idx = min(len(best_row_range) - 1, row_center_idx + rows_needed // 2)
+            selected_cols = col_right_idx - col_left_idx + 1
+            selected_rows = row_top_idx - row_bottom_idx + 1
+            col_min_val = int(best_col_range[col_left_idx])
+            col_max_val = int(best_col_range[col_right_idx])
+            row_min_val = int(best_row_range[row_bottom_idx])
+            row_max_val = int(best_row_range[row_top_idx])
+            # How many hard-block tiles (DSP/BRAM/URAM) actually fall inside
+            # THIS box -- see hard_block_tiles above for why this can't be
+            # read off column_info/row_info's 1D aggregates.
+            hard_block_sites_in_region = sum(
+                1 for (tc, tr, _kind) in hard_block_tiles
+                if col_min_val <= tc <= col_max_val and row_min_val <= tr <= row_max_val
+            )
+            return {
+                "col_min": col_min_val,
+                "col_max": col_max_val,
+                "row_min": row_min_val,
+                "row_max": row_max_val,
+                "center_col": int(col_center),
+                "center_row": int(row_center),
+                "center_of_mass_col": int(center_of_mass_col),
+                "center_of_mass_row": int(center_of_mass_row),
+                "contiguous_columns": selected_cols,
+                "contiguous_rows": selected_rows,
+                "distance_to_centroid_rows": abs(best_row_range[row_bottom_idx + selected_rows // 2] - center_of_mass_row),
+                "hard_block_sites_in_region": hard_block_sites_in_region,
+                "estimated_resources": {
+                    "slice_sites": int(best_col_resources["slices"] * selected_cols / len(best_col_range)),
+                    "dsp_sites": int(best_col_resources["dsps"] * selected_cols / len(best_col_range)),
+                    "bram_sites": int(best_col_resources["brams"] * selected_cols / len(best_col_range)),
+                },
+            }
+
+        # 2026-08-01 multi-candidate audit: the old version returned exactly
+        # one region, centered on the (often mis-anchored) centroid, with no
+        # fallback if it didn't pan out. Offer that centered window plus two
+        # alternates shifted along rows by half the window height -- cheap
+        # (same tile scan, no extra Vivado/RapidWright calls), and gives a
+        # caller whose first pick fails resource validation somewhere to
+        # actually retry instead of giving up.
+        row_span = rows_needed // 2
+        candidate_row_centers = [
+            row_start_idx,
+            max(0, row_start_idx - row_span),
+            min(len(best_row_range) - 1, row_start_idx + row_span),
+        ]
+        seen_windows = set()
+        candidate_regions = []
+        for row_center_idx in candidate_row_centers:
+            region = build_region(row_center_idx)
+            key = (region["row_min"], region["row_max"])
+            if key in seen_windows:
+                continue
+            seen_windows.add(key)
+            candidate_regions.append(region)
+
+        # 2026-08-01 fix: when the caller didn't ask for any DSP/BRAM
+        # capacity, a region that happens to sweep in DSP/URAM/BRAM tiles is
+        # pure downside -- fir_systolic_transposed: a 100-240 LUT/FF-only
+        # pblock request got a region spanning a full URAM288 column purely
+        # because column_info/row_info's aggregates couldn't see it, and
+        # Vivado's router hit a fatal '13HDPLException' trying to route
+        # around/through it. Rank hard-block-free candidates first in that
+        # case; only fall back to proximity-only ranking when hard blocks
+        # were actually requested (they're then unavoidable and desired).
+        avoid_hard_blocks = not target_dsp_count and not target_bram_count
+        if avoid_hard_blocks:
+            candidate_regions.sort(key=lambda r: (r["hard_block_sites_in_region"], r["distance_to_centroid_rows"]))
+        else:
+            candidate_regions.sort(key=lambda r: r["distance_to_centroid_rows"])
+
+        best_region = candidate_regions[0]
+        final_col_min = best_region["col_min"]
+        final_col_max = best_region["col_max"]
+        final_row_min = best_region["row_min"]
+        final_row_max = best_region["row_max"]
+        est_slice_sites = best_region["estimated_resources"]["slice_sites"]
+        est_dsp_sites = best_region["estimated_resources"]["dsp_sites"]
+        est_bram_sites = best_region["estimated_resources"]["bram_sites"]
+
         return {
             "status": "success",
             "device": str(device.getName()),
@@ -1068,9 +1206,10 @@ def analyze_fabric_for_pblock(
                 "center_row": int(row_center),
                 "center_of_mass_col": int(center_of_mass_col),
                 "center_of_mass_row": int(center_of_mass_row),
-                "contiguous_columns": selected_cols,
-                "contiguous_rows": selected_rows
+                "contiguous_columns": best_region["contiguous_columns"],
+                "contiguous_rows": best_region["contiguous_rows"]
             },
+            "candidate_regions": candidate_regions,
             "estimated_resources": {
                 "slice_sites": est_slice_sites,
                 "dsp_sites": est_dsp_sites,

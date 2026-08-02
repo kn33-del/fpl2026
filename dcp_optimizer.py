@@ -176,6 +176,7 @@ RAPIDWRIGHT_PLACEMENT_ACTIONS = [
 VIVADO_INCREMENTAL_IMPLEMENTATION_ACTIONS = {
     "phys_opt_design",
     "phys_opt_design_retime",
+    "phys_opt_design_pin_swap",
     "replicate_register",
     "place_design_explore",
     "route_explore",
@@ -219,6 +220,7 @@ RECONSTRAIN_RELAX = 0.95
 PHYS_OPT_INCREMENTAL_ACTIONS = {
     "phys_opt_design",
     "phys_opt_design_retime",
+    "phys_opt_design_pin_swap",
     "replicate_register",
 }
 # Directive sweep for place_design_explore (item 3a: search within a recipe).
@@ -372,6 +374,7 @@ RUN_RECIPE_STAGE_WHITELIST = {
     "route_explore",
     "phys_opt_design",
     "phys_opt_design_retime",
+    "phys_opt_design_pin_swap",
     "pblock",
     # fanout_split removed (pipeline audit 2026-07-28): _execute_run_recipe
     # dispatches stages straight to execute_validated_action without
@@ -422,6 +425,13 @@ ACTION_PARAMETERS_SCHEMA = {
     "phys_opt_design_retime": {
         "directive": "str, phys_opt directive used with retiming enabled",
     },
+    "phys_opt_design_pin_swap": {
+        "directive": (
+            "str, phys_opt directive used with LUT pin-swapping enabled (-critical_pin_opt: "
+            "remaps logical to physical pins within a SLICE to reduce routing congestion on "
+            "critical nets, without moving any cells)"
+        ),
+    },
     "place_design_explore": {
         "directive": (
             "str, place_design directive; if omitted, the next untried entry of "
@@ -451,7 +461,7 @@ ACTION_PARAMETERS_SCHEMA = {
             "sequentially with a per-stage budget check (the recipe stops cleanly "
             "when the next stage no longer fits) and per-stage keep-best/rollback. "
             "Allowed stage actions: place_design_explore, route_explore, "
-            "phys_opt_design, phys_opt_design_retime, pblock"
+            "phys_opt_design, phys_opt_design_retime, phys_opt_design_pin_swap, pblock"
         ),
     },
 }
@@ -531,6 +541,12 @@ LEARN FROM THIS RUN'S RESULTS:
   phys_opt -> re-route) on the current placed+routed design. It is a bounded,
   keep-best-gated refinement: worth ONE attempt per run once plain
   phys_opt/route_explore refinement has stalled and before resorting to re-rolls.
+- phys_opt_design_pin_swap runs phys_opt_design with LUT pin-swapping enabled
+  (-critical_pin_opt): it remaps logical-to-physical pin assignments within a SLICE
+  to reduce routing congestion on critical nets, without moving any cell or changing
+  placement. Zero placement risk, so it is a safe refinement to try alongside
+  phys_opt_design/phys_opt_design_retime once those have stalled -- particularly on
+  net-delay-bound paths where the bottleneck is routing, not logic depth.
 - An action that regressed or failed on the same targets is worth less than its ranking.
 - When choosing a place directive, pick from place_directives_untried (in the timing
   state) rather than inventing one; place_directives_tried shows measured results.
@@ -544,9 +560,9 @@ BUDGET AWARENESS:
   and prefer refinements that fit over expensive re-rolls that will be refused.
 - run_recipe executes a full pipeline in one decision -- prefer it over issuing the
   same stages one iteration at a time. Stages are whitelisted (place_design_explore,
-  route_explore, phys_opt_design, phys_opt_design_retime, pblock), max 6;
-  each stage is measured and kept-or-rolled-back individually, and the recipe stops
-  cleanly when the next stage no longer fits the remaining budget.
+  route_explore, phys_opt_design, phys_opt_design_retime, phys_opt_design_pin_swap,
+  pblock), max 6; each stage is measured and kept-or-rolled-back individually, and
+  the recipe stops cleanly when the next stage no longer fits the remaining budget.
 """
 
 
@@ -1906,23 +1922,29 @@ class DCPOptimizer(DCPOptimizerBase):
             )
         before_wns = before_guard_wns
         directive = arguments.get("directive") or PHYS_OPT_PRIMARY_DIRECTIVE
-        primary = await self._run_phys_opt_tcl(directive=directive, retime=True)
+        # LUT pin-swapping (-critical_pin_opt): a real Vivado flag combinable
+        # with -directive/-retime in one raw Tcl command (the server's
+        # directive/bool-flag mutual exclusivity only applies to its own
+        # structured-argument tool -- _run_phys_opt_tcl builds the Tcl
+        # string directly, so that restriction doesn't apply here).
+        critical_pin_opt = bool(arguments.get("critical_pin_opt", False))
+        primary = await self._run_phys_opt_tcl(directive=directive, retime=True, critical_pin_opt=critical_pin_opt)
         if self._action_failure(primary, default_command="phys_opt_design").get("error_type") == "vivado_license_failure":
             return primary
         if self._vivado_output_has_error(primary) and directive != "Default":
             logger.warning("phys_opt directive %s unsupported or failed; falling back to Default", directive)
-            primary = await self._run_phys_opt_tcl(directive="Default", retime=True)
+            primary = await self._run_phys_opt_tcl(directive="Default", retime=True, critical_pin_opt=critical_pin_opt)
 
         after_wns = await self._get_current_wns()
         output = [primary]
         if before_wns is not None and after_wns is not None and after_wns <= before_wns:
-            secondary = await self._run_phys_opt_tcl(directive=PHYS_OPT_SECONDARY_DIRECTIVE, retime=True)
+            secondary = await self._run_phys_opt_tcl(directive=PHYS_OPT_SECONDARY_DIRECTIVE, retime=True, critical_pin_opt=critical_pin_opt)
             if self._action_failure(secondary, default_command="phys_opt_design").get("error_type") == "vivado_license_failure":
                 output.append(secondary)
                 return "\n\n".join(output)
             if self._vivado_output_has_error(secondary):
                 logger.warning("phys_opt directive %s unsupported or failed; falling back to Default", PHYS_OPT_SECONDARY_DIRECTIVE)
-                secondary = await self._run_phys_opt_tcl(directive="Default", retime=True)
+                secondary = await self._run_phys_opt_tcl(directive="Default", retime=True, critical_pin_opt=critical_pin_opt)
             output.append(secondary)
         return "\n\n".join(output)
 
@@ -1969,19 +1991,22 @@ class DCPOptimizer(DCPOptimizerBase):
         assert computed_args is not None
         return await self.call_tool("vivado_create_and_apply_pblock", computed_args, internal=True)
 
-    async def _run_phys_opt_tcl(self, directive: str = "Default", retime: bool = True) -> str:
+    async def _run_phys_opt_tcl(
+        self, directive: str = "Default", retime: bool = True, critical_pin_opt: bool = False
+    ) -> str:
         if retime and self.phys_opt_retime_supported is False:
             logger.info("Skipping phys_opt -retime because a previous retime attempt was rejected.")
             retime = False
         retime_flag = " -retime" if retime else ""
-        command = f"phys_opt_design -directive {directive}{retime_flag}"
+        pin_swap_flag = " -critical_pin_opt" if critical_pin_opt else ""
+        command = f"phys_opt_design -directive {directive}{retime_flag}{pin_swap_flag}"
         result = await self.call_tool("vivado_run_tcl", {"command": command, "timeout": self._implementation_timeout_s(kind="phys_opt")}, internal=True)
         if self._action_failure(result, default_command=command).get("error_type") == "vivado_license_failure":
             return result
         if self._vivado_output_has_error(result) and retime:
             self.phys_opt_retime_supported = False
             logger.warning("phys_opt retime failed with directive %s; retrying without -retime", directive)
-            command = f"phys_opt_design -directive {directive}"
+            command = f"phys_opt_design -directive {directive}{pin_swap_flag}"
             result = await self.call_tool("vivado_run_tcl", {"command": command, "timeout": self._implementation_timeout_s(kind="phys_opt")}, internal=True)
         elif retime:
             self.phys_opt_retime_supported = True
@@ -3359,6 +3384,7 @@ class DCPOptimizer(DCPOptimizerBase):
             "replicate_register",
             "phys_opt_design",
             "phys_opt_design_retime",
+            "phys_opt_design_pin_swap",
             "qor_suggestions",
             "fanout_split",
             "lut_opt",
@@ -3392,6 +3418,7 @@ class DCPOptimizer(DCPOptimizerBase):
                 *RAPIDWRIGHT_STRUCTURAL_ACTIONS,  # includes place_design_explore
                 "phys_opt_design_retime",
                 "phys_opt_design",
+                "phys_opt_design_pin_swap",
                 "route_explore",
                 "run_recipe",
                 "replicate_register",
@@ -4135,161 +4162,208 @@ class DCPOptimizer(DCPOptimizerBase):
         overlap_attempt = 0
         size_attempt = 0
 
+        # Cluster anchoring (2026-08-01 multi-candidate audit): pass the
+        # actual candidate-path cells so the fabric search centers on where
+        # THIS cluster lives, not the whole design's centroid -- the same
+        # startpoint/endpoint-to-cell-name extraction used elsewhere
+        # (_bram_dsp_bottleneck_evidence).
+        target_cell_names: list[str] = []
+        for candidate in self.current_target_candidates:
+            for key in ("startpoint", "endpoint"):
+                name = str(candidate.get(key) or "")
+                if "/" in name:
+                    name = name.rsplit("/", 1)[0]
+                if name and name not in target_cell_names:
+                    target_cell_names.append(name)
+
         while True:
             analysis_args = {
                 "target_lut_count": target_lut_count,
                 "target_ff_count": target_ff_count,
                 "target_dsp_count": target_dsp_count,
                 "target_bram_count": target_bram_count,
+                "target_cell_names": target_cell_names,
             }
             fabric_text = await self.call_tool("rapidwright_analyze_fabric_for_pblock", analysis_args, internal=True)
             fabric = self._parse_json_result(fabric_text)
             if self._result_has_error(fabric):
                 return None, f"RapidWright fabric analysis failed: {fabric.get('error') or fabric_text[:300]}"
 
-            region = fabric.get("recommended_region") or {}
             required_region_keys = ("col_min", "col_max", "row_min", "row_max")
-            if not all(key in region for key in required_region_keys):
+            region_candidates = [
+                candidate for candidate in (fabric.get("candidate_regions") or [fabric.get("recommended_region")])
+                if candidate and all(key in candidate for key in required_region_keys)
+            ]
+            if not region_candidates:
                 return None, f"RapidWright fabric analysis did not return recommended_region: {fabric_text[:300]}"
 
-            # --- Fix #2a, reworked (Fix #11): a region overlapping a pblock
-            # applied EARLIER this run used to put pblock on a 20-iteration
-            # cooldown ("withholding pblock"). Run history showed that once the
-            # first pblock landed on the timing-critical region, every future
-            # recommendation overlapped it, so the pblock family was
-            # effectively dead for the rest of the run -- 25+ consecutive
-            # withheld attempts while the design never changed. The critical
-            # region is critical precisely because that's where the failing
-            # paths live; refusing to ever touch it again is a deadlock, not a
-            # safety feature. Instead, delete the stale overlapping pblock
-            # from the live design (its cells keep their current placement)
-            # and proceed with the newly recommended region. ---
-            overlap = self._find_pblock_overlap(region)
-            while overlap is not None:
-                overlap_attempt += 1
-                stale_name = str(overlap.get("pblock_name") or "")
-                if stale_name:
-                    logger.warning(
-                        "pblock region overlap: recommended region %s collides with "
-                        "already-applied pblock %s (iteration %s); deleting the stale "
-                        "pblock and proceeding with the new region instead of "
-                        "withholding the pblock action.",
-                        region, stale_name, overlap.get("iteration"),
-                    )
-                    await self.call_tool(
-                        "vivado_run_tcl",
-                        {
-                            "command": (
-                                f"if {{[llength [get_pblocks -quiet {stale_name}]] > 0}} "
-                                f"{{delete_pblocks [get_pblocks {stale_name}]}}"
-                            )
-                        },
-                        internal=True,
-                    )
-                self.applied_pblock_regions = [
-                    applied for applied in self.applied_pblock_regions if applied is not overlap
-                ]
-                self.pblock_region_cooldown_until_iter = -1
+            # Try every candidate region from this fabric scan at the CURRENT
+            # target sizing before paying for a whole new RapidWright call --
+            # 2026-08-01: previously only the single top recommendation was
+            # ever tried, so a region that failed (overlap, clock-region miss
+            # resolved but still over-utilized) went straight to shrinking the
+            # target instead of just trying the next-best window from the
+            # same scan. Different windows can have different available
+            # supply even at identical demand, so this applies to BRAM/DSP
+            # overshoot too, not just LUT/FF.
+            ranges = None
+            range_payload = None
+            failing_label = None
+            utilization_error = None
+            for region in region_candidates:
+                # --- Fix #2a, reworked (Fix #11): a region overlapping a pblock
+                # applied EARLIER this run used to put pblock on a 20-iteration
+                # cooldown ("withholding pblock"). Run history showed that once the
+                # first pblock landed on the timing-critical region, every future
+                # recommendation overlapped it, so the pblock family was
+                # effectively dead for the rest of the run -- 25+ consecutive
+                # withheld attempts while the design never changed. The critical
+                # region is critical precisely because that's where the failing
+                # paths live; refusing to ever touch it again is a deadlock, not a
+                # safety feature. Instead, delete the stale overlapping pblock
+                # from the live design (its cells keep their current placement)
+                # and proceed with the newly recommended region. ---
                 overlap = self._find_pblock_overlap(region)
+                while overlap is not None:
+                    overlap_attempt += 1
+                    stale_name = str(overlap.get("pblock_name") or "")
+                    if stale_name:
+                        logger.warning(
+                            "pblock region overlap: recommended region %s collides with "
+                            "already-applied pblock %s (iteration %s); deleting the stale "
+                            "pblock and proceeding with the new region instead of "
+                            "withholding the pblock action.",
+                            region, stale_name, overlap.get("iteration"),
+                        )
+                        await self.call_tool(
+                            "vivado_run_tcl",
+                            {
+                                "command": (
+                                    f"if {{[llength [get_pblocks -quiet {stale_name}]] > 0}} "
+                                    f"{{delete_pblocks [get_pblocks {stale_name}]}}"
+                                )
+                            },
+                            internal=True,
+                        )
+                    self.applied_pblock_regions = [
+                        applied for applied in self.applied_pblock_regions if applied is not overlap
+                    ]
+                    self.pblock_region_cooldown_until_iter = -1
+                    overlap = self._find_pblock_overlap(region)
 
-            convert_args = {
-                "col_min": int(region["col_min"]),
-                "col_max": int(region["col_max"]),
-                "row_min": int(region["row_min"]),
-                "row_max": int(region["row_max"]),
-                "use_clock_regions": bool(params.get("use_clock_regions", False)),
-            }
-            range_text = await self.call_tool("rapidwright_convert_fabric_region_to_pblock", convert_args, internal=True)
-            range_payload = self._parse_json_result(range_text)
-            if self._result_has_error(range_payload):
-                return None, f"RapidWright pblock range conversion failed: {range_payload.get('error') or range_text[:300]}"
-
-            ranges = range_payload.get("pblock_ranges")
-            if not ranges:
-                return None, f"RapidWright pblock range conversion returned no pblock_ranges: {range_text[:300]}"
-
-            # Run 20260712 lesson (iter 3, WNS -0.978 -> -3.682): the fabric
-            # analyzer recommends a region with FREE RESOURCES, which is not
-            # necessarily anywhere near the critical cells. Converted to
-            # clock-region form that produced CLOCKREGION_X5Y0:X5Y1 while the
-            # critical cluster sits in X1Y4/X2Y4 -- constraining the cells
-            # into it dragged them across the die. We now measure the
-            # cluster's clock regions (item 4), so require the computed
-            # clock-region range to actually contain at least one of them.
-            cluster_regions = {
-                str(region)
-                for region in (timing_context.get("cluster_clock_regions") or [])
-                if region
-            }
-            if (
-                "CLOCKREGION" in str(ranges)
-                and cluster_regions
-                and not self._clockregion_ranges_cover(str(ranges), cluster_regions)
-            ):
-                # History(16) lesson: failing this check outright burned an
-                # iteration and left recovery to the LLM (which never
-                # retried). The SLICE-range conversion of the SAME fabric
-                # region is what produced the old run's improving pblock, so
-                # fall back to it automatically instead of failing.
-                logger.warning(
-                    "Clock-region pblock %s misses the critical cluster's regions %s; "
-                    "auto-falling back to site-range conversion of the same fabric region.",
-                    ranges, sorted(cluster_regions),
-                )
-                convert_args["use_clock_regions"] = False
-                params["use_clock_regions"] = False
-                range_text = await self.call_tool(
-                    "rapidwright_convert_fabric_region_to_pblock", convert_args, internal=True
-                )
+                convert_args = {
+                    "col_min": int(region["col_min"]),
+                    "col_max": int(region["col_max"]),
+                    "row_min": int(region["row_min"]),
+                    "row_max": int(region["row_max"]),
+                    "use_clock_regions": bool(params.get("use_clock_regions", False)),
+                }
+                range_text = await self.call_tool("rapidwright_convert_fabric_region_to_pblock", convert_args, internal=True)
                 range_payload = self._parse_json_result(range_text)
                 if self._result_has_error(range_payload):
-                    return None, (
-                        f"site-range fallback conversion failed after the clock-region "
-                        f"result missed the cluster: {range_payload.get('error') or range_text[:300]}"
-                    )
+                    return None, f"RapidWright pblock range conversion failed: {range_payload.get('error') or range_text[:300]}"
+
                 ranges = range_payload.get("pblock_ranges")
                 if not ranges:
-                    return None, (
-                        "site-range fallback conversion returned no pblock_ranges after "
-                        "the clock-region result missed the cluster."
+                    return None, f"RapidWright pblock range conversion returned no pblock_ranges: {range_text[:300]}"
+
+                # Run 20260712 lesson (iter 3, WNS -0.978 -> -3.682): the fabric
+                # analyzer recommends a region with FREE RESOURCES, which is not
+                # necessarily anywhere near the critical cells. Converted to
+                # clock-region form that produced CLOCKREGION_X5Y0:X5Y1 while the
+                # critical cluster sits in X1Y4/X2Y4 -- constraining the cells
+                # into it dragged them across the die. We now measure the
+                # cluster's clock regions (item 4), so require the computed
+                # clock-region range to actually contain at least one of them.
+                cluster_regions = {
+                    str(cr)
+                    for cr in (timing_context.get("cluster_clock_regions") or [])
+                    if cr
+                }
+                if (
+                    "CLOCKREGION" in str(ranges)
+                    and cluster_regions
+                    and not self._clockregion_ranges_cover(str(ranges), cluster_regions)
+                ):
+                    # History(16) lesson: failing this check outright burned an
+                    # iteration and left recovery to the LLM (which never
+                    # retried). The SLICE-range conversion of the SAME fabric
+                    # region is what produced the old run's improving pblock, so
+                    # fall back to it automatically instead of failing.
+                    logger.warning(
+                        "Clock-region pblock %s misses the critical cluster's regions %s; "
+                        "auto-falling back to site-range conversion of the same fabric region.",
+                        ranges, sorted(cluster_regions),
                     )
+                    convert_args["use_clock_regions"] = False
+                    params["use_clock_regions"] = False
+                    range_text = await self.call_tool(
+                        "rapidwright_convert_fabric_region_to_pblock", convert_args, internal=True
+                    )
+                    range_payload = self._parse_json_result(range_text)
+                    if self._result_has_error(range_payload):
+                        return None, (
+                            f"site-range fallback conversion failed after the clock-region "
+                            f"result missed the cluster: {range_payload.get('error') or range_text[:300]}"
+                        )
+                    ranges = range_payload.get("pblock_ranges")
+                    if not ranges:
+                        return None, (
+                            "site-range fallback conversion returned no pblock_ranges after "
+                            "the clock-region result missed the cluster."
+                        )
 
-            # --- Fix #2b: reject regions that would be packed too densely. ---
-            site_counts = range_payload.get("site_counts") or {}
-            utilization_failure = self._check_pblock_utilization(
-                site_counts, target_lut_count, target_ff_count,
-                target_dsp_count, target_bram_count,
-            )
-            if not utilization_failure:
-                last_error = None
-                break
+                # --- Fix #2b: reject regions that would be packed too densely. ---
+                site_counts = range_payload.get("site_counts") or {}
+                utilization_failure = self._check_pblock_utilization(
+                    site_counts, target_lut_count, target_ff_count,
+                    target_dsp_count, target_bram_count,
+                )
+                if not utilization_failure:
+                    last_error = None
+                    break  # this candidate works -- stop trying more
 
-            failing_label, utilization_error = utilization_failure
-            last_error = utilization_error
+                failing_label, utilization_error = utilization_failure
+                last_error = utilization_error
+                # Try the next candidate region at the SAME target size
+                # before shrinking anything.
+            else:
+                # No `break` fired: every candidate region failed utilization.
+                ranges = None
+
+            if ranges is not None and not utilization_failure:
+                break  # a candidate worked -- exit the sizing-retry loop too
+
+            # Every candidate region tried at this sizing was over-utilized.
             # Pipeline audit 2026-07-28: BRAM/DSP demand comes from actual
             # hard-block cells that must be in the region
             # (self.pblock_hard_block_demand), not a resizable estimate like
-            # LUT/FF -- shrinking target_lut_count/target_ff_count below has
-            # zero effect on it, so retrying on a BRAM/DSP overshoot just
+            # LUT/FF -- shrinking target_lut_count/target_ff_count has zero
+            # effect on it, so retrying with a smaller LUT/FF target just
             # repeats the identical failure for free (boom_soc: "projected
             # BRAM utilization 464%... gave up after 4 sizing attempts", all
-            # 4 identical since none of them touched the BRAM target). Fail
-            # immediately instead of burning the remaining sizing attempts.
+            # 4 identical since none of them touched the BRAM target).
+            # Multiple candidate windows were already tried above (different
+            # locations can have different DSP/BRAM supply); if ALL of them
+            # failed on BRAM/DSP, no amount of LUT/FF shrinking will help --
+            # fail immediately instead of burning the remaining sizing attempts.
             if failing_label in ("BRAM", "DSP"):
                 last_error = (
                     f"{utilization_error} This is hard-block demand from cells that must "
                     f"be in the region, not a resizable estimate -- retrying with a smaller "
-                    f"LUT/FF target cannot fix it; reduce the number of {failing_label} "
-                    f"cells being clustered instead."
+                    f"LUT/FF target cannot fix it, and none of the {len(region_candidates)} "
+                    f"candidate region(s) tried had enough {failing_label} capacity; reduce "
+                    f"the number of {failing_label} cells being clustered instead."
                 )
                 break
 
             if size_attempt < PBLOCK_SIZE_SHRINK_MAX_RETRIES:
                 size_attempt += 1
                 logger.warning(
-                    "pblock sizing attempt %d over-utilized (%s); shrinking target "
-                    "lut/ff counts by %.0f%% and retrying.",
-                    size_attempt, utilization_error, 100 * (1 - PBLOCK_SIZE_SHRINK_FACTOR),
+                    "pblock sizing attempt %d over-utilized on all %d candidate region(s) (%s); "
+                    "shrinking target lut/ff counts by %.0f%% and retrying.",
+                    size_attempt, len(region_candidates), utilization_error,
+                    100 * (1 - PBLOCK_SIZE_SHRINK_FACTOR),
                 )
                 target_lut_count = max(int(target_lut_count * PBLOCK_SIZE_SHRINK_FACTOR), PBLOCK_MIN_TARGET_LUT_COUNT // 4)
                 target_ff_count = max(int(target_ff_count * PBLOCK_SIZE_SHRINK_FACTOR), PBLOCK_MIN_TARGET_FF_COUNT // 4)
@@ -5725,7 +5799,7 @@ class DCPOptimizer(DCPOptimizerBase):
             # Item 4: count every full re-place dispatch (warm start and
             # run_recipe stages included) toward the large-design cap.
             self.full_replace_attempts += 1
-        if action in {"phys_opt_design", "phys_opt_design_retime"}:
+        if action in {"phys_opt_design", "phys_opt_design_retime", "phys_opt_design_pin_swap"}:
             if not await self._check_implementation_license():
                 return self._failure_json(
                     "vivado_license_failure",
@@ -5735,7 +5809,22 @@ class DCPOptimizer(DCPOptimizerBase):
             self.last_recipe = action
             self.last_targets = [timing_context.get("delay_class", "timing_path")]
             self.last_batch_size = 1
-            return await self.call_tool("vivado_phys_opt_design", params)
+            call_params = dict(params)
+            if action == "phys_opt_design_pin_swap":
+                # LUT pin-swapping (remap logical to physical pins within a
+                # SLICE to reduce routing congestion on critical nets) --
+                # Vivado's -critical_pin_opt flag, registered in the MCP
+                # schema (VivadoMCP/vivado_mcp_server.py) but never
+                # exercised until now: every existing phys_opt call goes
+                # through _run_phys_opt_with_policy, which always builds a
+                # -directive-based Tcl command, and the server treats
+                # directive/bool-flags as mutually exclusive. Naming this as
+                # its own action (mirroring phys_opt_design_retime) forces
+                # critical_pin_opt=True through unconditionally, giving it
+                # its own trackable win/loss record instead of being a
+                # silent, invisible parameter on phys_opt_design.
+                call_params["critical_pin_opt"] = True
+            return await self.call_tool("vivado_phys_opt_design", call_params)
         if action == "place_design_explore":
             # History(16) forensics: Vivado's place_design is INCREMENTAL over
             # an existing placement -- on a fully placed design it is a
