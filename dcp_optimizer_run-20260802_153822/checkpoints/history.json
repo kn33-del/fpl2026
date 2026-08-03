@@ -1,0 +1,492 @@
+{
+  "input_dcp": "/home/fpl2026/fpl26_contest_benchmarks/corescore_500_mod_2025.1.dcp",
+  "clock_name": "clk_fpl26contest",
+  "clock_period_ns": 1.667,
+  "baseline_wns": -1.238,
+  "baseline_fmax_mhz": 344.23407917383815,
+  "best_wns": -1.219,
+  "best_fmax_mhz": 346.5003465003465,
+  "best_checkpoint": "/home/fpl2026/dcp_optimizer_run-20260802_153822/checkpoints/iter_001.dcp",
+  "current_iter": 4,
+  "stall_count": 3,
+  "cells_blacklisted": [],
+  "nets_blacklisted": [],
+  "iterations": [
+    {
+      "iter": 1,
+      "recipe": "pblock",
+      "batch_size": 1,
+      "targets": [
+        "pblock_net_delay_001",
+        "SLICE_X79Y137:SLICE_X85Y189 DSP48E2_X9Y56:DSP48E2_X9Y75 RAMB18_X5Y56:RAMB18_X6Y75 RAMB36_X5Y28:RAMB36_X6Y37"
+      ],
+      "wns_before": -1.238,
+      "wns_after": -1.219,
+      "fmax_before": 344.23407917383815,
+      "fmax_after": 346.5003465003465,
+      "delta_fmax": 2.2662673265083413,
+      "vivado_runtime_s": 409.29181480407715,
+      "status": "improved",
+      "checkpoint": "/home/fpl2026/dcp_optimizer_run-20260802_153822/checkpoints/iter_001.dcp",
+      "target_tier": "tier1_violating_paths",
+      "target_candidate_count": 20,
+      "path_delay_classification": "mixed",
+      "path_delay_breakdown": {
+        "logic_pct": 0.48511000000000004,
+        "net_pct": 0.51489,
+        "logic_delay_ns": 1.203,
+        "net_delay_ns": 1.277
+      },
+      "clock_period_ns": 1.667,
+      "achieved_fmax_mhz": 346.5003465003465,
+      "no_improvement_count": 0,
+      "consecutive_no_improvement": 0,
+      "action_failure_memory": {},
+      "action_failure_counts": {},
+      "delay_class": "mixed",
+      "endpoint_type": "BRAM_CONTROL",
+      "allowed_actions": [
+        "pblock",
+        "pblock_full_replace",
+        "place_design_explore",
+        "phys_opt_design_retime",
+        "phys_opt_design_pin_swap",
+        "run_recipe",
+        "replicate_register",
+        "lut_opt",
+        "route_explore",
+        "phys_opt_design"
+      ],
+      "forbidden_actions": [
+        "logic_restructure"
+      ],
+      "action_guidance": {
+        "fanout_split": "endpoint is a BRAM_CONTROL pin; routing to a hard-block control pin needs physical proximity, not net splitting",
+        "rapidwright_optimize_cell_placement": "0 wins / 4 losses across previous runs on this design",
+        "route_explore": "0 wins / 5 losses across previous runs on this design",
+        "phys_opt_design": "0 wins / 4 losses across previous runs on this design"
+      },
+      "congestion_level": null,
+      "cluster_clock_regions": [
+        "X5Y2"
+      ],
+      "llm_chosen_action": "pblock",
+      "structural_override_active": false,
+      "stuck_iterations": 0,
+      "exhausted_actions": [],
+      "validation_result": "ok",
+      "reprompt_count": 0,
+      "why_not_top_forbidden_action": "pblock_full_replace was skipped because a targeted single-cluster pblock on the 17 identified clusters is lower-risk than a whole-design re-place that discards the current winning placement.",
+      "raw_response": "{\n  \"delay_class_acknowledged\": \"mixed\",\n  \"endpoint_type_acknowledged\": \"BRAM_CONTROL\",\n  \"chosen_action\": \"pblock\",\n  \"action_parameters\": {\n    \"target_lut_count\": 800,\n    \"target_ff_count\": 400,\n    \"use_clock_regions\": false\n  },\n  \"why_this_fits_delay_class\": \"mixed delay with net_pct=0.51489 plus avg_tile_spread=232 and BRAM_CONTROL endpoint requires physical clustering via pblock to cut net delay on spread-out paths.\",\n  \"why_not_top_forbidden_action\": \"pblock_full_replace was skipped because a targeted single-cluster pblock on the 17 identified clusters is lower-risk than a whole-design re-place that discards the current winning placement.\",\n  \"confidence\": 4\n}",
+      "cluster_count": 17,
+      "primary_diagnosis": "localized_congestion",
+      "diagnosis_reasoning_trace": [
+        "normalized 20 timing-path candidate(s) from current_target_candidates",
+        "clustered into 17 cluster(s) via shared start/end cell name",
+        "primary cluster 'cluster_8' does NOT contain the current worst path -- reassigned to the largest non-trivial cluster in the pool since the worst path's own cluster was a singleton (4 member(s), 1 cell(s) shared across all members)",
+        "top two hypotheses (localized_congestion=0.50, placement_already_compact=0.45) within 0.15 of each other and neither hit the 0.75 floor -- fetching rapidwright_analyze_net_detour as tie-break evidence.",
+        "scored hypotheses: localized_congestion=0.50, placement_already_compact=0.45, excessive_fanout=0.40, long_interconnect=0.15",
+        "primary hypothesis: localized_congestion (confidence 0.50)"
+      ],
+      "diagnosis_action_adjustment": null,
+      "rapidwright_edit_summary": {
+        "action": "pblock",
+        "cells_moved": 8,
+        "nets_affected": 0,
+        "pblock_ranges": "SLICE_X0Y0:SLICE_X280Y1885 DSP48E2_X9Y0:DSP48E2_X9Y694 RAMB18_X0Y0:RAMB18_X38Y694 RAMB36_X0Y0:RAMB36_X38Y330",
+        "fabric_region": {
+          "col_min": 320,
+          "col_max": 340,
+          "row_min": 114,
+          "row_max": 168,
+          "center_col": 334,
+          "center_row": 155,
+          "center_of_mass_col": 330,
+          "center_of_mass_row": 141,
+          "contiguous_columns": 21,
+          "contiguous_rows": 55,
+          "distance_to_centroid_rows": 0,
+          "hard_block_sites_in_region": 80,
+          "estimated_resources": {
+            "slice_sites": 1565,
+            "dsp_sites": 71,
+            "bram_sites": 67
+          }
+        },
+        "target_lut_count": 800,
+        "target_ff_count": 400,
+        "site_counts": {
+          "SLICE": 371,
+          "DSP48E2": 20,
+          "RAMB18": 40,
+          "RAMB36": 20,
+          "URAM288": 0
+        },
+        "changed_design": true,
+        "pblock_name": "pblock_net_delay_001",
+        "apply_to": "current_design",
+        "is_soft": false,
+        "cells_matched": 8,
+        "cells_assigned": 8,
+        "resource_validation": {
+          "is_valid": true,
+          "primitive_count": 252739,
+          "cell_count": 8,
+          "resource_issues": {},
+          "errors": [],
+          "drc_output": "Copyright 1986-2022 Xilinx, Inc. All Rights Reserved. Copyright 2022-2025 Advanced Micro Devices, Inc. All Rights Reserved.\n---------------------------------------------------------------------------------------------------------------------------------------------\n| Tool Version : Vivado v.2025.1 (lin64) Build 6140274 Wed May 21 22:58:25 MDT 2025\n| Date         : Sun Aug  2 15:40:53 2026\n| Host         : 35ns7cfvpwajp9e9nht0kyrsvp running 64-bit Ubuntu 24.04.4 LTS\n| Command      : report_drc -checks {UTLZ-1 UTLZ-2} -file /home/fpl2026/VivadoMCP/drc_check_pblock_net_delay_001.rpt\n| Design       : corescore_vu3p\n| Device       : xcvu3p-ffvc1517-2-e\n| Speed File   : -2\n| Design State : ignored\n---------------------------------------------------------------------------------------------------------------------------------------------\n\nReport DRC\n\nTable of Contents\n-----------------\n1. REPORT SUMMARY\n2. REPORT DETAILS\n\n1. REPORT SUMMARY\n-----------------\n            Netlist: netlist\n      "
+        }
+      }
+    },
+    {
+      "iter": 2,
+      "recipe": "vivado_phys_opt",
+      "batch_size": 1,
+      "targets": [
+        "critical_cell_opt"
+      ],
+      "wns_before": -1.219,
+      "wns_after": -1.219,
+      "fmax_before": 346.5003465003465,
+      "fmax_after": 346.5003465003465,
+      "delta_fmax": 0.0,
+      "vivado_runtime_s": 298.1913888454437,
+      "status": "no_improvement",
+      "checkpoint": "/home/fpl2026/dcp_optimizer_run-20260802_153822/checkpoints/iter_002.dcp",
+      "target_tier": "tier1_violating_paths",
+      "target_candidate_count": 20,
+      "path_delay_classification": "mixed",
+      "path_delay_breakdown": {
+        "logic_pct": 0.4888,
+        "net_pct": 0.5112,
+        "logic_delay_ns": 1.203,
+        "net_delay_ns": 1.258
+      },
+      "clock_period_ns": 1.667,
+      "achieved_fmax_mhz": 346.5003465003465,
+      "no_improvement_count": 1,
+      "consecutive_no_improvement": 0,
+      "action_failure_memory": {},
+      "action_failure_counts": {},
+      "delay_class": "mixed",
+      "endpoint_type": "BRAM_CONTROL",
+      "allowed_actions": [
+        "replicate_register",
+        "phys_opt_design_retime",
+        "phys_opt_design_pin_swap",
+        "run_recipe",
+        "lut_opt",
+        "route_explore",
+        "phys_opt_design",
+        "pblock_full_replace",
+        "place_design_explore",
+        "pblock"
+      ],
+      "forbidden_actions": [
+        "logic_restructure"
+      ],
+      "action_guidance": {
+        "fanout_split": "endpoint is a BRAM_CONTROL pin; routing to a hard-block control pin needs physical proximity, not net splitting",
+        "rapidwright_optimize_cell_placement": "0 wins / 4 losses across previous runs on this design",
+        "route_explore": "0 wins / 5 losses across previous runs on this design",
+        "phys_opt_design": "0 wins / 4 losses across previous runs on this design",
+        "pblock_full_replace": "this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won",
+        "place_design_explore": "this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won",
+        "pblock": "excessive_fanout (confidence 0.80) argues against this action: 1 cell(s) (['corescorecore/core_108/serving/ram/mem_reg_bram_0']) recur across 9/20 extracted candidates (45%) -- consistent with a shared high-fanout driver rather than independent placement issues."
+      },
+      "congestion_level": 0,
+      "cluster_clock_regions": [
+        "X3Y0",
+        "X4Y0"
+      ],
+      "llm_chosen_action": "replicate_register",
+      "structural_override_active": false,
+      "stuck_iterations": 0,
+      "exhausted_actions": [],
+      "validation_result": "ok",
+      "reprompt_count": 0,
+      "why_not_top_forbidden_action": "pblock was not chosen because the new excessive_fanout diagnosis (0.80) and prior pblock history (only marginal WNS gain) indicate replication on the shared driver cell is the higher-leverage next step.",
+      "raw_response": "{\n  \"delay_class_acknowledged\": \"mixed\",\n  \"endpoint_type_acknowledged\": \"BRAM_CONTROL\",\n  \"chosen_action\": \"replicate_register\",\n  \"action_parameters\": {},\n  \"why_this_fits_delay_class\": \"mixed delay (net_pct=0.5112) stems from excessive_fanout on one recurring driver cell across 45% of candidates, so register replication directly reduces net delay on the shared BRAM_CONTROL paths.\",\n  \"why_not_top_forbidden_action\": \"pblock was not chosen because the new excessive_fanout diagnosis (0.80) and prior pblock history (only marginal WNS gain) indicate replication on the shared driver cell is the higher-leverage next step.\",\n  \"confidence\": 4\n}",
+      "cluster_count": 11,
+      "primary_diagnosis": "excessive_fanout",
+      "diagnosis_reasoning_trace": [
+        "normalized 20 timing-path candidate(s) from current_target_candidates",
+        "clustered into 11 cluster(s) via shared start/end cell name",
+        "primary cluster 'cluster_0' contains the current worst path (9 member(s), 1 cell(s) shared across all members)",
+        "outcome history: localized_congestion's own prescriptions scored 1 win(s) / 0 loss(es) this run -> confidence +0.08",
+        "scored hypotheses: excessive_fanout=0.80, long_interconnect=0.50, placement_already_compact=0.25, localized_congestion=0.18",
+        "primary hypothesis: excessive_fanout (confidence 0.80)",
+        "  + 1 cell(s) (['corescorecore/core_108/serving/ram/mem_reg_bram_0']) recur across 9/20 extracted candidates (45%) -- consistent with a shared high-fanout driver rather than independent placement issues."
+      ],
+      "diagnosis_action_adjustment": "excessive_fanout (confidence 0.80) demoted ['pblock']; excessive_fanout (confidence 0.80) prioritized ['replicate_register']"
+    },
+    {
+      "iter": 3,
+      "recipe": "pblock",
+      "batch_size": 1,
+      "targets": [
+        "pblock_net_delay_003",
+        "SLICE_X79Y137:SLICE_X85Y189 DSP48E2_X9Y56:DSP48E2_X9Y75 RAMB18_X5Y56:RAMB18_X6Y75 RAMB36_X5Y28:RAMB36_X6Y37"
+      ],
+      "wns_before": -1.219,
+      "wns_after": -1.219,
+      "fmax_before": 346.5003465003465,
+      "fmax_after": 346.5003465003465,
+      "delta_fmax": 0.0,
+      "vivado_runtime_s": 266.59008049964905,
+      "status": "no_improvement",
+      "checkpoint": "/home/fpl2026/dcp_optimizer_run-20260802_153822/checkpoints/iter_003.dcp",
+      "target_tier": "tier1_violating_paths",
+      "target_candidate_count": 20,
+      "path_delay_classification": "mixed",
+      "path_delay_breakdown": {
+        "logic_pct": 0.4888,
+        "net_pct": 0.5112,
+        "logic_delay_ns": 1.203,
+        "net_delay_ns": 1.258
+      },
+      "clock_period_ns": 1.667,
+      "achieved_fmax_mhz": 346.5003465003465,
+      "no_improvement_count": 2,
+      "consecutive_no_improvement": 1,
+      "action_failure_memory": {
+        "replicate_register": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "critical_cell_opt"
+          ],
+          "last_failed_iter": 2,
+          "failed_on_current_targets": true
+        }
+      },
+      "action_failure_counts": {
+        "replicate_register": 1
+      },
+      "delay_class": "mixed",
+      "endpoint_type": "BRAM_CONTROL",
+      "allowed_actions": [
+        "pblock",
+        "phys_opt_design_retime",
+        "phys_opt_design_pin_swap",
+        "run_recipe",
+        "replicate_register",
+        "lut_opt",
+        "route_explore",
+        "phys_opt_design",
+        "pblock_full_replace",
+        "place_design_explore"
+      ],
+      "forbidden_actions": [
+        "logic_restructure"
+      ],
+      "action_guidance": {
+        "fanout_split": "endpoint is a BRAM_CONTROL pin; routing to a hard-block control pin needs physical proximity, not net splitting",
+        "rapidwright_optimize_cell_placement": "0 wins / 4 losses across previous runs on this design",
+        "route_explore": "0 wins / 5 losses across previous runs on this design",
+        "phys_opt_design": "0 wins / 4 losses across previous runs on this design",
+        "pblock_full_replace": "this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won",
+        "place_design_explore": "this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won"
+      },
+      "congestion_level": 0,
+      "cluster_clock_regions": [
+        "X3Y0",
+        "X4Y0"
+      ],
+      "llm_chosen_action": "pblock",
+      "structural_override_active": false,
+      "stuck_iterations": 1,
+      "exhausted_actions": [],
+      "validation_result": "ok",
+      "reprompt_count": 0,
+      "why_not_top_forbidden_action": "phys_opt_design_retime was not chosen because the path is net-delay dominated and prior phys_opt actions have shown 0 wins on this design.",
+      "raw_response": "{\n  \"delay_class_acknowledged\": \"mixed\",\n  \"endpoint_type_acknowledged\": \"BRAM_CONTROL\",\n  \"chosen_action\": \"pblock\",\n  \"action_parameters\": {\n    \"target_lut_count\": 800,\n    \"target_ff_count\": 400,\n    \"use_clock_regions\": false\n  },\n  \"why_this_fits_delay_class\": \"mixed delay (net_pct=0.5112) with BRAM_CONTROL endpoint and 232-tile spread is best reduced by tightening the physical region around the shared driver cell.\",\n  \"why_not_top_forbidden_action\": \"phys_opt_design_retime was not chosen because the path is net-delay dominated and prior phys_opt actions have shown 0 wins on this design.\",\n  \"confidence\": 4\n}",
+      "cluster_count": 11,
+      "primary_diagnosis": "excessive_fanout",
+      "diagnosis_reasoning_trace": [
+        "normalized 20 timing-path candidate(s) from current_target_candidates",
+        "clustered into 11 cluster(s) via shared start/end cell name",
+        "primary cluster 'cluster_0' contains the current worst path (9 member(s), 1 cell(s) shared across all members)",
+        "outcome history: excessive_fanout's own prescriptions scored 0 win(s) / 1 loss(es) this run -> confidence -0.08",
+        "outcome history: localized_congestion's own prescriptions scored 1 win(s) / 0 loss(es) this run -> confidence +0.08",
+        "scored hypotheses: excessive_fanout=0.72, long_interconnect=0.50, placement_already_compact=0.25, localized_congestion=0.18",
+        "primary hypothesis: excessive_fanout (confidence 0.72)",
+        "  + 1 cell(s) (['corescorecore/core_108/serving/ram/mem_reg_bram_0']) recur across 9/20 extracted candidates (45%) -- consistent with a shared high-fanout driver rather than independent placement issues.",
+        "  - outcome history: excessive_fanout's own prescriptions scored 0 win(s) / 1 loss(es) this run -> confidence -0.08"
+      ],
+      "diagnosis_action_adjustment": null,
+      "rapidwright_edit_summary": {
+        "action": "pblock",
+        "cells_moved": 8,
+        "nets_affected": 0,
+        "pblock_ranges": "SLICE_X0Y0:SLICE_X280Y1885 DSP48E2_X9Y0:DSP48E2_X9Y694 RAMB18_X0Y0:RAMB18_X38Y694 RAMB36_X0Y0:RAMB36_X38Y330",
+        "fabric_region": {
+          "col_min": 320,
+          "col_max": 340,
+          "row_min": 114,
+          "row_max": 168,
+          "center_col": 334,
+          "center_row": 155,
+          "center_of_mass_col": 330,
+          "center_of_mass_row": 141,
+          "contiguous_columns": 21,
+          "contiguous_rows": 55,
+          "distance_to_centroid_rows": 0,
+          "hard_block_sites_in_region": 80,
+          "estimated_resources": {
+            "slice_sites": 1565,
+            "dsp_sites": 71,
+            "bram_sites": 67
+          }
+        },
+        "target_lut_count": 800,
+        "target_ff_count": 400,
+        "site_counts": {
+          "SLICE": 371,
+          "DSP48E2": 20,
+          "RAMB18": 40,
+          "RAMB36": 20,
+          "URAM288": 0
+        },
+        "changed_design": true,
+        "pblock_name": "pblock_net_delay_003",
+        "apply_to": "current_design",
+        "is_soft": false,
+        "cells_matched": 8,
+        "cells_assigned": 8,
+        "resource_validation": {
+          "is_valid": true,
+          "primitive_count": 252739,
+          "cell_count": 8,
+          "resource_issues": {},
+          "errors": [],
+          "drc_output": "Copyright 1986-2022 Xilinx, Inc. All Rights Reserved. Copyright 2022-2025 Advanced Micro Devices, Inc. All Rights Reserved.\n---------------------------------------------------------------------------------------------------------------------------------------------\n| Tool Version : Vivado v.2025.1 (lin64) Build 6140274 Wed May 21 22:58:25 MDT 2025\n| Date         : Sun Aug  2 15:48:59 2026\n| Host         : 35ns7cfvpwajp9e9nht0kyrsvp running 64-bit Ubuntu 24.04.4 LTS\n| Command      : report_drc -checks {UTLZ-1 UTLZ-2} -file /home/fpl2026/VivadoMCP/drc_check_pblock_net_delay_003.rpt\n| Design       : corescore_vu3p\n| Device       : xcvu3p-ffvc1517-2-e\n| Speed File   : -2\n| Design State : ignored\n---------------------------------------------------------------------------------------------------------------------------------------------\n\nReport DRC\n\nTable of Contents\n-----------------\n1. REPORT SUMMARY\n2. REPORT DETAILS\n\n1. REPORT SUMMARY\n-----------------\n            Netlist: netlist\n      "
+        }
+      }
+    },
+    {
+      "iter": 4,
+      "recipe": "vivado_phys_opt",
+      "batch_size": 1,
+      "targets": [
+        "Explore"
+      ],
+      "wns_before": -1.219,
+      "wns_after": null,
+      "fmax_before": 346.5003465003465,
+      "fmax_after": null,
+      "delta_fmax": 0.0,
+      "vivado_runtime_s": 43.20465064048767,
+      "status": "failed",
+      "reason": "Command: phys_opt_design -directive Default -critical_pin_opt\r\nAttempting to get a license for feature 'Implementation' and/or device 'xcvu3p'\r\nINFO: [Common 17-349] Got license for feature 'Implementation' and/or device 'xcvu3p'\r\nINFO: [Vivado_Tcl 4-241] Physical synthesis in post route mode \r\nINFO: [Vivado_Tcl 4-137] Directive used for phys_opt_design is: Default\r\nERROR: [Vivado_Tcl 4-167] Cannot specify '-critical_pin_opt' when '-directive' is specified\r\nResolution: Please use only -directive switch.\r\nINFO: [Common 17-83] Releasing license: Implementation\r\n4 Infos, 0 Warnings, 0 Critical Warnings and 1 Errors encountered.\r\nphys_opt_design failed\r\nERROR: [Common 17-39] 'phys_opt_design' failed due to earlier errors.\n\nCommand: phys_opt_design -directive Default -critical_pin_opt\r\nAttempting to get a license for feature 'Implementation' and/or device 'xcvu3p'\r\nINFO: [Common 17-349] Got license for feature 'Implementation' and/or device 'xcvu3p'\r\nINFO: [Vivado_Tcl 4-241] Physical synthesis in post route mode \r\nINFO: [Vivado_Tcl 4-137] Directive used for phys_opt_design is: Default\r\nERROR: [Vivado_Tcl 4-167] Cannot specify '-critical_pin_opt' when '-directive' is specified\r\nResolution: Please use only -directive switch.\r\nINFO: [Common 17-83] Releasing license: Implementation\r\n4 Infos, 0 Warnings, 0 Critical Warnings and 1 Errors encountered.\r\nphys_opt_design failed\r\nERROR: [Common 17-39] 'phys_opt_design' failed due to earlier errors.",
+      "error_type": "vivado_command_failure",
+      "checkpoint": null,
+      "rapidwright_edit_summary": null,
+      "action_failure_memory": {
+        "replicate_register": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "critical_cell_opt"
+          ],
+          "last_failed_iter": 2,
+          "failed_on_current_targets": false
+        },
+        "rapidwright_convert_fabric_region_to_pblock": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "pblock_net_delay_003",
+            "SLICE_X79Y137:SLICE_X85Y189 DSP48E2_X9Y56:DSP48E2_X9Y75 RAMB18_X5Y56:RAMB18_X6Y75 RAMB36_X5Y28:RAMB36_X6Y37"
+          ],
+          "last_failed_iter": 3,
+          "failed_on_current_targets": false
+        },
+        "rapidwright_analyze_fabric_for_pblock": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "pblock_net_delay_003",
+            "SLICE_X79Y137:SLICE_X85Y189 DSP48E2_X9Y56:DSP48E2_X9Y75 RAMB18_X5Y56:RAMB18_X6Y75 RAMB36_X5Y28:RAMB36_X6Y37"
+          ],
+          "last_failed_iter": 3,
+          "failed_on_current_targets": false
+        },
+        "pblock": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "pblock_net_delay_003",
+            "SLICE_X79Y137:SLICE_X85Y189 DSP48E2_X9Y56:DSP48E2_X9Y75 RAMB18_X5Y56:RAMB18_X6Y75 RAMB36_X5Y28:RAMB36_X6Y37"
+          ],
+          "last_failed_iter": 3,
+          "failed_on_current_targets": false
+        }
+      },
+      "action_failure_counts": {
+        "pblock": 1,
+        "replicate_register": 1,
+        "rapidwright_convert_fabric_region_to_pblock": 1,
+        "rapidwright_analyze_fabric_for_pblock": 1
+      },
+      "delay_class": "mixed",
+      "endpoint_type": "BRAM_CONTROL",
+      "allowed_actions": [
+        "pblock",
+        "phys_opt_design_retime",
+        "phys_opt_design_pin_swap",
+        "run_recipe",
+        "replicate_register",
+        "lut_opt",
+        "route_explore",
+        "phys_opt_design",
+        "pblock_full_replace",
+        "place_design_explore"
+      ],
+      "forbidden_actions": [
+        "logic_restructure"
+      ],
+      "action_guidance": {
+        "fanout_split": "endpoint is a BRAM_CONTROL pin; routing to a hard-block control pin needs physical proximity, not net splitting",
+        "rapidwright_optimize_cell_placement": "0 wins / 4 losses across previous runs on this design",
+        "route_explore": "0 wins / 5 losses across previous runs on this design",
+        "phys_opt_design": "0 wins / 4 losses across previous runs on this design",
+        "pblock_full_replace": "this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won",
+        "place_design_explore": "this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won"
+      },
+      "congestion_level": 0,
+      "cluster_clock_regions": [
+        "X3Y0",
+        "X4Y0"
+      ],
+      "llm_chosen_action": "phys_opt_design_pin_swap",
+      "structural_override_active": false,
+      "stuck_iterations": 2,
+      "consecutive_no_improvement": 2,
+      "exhausted_actions": [],
+      "validation_result": "ok",
+      "reprompt_count": 0,
+      "why_not_top_forbidden_action": "pblock was not chosen because it already failed to improve WNS on the current targets (failure_memory shows consecutive_no_action_failures=1) and the diagnosis has shifted to excessive_fanout.",
+      "raw_response": "{\n  \"delay_class_acknowledged\": \"mixed\",\n  \"endpoint_type_acknowledged\": \"BRAM_CONTROL\",\n  \"chosen_action\": \"phys_opt_design_pin_swap\",\n  \"action_parameters\": {\n    \"directive\": \"Explore\"\n  },\n  \"why_this_fits_delay_class\": \"mixed delay with net_pct=0.5112 is driven by routing on the shared BRAM_CONTROL fanout; phys_opt_design_pin_swap reduces that routing congestion by remapping LUT pins inside slices with zero placement risk.\",\n  \"why_not_top_forbidden_action\": \"pblock was not chosen because it already failed to improve WNS on the current targets (failure_memory shows consecutive_no_action_failures=1) and the diagnosis has shifted to excessive_fanout.\",\n  \"confidence\": 3\n}",
+      "cluster_count": 11,
+      "primary_diagnosis": "excessive_fanout",
+      "diagnosis_reasoning_trace": [
+        "normalized 20 timing-path candidate(s) from current_target_candidates",
+        "clustered into 11 cluster(s) via shared start/end cell name",
+        "primary cluster 'cluster_0' contains the current worst path (9 member(s), 1 cell(s) shared across all members)",
+        "outcome history: excessive_fanout's own prescriptions scored 0 win(s) / 1 loss(es) this run -> confidence -0.08",
+        "outcome history: localized_congestion's own prescriptions scored 1 win(s) / 0 loss(es) this run -> confidence +0.08",
+        "scored hypotheses: excessive_fanout=0.72, long_interconnect=0.50, placement_already_compact=0.25, localized_congestion=0.18",
+        "primary hypothesis: excessive_fanout (confidence 0.72)",
+        "  + 1 cell(s) (['corescorecore/core_108/serving/ram/mem_reg_bram_0']) recur across 9/20 extracted candidates (45%) -- consistent with a shared high-fanout driver rather than independent placement issues.",
+        "  - outcome history: excessive_fanout's own prescriptions scored 0 win(s) / 1 loss(es) this run -> confidence -0.08"
+      ],
+      "diagnosis_action_adjustment": null
+    }
+  ],
+  "started_at_epoch_s": 1785685176.4914863,
+  "llm_cost_usd": 0.018199800000000002,
+  "benchmark_score": {
+    "formula": "alpha - (0.1*alpha)*beta - (0.1*alpha)*gamma",
+    "alpha_delta_fmax_mhz": 2.2662673265083413,
+    "beta_openrouter_cost_usd": 0.018199800000000002,
+    "gamma_runtime_hours": 0.23812197029590607,
+    "wall_clock_runtime_s": 857.2390930652618,
+    "score": 2.2081779611989028
+  }
+}

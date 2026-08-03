@@ -4,10 +4,10 @@
   "clock_period_ns": 1.538,
   "baseline_wns": -7.752,
   "baseline_fmax_mhz": 107.64262648008612,
-  "best_wns": -6.549,
-  "best_fmax_mhz": 123.65524916532708,
-  "best_checkpoint": "/home/fpl2026/dcp_optimizer_run-20260801_141652/checkpoints/iter_003.dcp",
-  "current_iter": 3,
+  "best_wns": -5.2,
+  "best_fmax_mhz": 148.41199168892845,
+  "best_checkpoint": "/home/fpl2026/dcp_optimizer_run-20260801_141652/checkpoints/iter_004.dcp",
+  "current_iter": 4,
   "stall_count": 0,
   "cells_blacklisted": [],
   "nets_blacklisted": [],
@@ -375,16 +375,128 @@
         "  + cluster cells span 3 clock regions (['X0Y1', 'X0Y4', 'X5Y3']) -- crossings confirm real physical distance."
       ],
       "diagnosis_action_adjustment": null
+    },
+    {
+      "iter": 4,
+      "recipe": "route_explore",
+      "batch_size": 1,
+      "targets": [
+        "directive:AggressiveExplore"
+      ],
+      "wns_before": -6.549,
+      "wns_after": -5.2,
+      "fmax_before": 123.65524916532708,
+      "fmax_after": 148.41199168892845,
+      "delta_fmax": 24.756742523601375,
+      "vivado_runtime_s": 1199.7475492954254,
+      "status": "improved",
+      "checkpoint": "/home/fpl2026/dcp_optimizer_run-20260801_141652/checkpoints/iter_004.dcp",
+      "target_tier": "tier1_violating_paths",
+      "target_candidate_count": 20,
+      "path_delay_classification": "net_delay_bound",
+      "path_delay_breakdown": {
+        "logic_pct": 0.06232,
+        "net_pct": 0.93768,
+        "logic_delay_ns": 0.512,
+        "net_delay_ns": 7.704
+      },
+      "clock_period_ns": 1.538,
+      "achieved_fmax_mhz": 148.41199168892845,
+      "no_improvement_count": 0,
+      "consecutive_no_improvement": 0,
+      "action_failure_memory": {
+        "pblock": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "pblock_net_delay_001",
+            "SLICE_X76Y109:SLICE_X83Y161 DSP48E2_X9Y44:DSP48E2_X9Y65 RAMB18_X5Y44:RAMB18_X5Y65 RAMB36_X5Y22:RAMB36_X5Y32"
+          ],
+          "last_failed_iter": 1,
+          "failed_on_current_targets": false
+        },
+        "rapidwright_analyze_fabric_for_pblock": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "pblock_net_delay_001",
+            "SLICE_X76Y109:SLICE_X83Y161 DSP48E2_X9Y44:DSP48E2_X9Y65 RAMB18_X5Y44:RAMB18_X5Y65 RAMB36_X5Y22:RAMB36_X5Y32"
+          ],
+          "last_failed_iter": 1,
+          "failed_on_current_targets": false
+        },
+        "rapidwright_convert_fabric_region_to_pblock": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "pblock_net_delay_001",
+            "SLICE_X76Y109:SLICE_X83Y161 DSP48E2_X9Y44:DSP48E2_X9Y65 RAMB18_X5Y44:RAMB18_X5Y65 RAMB36_X5Y22:RAMB36_X5Y32"
+          ],
+          "last_failed_iter": 1,
+          "failed_on_current_targets": false
+        }
+      },
+      "action_failure_counts": {
+        "pblock": 1,
+        "rapidwright_analyze_fabric_for_pblock": 1,
+        "rapidwright_convert_fabric_region_to_pblock": 1
+      },
+      "delay_class": "net_delay_bound",
+      "endpoint_type": "REGISTER",
+      "allowed_actions": [
+        "pblock",
+        "qor_suggestions",
+        "route_explore",
+        "run_recipe",
+        "lut_opt",
+        "replicate_register",
+        "phys_opt_design",
+        "phys_opt_design_retime"
+      ],
+      "forbidden_actions": [
+        "logic_restructure"
+      ],
+      "action_guidance": {
+        "fanout_split": "delay class is net_delay_bound (net_pct=0.93768); logic-side changes rarely fix routing-bound paths",
+        "lut_opt": "delay class is net_delay_bound (net_pct=0.93768); logic-side changes rarely fix routing-bound paths",
+        "replicate_register": "WNS -6.549 ns is below -0.500 ns; incremental phys_opt cannot close that gap while structural actions remain",
+        "phys_opt_design": "WNS -6.549 ns is below -0.500 ns; incremental phys_opt cannot close that gap while structural actions remain",
+        "phys_opt_design_retime": "WNS -6.549 ns is below -0.500 ns; incremental phys_opt cannot close that gap while structural actions remain",
+        "pblock_full_replace": "this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won; device utilization {'LUT': '75%', 'DSP': '70%'} leaves too little free space for a full re-place to reliably legalize within any contest-realistic timeout; refine the input's existing placement instead (phys_opt_design, phys_opt_design_retime, route_explore, local pblock)",
+        "place_design_explore": "this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won; device utilization {'LUT': '75%', 'DSP': '70%'} leaves too little free space for a full re-place to reliably legalize within any contest-realistic timeout; refine the input's existing placement instead (phys_opt_design, phys_opt_design_retime, route_explore, local pblock)"
+      },
+      "congestion_level": 0,
+      "cluster_clock_regions": [
+        "X0Y3",
+        "X0Y4"
+      ],
+      "llm_chosen_action": "route_explore",
+      "structural_override_active": false,
+      "stuck_iterations": 0,
+      "exhausted_actions": [],
+      "validation_result": "ok",
+      "reprompt_count": 0,
+      "why_not_top_forbidden_action": "pblock is highest-ranked but already failed once on identical targets with BRAM/FIFO shortage, so route_explore is the next viable refinement.",
+      "raw_response": "{\n  \"delay_class_acknowledged\": \"net_delay_bound\",\n  \"endpoint_type_acknowledged\": \"REGISTER\",\n  \"chosen_action\": \"route_explore\",\n  \"action_parameters\": {\"directive\": \"AggressiveExplore\"},\n  \"why_this_fits_delay_class\": \"net_pct=0.93768 shows routing-bound paths; after prior route_explore and phys_opt gains, another directed re-route on the current placement is the lowest-risk next refinement.\",\n  \"why_not_top_forbidden_action\": \"pblock is highest-ranked but already failed once on identical targets with BRAM/FIFO shortage, so route_explore is the next viable refinement.\",\n  \"confidence\": 4\n}",
+      "cluster_count": 6,
+      "primary_diagnosis": "long_interconnect",
+      "diagnosis_reasoning_trace": [
+        "normalized 20 timing-path candidate(s) from current_target_candidates",
+        "clustered into 6 cluster(s) via shared start/end cell name",
+        "primary cluster 'cluster_1' does NOT contain the current worst path -- reassigned to the largest non-trivial cluster in the pool since the worst path's own cluster was a singleton (9 member(s), 1 cell(s) shared across all members)",
+        "scored hypotheses: long_interconnect=0.90, excessive_fanout=0.80, placement_already_compact=0.25, localized_congestion=0.10",
+        "primary hypothesis: long_interconnect (confidence 0.90)",
+        "  + avg spread 65.0 tiles exceeds 30 on a net-delay-bound cluster (94% net delay) -- cells are genuinely far apart, not just congested.",
+        "  + cluster cells span 2 clock regions (['X0Y3', 'X0Y4']) -- crossings confirm real physical distance."
+      ],
+      "diagnosis_action_adjustment": null
     }
   ],
   "started_at_epoch_s": 1785593925.5389154,
-  "llm_cost_usd": 0.017895750000000002,
+  "llm_cost_usd": 0.0247131,
   "benchmark_score": {
     "formula": "alpha - (0.1*alpha)*beta - (0.1*alpha)*gamma",
-    "alpha_delta_fmax_mhz": 16.012622685240956,
-    "beta_openrouter_cost_usd": 0.017895750000000002,
-    "gamma_runtime_hours": 0.639095770849122,
-    "wall_clock_runtime_s": 2300.744775056839,
-    "score": 14.960606952164996
+    "alpha_delta_fmax_mhz": 40.76936520884233,
+    "beta_openrouter_cost_usd": 0.0247131,
+    "gamma_runtime_hours": 0.9849439542823367,
+    "wall_clock_runtime_s": 3545.7982354164124,
+    "score": 36.65305749067028
   }
 }
