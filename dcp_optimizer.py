@@ -108,7 +108,14 @@ ACTION_FAILURE_EXHAUSTION_THRESHOLD = 3
 # near-identical rebuttal right after iter 13's own fresh failure. A
 # low-confidence pick of a discouraged action is now treated as invalid and
 # re-prompted instead of executed as-is (see validate_llm_action).
-DISCOURAGED_ACTION_MIN_CONFIDENCE = 3
+#
+# Calibration note (run 20260803_150309, amd_mini): threshold 3 never fired
+# in practice -- every discouraged-action pick that run (iters 5, 6, 10, 11)
+# self-rated confidence exactly 3/5, landing right on the boundary of a
+# "< 3" check. The model appears to hedge at exactly 3 when overriding
+# guidance rather than genuinely varying its confidence, so the bar is
+# raised to require 4+ to actually have teeth.
+DISCOURAGED_ACTION_MIN_CONFIDENCE = 4
 # Fix #6: how many iterations a cell stays blacklisted before it becomes
 # eligible again. Without this, cells_blacklisted only grows, and long runs
 # eventually exhaust the critical-path candidate pool entirely.
@@ -1973,11 +1980,14 @@ class DCPOptimizer(DCPOptimizerBase):
             )
         before_wns = before_guard_wns
         directive = arguments.get("directive") or PHYS_OPT_PRIMARY_DIRECTIVE
-        # LUT pin-swapping (-critical_pin_opt): a real Vivado flag combinable
-        # with -directive/-retime in one raw Tcl command (the server's
-        # directive/bool-flag mutual exclusivity only applies to its own
-        # structured-argument tool -- _run_phys_opt_tcl builds the Tcl
-        # string directly, so that restriction doesn't apply here).
+        # LUT pin-swapping (-critical_pin_opt): confirmed NOT combinable with
+        # -directive in this Vivado 2025.1 install -- ERROR: [Vivado_Tcl 4-167]
+        # "Cannot specify '-critical_pin_opt' when '-directive' is specified",
+        # seen identically across at least 4 separate runs (corescore x2,
+        # finn_radioml, amd_mini) any time phys_opt_design_pin_swap ran,
+        # regardless of directive value. The prior comment here claiming the
+        # two were combinable was wrong; _run_phys_opt_tcl now drops
+        # -directive entirely when critical_pin_opt is set.
         critical_pin_opt = bool(arguments.get("critical_pin_opt", False))
         primary = await self._run_phys_opt_tcl(directive=directive, retime=True, critical_pin_opt=critical_pin_opt)
         if self._action_failure(primary, default_command="phys_opt_design").get("error_type") == "vivado_license_failure":
@@ -2050,14 +2060,19 @@ class DCPOptimizer(DCPOptimizerBase):
             retime = False
         retime_flag = " -retime" if retime else ""
         pin_swap_flag = " -critical_pin_opt" if critical_pin_opt else ""
-        command = f"phys_opt_design -directive {directive}{retime_flag}{pin_swap_flag}"
+        # -critical_pin_opt is one of Vivado's "specific optimization options"
+        # and is genuinely incompatible with -directive (ERROR: [Vivado_Tcl
+        # 4-167]) -- drop -directive entirely in that case rather than
+        # sending a command guaranteed to fail.
+        directive_flag = "" if critical_pin_opt else f" -directive {directive}"
+        command = f"phys_opt_design{directive_flag}{retime_flag}{pin_swap_flag}"
         result = await self.call_tool("vivado_run_tcl", {"command": command, "timeout": self._implementation_timeout_s(kind="phys_opt")}, internal=True)
         if self._action_failure(result, default_command=command).get("error_type") == "vivado_license_failure":
             return result
         if self._vivado_output_has_error(result) and retime:
             self.phys_opt_retime_supported = False
             logger.warning("phys_opt retime failed with directive %s; retrying without -retime", directive)
-            command = f"phys_opt_design -directive {directive}{pin_swap_flag}"
+            command = f"phys_opt_design{directive_flag}{pin_swap_flag}"
             result = await self.call_tool("vivado_run_tcl", {"command": command, "timeout": self._implementation_timeout_s(kind="phys_opt")}, internal=True)
         elif retime:
             self.phys_opt_retime_supported = True
@@ -2433,6 +2448,42 @@ class DCPOptimizer(DCPOptimizerBase):
             tally = tallies.setdefault(action, {"good": 0, "bad": 0})
             tally[bucket] = tally.get(bucket, 0) + 1
         return tallies
+
+    def _recent_stall_action_families(self, n: int) -> set[str]:
+        """Action names (llm_chosen_action, falling back to recipe) from the
+        last n recorded iterations that did NOT improve/marginally-improve --
+        used by the structural_override stuck-detector to tell whether the
+        stalls it's reacting to were themselves placement/pblock attempts,
+        in which case forcing MORE placement is the wrong recovery."""
+        if self.checkpoint_manager is None:
+            return set()
+        recent = self.checkpoint_manager.iterations[-n:]
+        return {
+            str(record.get("llm_chosen_action") or record.get("recipe"))
+            for record in recent
+            if str(record.get("status")) not in ("improved", "marginal")
+        }
+
+    def _widen_override_with_untried_phys_opt(
+        self, structural_allowed: list[str], allowed: list[str]
+    ) -> list[str]:
+        """Add any phys_opt-family action that is allowed but was NOT among
+        the recent stalls -- i.e. genuinely untried, not just walled off by
+        the override -- so the forced menu doesn't exclude the one lever
+        that hasn't actually failed yet (see _recent_stall_action_families
+        and the 20260803_141612 finn_radioml case in _build_timing_context:
+        recent stalls were pblock/route_explore/phys_opt_design_pin_swap --
+        pin_swap correctly stays excluded as "already tried", but plain
+        phys_opt_design and phys_opt_design_retime, never attempted, get
+        added back onto a menu that would otherwise have been placement-only)."""
+        recent_stall_actions = self._recent_stall_action_families(STUCK_ITERATION_THRESHOLD)
+        phys_opt_untried = [
+            action for action in PHYS_OPT_INCREMENTAL_ACTIONS
+            if action in allowed
+            and action not in recent_stall_actions
+            and action not in structural_allowed
+        ]
+        return structural_allowed + phys_opt_untried
 
     def _save_crossrun_priors(self) -> None:
         """Merge this run's outcomes into the persistent per-design store."""
@@ -3245,9 +3296,23 @@ class DCPOptimizer(DCPOptimizerBase):
             # first, just from a shorter list.
             structural_source = RAPIDWRIGHT_PLACEMENT_ACTIONS if high_spread else RAPIDWRIGHT_STRUCTURAL_ACTIONS
             structural_allowed = [action for action in structural_source if action in allowed]
+            # Run 20260803_141612 (finn_radioml): the stalls triggering this
+            # override were THEMSELVES placement/pblock attempts (pblock,
+            # route_explore, pblock -- all no_improvement). Forcing MORE
+            # placement/pblock in response walled phys_opt_design out of
+            # allowed_actions for the rest of the override window; it only
+            # got tried afterward by the LLM-independent _endgame_polish
+            # fallback, where it won +7.4 MHz on the first attempt. When the
+            # recent stalls are all structural/placement actions, widen the
+            # forced menu to include the untried phys_opt family instead of
+            # doubling down on the family that was already failing.
+            structural_allowed = self._widen_override_with_untried_phys_opt(structural_allowed, allowed)
             if structural_allowed:
                 allowed = structural_allowed
                 for action in RAPIDWRIGHT_STRUCTURAL_ACTIONS:
+                    if action in forbidden:
+                        forbidden.remove(action)
+                for action in PHYS_OPT_INCREMENTAL_ACTIONS:
                     if action in forbidden:
                         forbidden.remove(action)
                 logger.warning(

@@ -223,6 +223,98 @@ def test_phys_opt_directive_outcome_recorded_across_action_family(opt):
     ]
 
 
+def test_recent_stall_action_families_last_n(opt):
+    opt.checkpoint_manager = CheckpointManager(
+        input_dcp="in.dcp", output_dir="ckpt", clock_name="clk")
+    opt.checkpoint_manager.iterations = [
+        {"llm_chosen_action": "place_design_explore", "status": "improved"},
+        {"llm_chosen_action": "pblock", "status": "no_improvement"},
+        {"llm_chosen_action": "route_explore", "status": "no_improvement"},
+        {"llm_chosen_action": "pblock", "status": "no_improvement"},
+    ]
+    assert opt._recent_stall_action_families(3) == {"pblock", "route_explore"}
+
+
+def test_structural_override_widens_menu_with_genuinely_untried_phys_opt(opt):
+    # Reproduces run 20260803_141612 (finn_radioml) iters 2-4: pblock
+    # (no_improvement), route_explore (no_improvement), phys_opt_design_pin_swap
+    # (failed -- the -critical_pin_opt/-directive Tcl bug). The stuck detector
+    # then fired at iter 5. Old behavior forced MORE placement, walling off
+    # plain phys_opt_design/phys_opt_design_retime -- never attempted -- for
+    # the rest of the override window; phys_opt_design only won (+7.4 MHz)
+    # later via the LLM-independent endgame_polish fallback. pin_swap
+    # specifically stays excluded (it WAS just tried), but the untried
+    # variants should be added back onto the menu.
+    opt.checkpoint_manager = CheckpointManager(
+        input_dcp="in.dcp", output_dir="ckpt", clock_name="clk")
+    opt.checkpoint_manager.iterations = [
+        {"llm_chosen_action": "pblock", "status": "no_improvement"},
+        {"llm_chosen_action": "route_explore", "status": "no_improvement"},
+        {"llm_chosen_action": "phys_opt_design_pin_swap", "status": "failed"},
+    ]
+    allowed = [
+        "pblock", "pblock_full_replace", "place_design_explore",
+        "phys_opt_design", "phys_opt_design_retime", "phys_opt_design_pin_swap",
+    ]
+    structural_allowed = ["pblock", "pblock_full_replace", "place_design_explore"]
+    widened = opt._widen_override_with_untried_phys_opt(structural_allowed, allowed)
+    assert set(widened) == set(structural_allowed) | {"phys_opt_design", "phys_opt_design_retime"}
+    assert "phys_opt_design_pin_swap" not in widened
+
+
+def test_structural_override_does_not_widen_when_a_stall_was_phys_opt(opt):
+    # If a recent stall was itself a phys_opt attempt, it's not an untried
+    # family -- don't widen (matches _recent_stall_action_families excluding
+    # it from "untried" via the `action not in recent_stall_actions` filter).
+    opt.checkpoint_manager = CheckpointManager(
+        input_dcp="in.dcp", output_dir="ckpt", clock_name="clk")
+    opt.checkpoint_manager.iterations = [
+        {"llm_chosen_action": "pblock", "status": "no_improvement"},
+        {"llm_chosen_action": "phys_opt_design", "status": "no_improvement"},
+        {"llm_chosen_action": "pblock", "status": "no_improvement"},
+    ]
+    allowed = ["pblock", "pblock_full_replace", "phys_opt_design"]
+    structural_allowed = ["pblock", "pblock_full_replace"]
+    widened = opt._widen_override_with_untried_phys_opt(structural_allowed, allowed)
+    assert widened == structural_allowed
+
+
+def test_critical_pin_opt_drops_directive_flag(opt):
+    # ERROR: [Vivado_Tcl 4-167] "Cannot specify '-critical_pin_opt' when
+    # '-directive' is specified" -- seen identically across corescore x2,
+    # finn_radioml, and amd_mini every time phys_opt_design_pin_swap ran,
+    # regardless of directive. -directive must be omitted whenever
+    # critical_pin_opt is requested.
+    commands = []
+
+    async def fake_call_tool(tool_name, params, internal=False):
+        commands.append(params["command"])
+        return "ok"
+
+    with patch.object(opt, "call_tool", side_effect=fake_call_tool):
+        asyncio.run(opt._run_phys_opt_tcl(
+            directive="AggressiveFanoutOpt", retime=True, critical_pin_opt=True))
+    assert len(commands) == 1
+    assert "-directive" not in commands[0]
+    assert "-critical_pin_opt" in commands[0]
+    assert "-retime" in commands[0]
+
+
+def test_normal_phys_opt_still_uses_directive(opt):
+    # Confirms the fix doesn't remove -directive for the normal (non-pin-swap)
+    # case, which Vivado does accept combined with -directive/-retime.
+    commands = []
+
+    async def fake_call_tool(tool_name, params, internal=False):
+        commands.append(params["command"])
+        return "ok"
+
+    with patch.object(opt, "call_tool", side_effect=fake_call_tool):
+        asyncio.run(opt._run_phys_opt_tcl(
+            directive="Explore", retime=True, critical_pin_opt=False))
+    assert commands[0] == "phys_opt_design -directive Explore -retime"
+
+
 def test_phys_opt_dispatch_defaults_to_untried_directive(opt):
     calls = []
 
@@ -813,6 +905,37 @@ def test_invalid_place_directive_rejected_at_validation(opt):
     }
     ok_flag, reason = opt.validate_llm_action(bad_full, context)
     assert ok_flag is False and "invalid_place_directive" in reason
+
+
+def test_discouraged_action_below_min_confidence_rejected(opt):
+    # Run 20260803_150309 (amd_mini): every discouraged-action pick that run
+    # (iters 5, 6, 10, 11) self-rated confidence exactly 3/5 -- the old
+    # threshold (reject < 3) never fired. Confidence 3 must now be rejected;
+    # only 4+ overrides guidance.
+    context = {
+        "allowed_actions": ["pblock", "place_design_explore"],
+        "forbidden_actions": [],
+        "delay_class": "logic_delay_bound",
+        "action_guidance": {"pblock": "0 wins / 3 losses across previous runs on this design"},
+    }
+    decision = {
+        "chosen_action": "pblock",
+        "delay_class_acknowledged": "logic_delay_bound",
+        "action_parameters": {},
+        "confidence": 3,
+    }
+    ok_flag, reason = opt.validate_llm_action(decision, context)
+    assert ok_flag is False and "discouraged_action_low_confidence" in reason
+    decision["confidence"] = 4
+    assert opt.validate_llm_action(decision, context) == (True, "ok")
+    # An action NOT in action_guidance is never gated on confidence.
+    decision2 = {
+        "chosen_action": "place_design_explore",
+        "delay_class_acknowledged": "logic_delay_bound",
+        "action_parameters": {},
+        "confidence": 1,
+    }
+    assert opt.validate_llm_action(decision2, context) == (True, "ok")
 
 
 def test_menu_collapse_stops_only_on_all_losers(opt, tmp_path):
