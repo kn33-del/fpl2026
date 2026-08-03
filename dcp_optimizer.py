@@ -58,6 +58,28 @@ CONSTRAINT_AUDIT_COMMON_PREFIX_FRACTION = 0.30
 TIME_BUDGET_RESERVE_S = 300
 PHYS_OPT_PRIMARY_DIRECTIVE = "AggressiveExplore"
 PHYS_OPT_SECONDARY_DIRECTIVE = "ExploreWithRemap"
+# Directive sweep for phys_opt_design/phys_opt_design_retime/phys_opt_design_pin_swap,
+# mirroring PLACE_DIRECTIVE_SWEEP: without it, the LLM has no reason to move
+# off one directive string once it's typed it, and nothing tracks that it's
+# already been tried. Run 20260802_135418 (amd_mini) picked "Explore" as the
+# phys_opt directive three separate times across three separate iterations
+# (2, 3, 8) for a logic/fanout-bound path -- never AggressiveFanoutOpt, the
+# one directive in Vivado's own list (VivadoMCP/vivado_mcp_server.py) whose
+# description is literally "driver replication for fanout-related
+# optimizations." Directive names below are the confirmed-valid set from
+# that MCP tool's schema; Default (too weak / the automatic error-fallback
+# already) and RQS (coupled to the qor_suggestions flow only) are excluded.
+PHYS_OPT_DIRECTIVE_SWEEP = [
+    "AggressiveExplore",
+    "Explore",
+    "AggressiveFanoutOpt",
+    "AlternateReplication",
+    "ExploreWithHoldFix",
+    "AlternateFlowWithRetiming",
+    "ExploreWithAggressiveHoldFix",
+    "AddRetime",
+    "RuntimeOptimized",
+]
 DECISION_NET_DELAY_BOUND_THRESHOLD = 0.70
 DECISION_LOGIC_DELAY_BOUND_THRESHOLD = 0.70
 DECISION_SPREAD_NET_THRESHOLD = 0.60
@@ -77,6 +99,16 @@ STUCK_ITERATION_THRESHOLD = 3
 STRUCTURAL_OVERRIDE_MAX_ITERS = 6
 WNS_IMPROVEMENT_EPSILON_NS = 1e-4
 ACTION_FAILURE_EXHAUSTION_THRESHOLD = 3
+# action_guidance is rebuttable by design (the LLM can still choose a
+# discouraged action if it argues why), but nothing checked whether the
+# argument was actually convincing. Run 20260803_131720 (corescore) chose
+# rapidwright_optimize_cell_placement at iters 13 AND 14 despite guidance
+# reading "0 wins / 4 losses across previous runs on this design" both
+# times, self-rating confidence 2/5 both times, and repeating a
+# near-identical rebuttal right after iter 13's own fresh failure. A
+# low-confidence pick of a discouraged action is now treated as invalid and
+# re-prompted instead of executed as-is (see validate_llm_action).
+DISCOURAGED_ACTION_MIN_CONFIDENCE = 3
 # Fix #6: how many iterations a cell stays blacklisted before it becomes
 # eligible again. Without this, cells_blacklisted only grows, and long runs
 # eventually exhaust the critical-path candidate pool entirely.
@@ -420,16 +452,24 @@ ACTION_PARAMETERS_SCHEMA = {
         "hierarchical_input_pins": "list[str], REQUIRED input pins of the LUT cone to collapse",
     },
     "phys_opt_design": {
-        "directive": "str, e.g. 'Explore', 'AggressiveExplore', 'RuntimeOptimized'",
+        "directive": (
+            "str, e.g. 'Explore', 'AggressiveExplore', 'AggressiveFanoutOpt', "
+            "'RuntimeOptimized'; if omitted, the next untried entry of "
+            f"{PHYS_OPT_DIRECTIVE_SWEEP} is chosen automatically (see phys_opt_directives_tried)"
+        ),
     },
     "phys_opt_design_retime": {
-        "directive": "str, phys_opt directive used with retiming enabled",
+        "directive": (
+            "str, phys_opt directive used with retiming enabled; if omitted, the next "
+            "untried entry of phys_opt_directives_untried is chosen automatically"
+        ),
     },
     "phys_opt_design_pin_swap": {
         "directive": (
             "str, phys_opt directive used with LUT pin-swapping enabled (-critical_pin_opt: "
             "remaps logical to physical pins within a SLICE to reduce routing congestion on "
-            "critical nets, without moving any cells)"
+            "critical nets, without moving any cells); if omitted, the next untried entry of "
+            "phys_opt_directives_untried is chosen automatically"
         ),
     },
     "place_design_explore": {
@@ -550,6 +590,10 @@ LEARN FROM THIS RUN'S RESULTS:
 - An action that regressed or failed on the same targets is worth less than its ranking.
 - When choosing a place directive, pick from place_directives_untried (in the timing
   state) rather than inventing one; place_directives_tried shows measured results.
+- Same for phys_opt_design/phys_opt_design_retime/phys_opt_design_pin_swap: pick from
+  phys_opt_directives_untried rather than repeating one already in phys_opt_directives_tried.
+  AggressiveFanoutOpt in particular replicates drivers to fix a shared high-fanout
+  net -- try it before concluding a fanout-diagnosed path has no phys_opt lever left.
 - Do not repeat an action+parameters combination that already failed; change what the
   failure evidence says was wrong (region size, directive, targets), or change action.
 
@@ -1331,6 +1375,13 @@ class DCPOptimizer(DCPOptimizerBase):
         # different directive instead of repeating one that already ran.
         self.place_directive_results: dict[str, dict] = {}
         self.last_place_directive: Optional[str] = None
+        # Same directive-sweep memory as place_directive_results, but for the
+        # phys_opt_design/_retime/_pin_swap family (see PHYS_OPT_DIRECTIVE_SWEEP).
+        # Shared across all three actions since they all resolve to the same
+        # underlying `phys_opt_design -directive X [-retime] [-critical_pin_opt]`
+        # Tcl call -- the directive is the actual lever, the flags are modifiers.
+        self.phys_opt_directive_results: dict[str, dict] = {}
+        self.last_phys_opt_directive: Optional[str] = None
         # Pblock search memory (item 3b): one entry per pblock/full_replace
         # attempt (ranges, target sizes, outcome), so sizing can adapt --
         # regression at size S => try a looser region, not the same one.
@@ -2280,6 +2331,21 @@ class DCPOptimizer(DCPOptimizerBase):
 
         return max(self.place_directive_results.items(), key=wns_of)[0]
 
+    def _next_phys_opt_directive(self) -> str:
+        """Same sweep as _next_place_directive, for the phys_opt directive
+        space: pick the first PHYS_OPT_DIRECTIVE_SWEEP entry not yet tried
+        this run, else re-run the best performer instead of repeating an
+        arbitrary one."""
+        for directive in PHYS_OPT_DIRECTIVE_SWEEP:
+            if directive not in self.phys_opt_directive_results:
+                return directive
+
+        def wns_of(item: tuple[str, dict]) -> float:
+            wns = item[1].get("wns_after")
+            return wns if isinstance(wns, (int, float)) else float("-inf")
+
+        return max(self.phys_opt_directive_results.items(), key=wns_of)[0]
+
     def _note_recipe_outcome(self, status: str, wns_after: Optional[float]) -> None:
         """Per-recipe search memory (item 3): record how this attempt's
         parameters performed so the NEXT attempt of the same recipe can move in
@@ -2290,6 +2356,16 @@ class DCPOptimizer(DCPOptimizerBase):
                 "status": status,
                 "wns_after": wns_after,
                 "iteration": self.iteration,
+            }
+        if (
+            action in {"phys_opt_design", "phys_opt_design_retime", "phys_opt_design_pin_swap"}
+            and self.last_phys_opt_directive
+        ):
+            self.phys_opt_directive_results[self.last_phys_opt_directive] = {
+                "status": status,
+                "wns_after": wns_after,
+                "iteration": self.iteration,
+                "action": action,
             }
         if action in {"pblock", "pblock_full_replace"}:
             entry = {
@@ -2340,6 +2416,23 @@ class DCPOptimizer(DCPOptimizerBase):
         self._refresh_design_scale()
         if self.design_scale != "unknown":
             logger.info("Design scale classified '%s' from cross-run priors.", self.design_scale)
+
+    def _this_run_action_tallies(self) -> dict[str, dict[str, int]]:
+        """This run's own good/bad tally per action, bucketed the same way
+        _save_crossrun_priors does -- used to keep the cross-run guidance
+        text current mid-run instead of only reflecting priors loaded at
+        startup (crossrun_priors isn't updated again until the run ends)."""
+        tallies: dict[str, dict[str, int]] = {}
+        if self.checkpoint_manager is None:
+            return tallies
+        for record in self.checkpoint_manager.iterations:
+            action = str(record.get("llm_chosen_action") or record.get("recipe") or "")
+            if not action:
+                continue
+            bucket = "good" if str(record.get("status")) in ("improved", "marginal") else "bad"
+            tally = tallies.setdefault(action, {"good": 0, "bad": 0})
+            tally[bucket] = tally.get(bucket, 0) + 1
+        return tallies
 
     def _save_crossrun_priors(self) -> None:
         """Merge this run's outcomes into the persistent per-design store."""
@@ -3278,6 +3371,10 @@ class DCPOptimizer(DCPOptimizerBase):
             "place_directives_untried": [
                 d for d in PLACE_DIRECTIVE_SWEEP if d not in self.place_directive_results
             ],
+            "phys_opt_directives_tried": dict(self.phys_opt_directive_results),
+            "phys_opt_directives_untried": [
+                d for d in PHYS_OPT_DIRECTIVE_SWEEP if d not in self.phys_opt_directive_results
+            ],
             # Cross-run memory: measured win/loss records for this design
             # from previous runs -- weigh these like this run's own history.
             "crossrun_action_records": dict((self.crossrun_priors or {}).get("actions") or {}),
@@ -3488,15 +3585,26 @@ class DCPOptimizer(DCPOptimizerBase):
         # the reason) instead of earning its losses all over again --
         # rapidwright_optimize_cell_placement is 0-for-everything across four
         # runs on the LogicNets benchmark, yet opened every run at full rank.
+        # crossrun_priors is loaded once at startup and only merged back to
+        # disk at the very end (_save_crossrun_priors), so without folding in
+        # this run's own tallies here the guidance text goes stale mid-run:
+        # run 20260803_131720 (corescore) showed rapidwright_optimize_cell_placement's
+        # guidance still reading "0 wins / 4 losses across previous runs" at
+        # iter 14, unchanged from iter 13, even though iter 13's own attempt
+        # (this same run) had just failed in between -- a fresher "+1 loss
+        # already this run" is a harder number for the LLM to rebut away.
+        this_run_tallies = self._this_run_action_tallies()
         for prior_action, prior_record in ((self.crossrun_priors or {}).get("actions") or {}).items():
             good = int(prior_record.get("good", 0))
             bad = int(prior_record.get("bad", 0))
-            if prior_action in allowed and good == 0 and bad >= 3:
-                allowed = self._demote_actions(
-                    allowed,
-                    [prior_action],
-                    f"0 wins / {bad} losses across previous runs on this design",
-                )
+            this_run = this_run_tallies.get(prior_action, {})
+            this_run_good = int(this_run.get("good", 0))
+            this_run_bad = int(this_run.get("bad", 0))
+            if prior_action in allowed and good == 0 and this_run_good == 0 and (bad + this_run_bad) >= 3:
+                reason = f"0 wins / {bad} losses across previous runs on this design"
+                if this_run_bad:
+                    reason += f", plus {this_run_bad} more loss(es) already this run"
+                allowed = self._demote_actions(allowed, [prior_action], reason)
         # Directive-level cross-run record: the action-level prior above can't
         # catch "place Default wins, place Explore loses" because both count
         # under place_design_explore. Name the losing directives so the LLM
@@ -5759,6 +5867,23 @@ class DCPOptimizer(DCPOptimizerBase):
                 f"invalid_place_directive: {place_directive!r} is not a place_design "
                 f"directive; choose one of {sorted(VALID_PLACE_DIRECTIVES)}"
             )
+        guidance = timing_context.get("action_guidance") or {}
+        if chosen in guidance:
+            try:
+                confidence = int(response.get("confidence") or 0)
+            except (TypeError, ValueError):
+                confidence = 0
+            if confidence < DISCOURAGED_ACTION_MIN_CONFIDENCE:
+                logger.warning(
+                    "LLM chose discouraged action %s with confidence %d/5 (guidance: %s). Re-prompting.",
+                    chosen, confidence, guidance[chosen],
+                )
+                return False, (
+                    f"discouraged_action_low_confidence: {chosen} is discouraged ({guidance[chosen]}) "
+                    f"and was chosen with confidence {confidence}/5 (minimum {DISCOURAGED_ACTION_MIN_CONFIDENCE} "
+                    "required to override guidance); either give a substantially stronger rebuttal of the "
+                    "guidance's specific record, or pick a different allowed action"
+                )
         return True, "ok"
 
     async def execute_validated_action(self, decision: dict, timing_context: dict) -> str:
@@ -5810,6 +5935,14 @@ class DCPOptimizer(DCPOptimizerBase):
             self.last_targets = [timing_context.get("delay_class", "timing_path")]
             self.last_batch_size = 1
             call_params = dict(params)
+            # Directive sweep (mirrors place_design_explore's _next_place_directive):
+            # default to the next untried PHYS_OPT_DIRECTIVE_SWEEP entry when the
+            # LLM omits one, and always record whichever directive actually ran
+            # so _note_recipe_outcome can track its result and the untried list
+            # stays accurate even when the LLM supplies its own directive string.
+            directive = str(call_params.get("directive") or self._next_phys_opt_directive())
+            call_params["directive"] = directive
+            self.last_phys_opt_directive = directive
             if action == "phys_opt_design_pin_swap":
                 # LUT pin-swapping (remap logical to physical pins within a
                 # SLICE to reduce routing congestion on critical nets) --

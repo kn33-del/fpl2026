@@ -39,7 +39,7 @@ except ImportError:  # pragma: no cover
     sys.modules.setdefault("openai", openai_stub)
 
 import dcp_optimizer as dcp  # noqa: E402
-from dcp_optimizer import DCPOptimizer, PLACE_DIRECTIVE_SWEEP  # noqa: E402
+from dcp_optimizer import DCPOptimizer, PLACE_DIRECTIVE_SWEEP, PHYS_OPT_DIRECTIVE_SWEEP  # noqa: E402
 from analysis_layer import (  # noqa: E402
     AnalysisEngine,
     Diagnosis,
@@ -185,6 +185,62 @@ def test_directive_outcome_recorded(opt):
     opt.iteration = 3
     opt._note_recipe_outcome("improved", -0.493)
     assert opt.place_directive_results["Explore"]["status"] == "improved"
+
+
+# ---------------------------------------------------------------------------
+# phys_opt directive sweep (same mechanism as place, for the fix where
+# amd_mini run 20260802_135418 picked "Explore" as the phys_opt directive
+# three separate iterations in a row on a fanout-diagnosed path)
+# ---------------------------------------------------------------------------
+
+def test_phys_opt_directive_sweep_advances(opt):
+    assert opt._next_phys_opt_directive() == PHYS_OPT_DIRECTIVE_SWEEP[0]
+    opt.phys_opt_directive_results[PHYS_OPT_DIRECTIVE_SWEEP[0]] = {
+        "status": "no_improvement", "wns_after": -0.9}
+    assert opt._next_phys_opt_directive() == PHYS_OPT_DIRECTIVE_SWEEP[1]
+
+
+def test_phys_opt_directive_sweep_reuses_best_when_exhausted(opt):
+    for i, directive in enumerate(PHYS_OPT_DIRECTIVE_SWEEP):
+        opt.phys_opt_directive_results[directive] = {
+            "status": "no_improvement", "wns_after": -1.0 + 0.1 * i}
+    opt.phys_opt_directive_results["AggressiveFanoutOpt"] = {
+        "status": "improved", "wns_after": -0.1}
+    assert opt._next_phys_opt_directive() == "AggressiveFanoutOpt"
+
+
+def test_phys_opt_directive_outcome_recorded_across_action_family(opt):
+    # phys_opt_design, phys_opt_design_retime, and phys_opt_design_pin_swap
+    # all resolve to the same underlying phys_opt_design Tcl call, so a
+    # directive tried under one should register for all three.
+    opt.last_action_key = "phys_opt_design_retime"
+    opt.last_phys_opt_directive = "Explore"
+    opt.iteration = 2
+    opt._note_recipe_outcome("no_improvement", -0.904)
+    assert opt.phys_opt_directive_results["Explore"]["status"] == "no_improvement"
+    assert "Explore" not in [
+        d for d in PHYS_OPT_DIRECTIVE_SWEEP if d not in opt.phys_opt_directive_results
+    ]
+
+
+def test_phys_opt_dispatch_defaults_to_untried_directive(opt):
+    calls = []
+
+    async def fake_call_tool(tool_name, params, internal=False):
+        calls.append((tool_name, dict(params)))
+        return "ok"
+
+    async def fake_license():
+        return True
+
+    with patch.object(opt, "call_tool", side_effect=fake_call_tool), \
+         patch.object(opt, "_check_implementation_license", side_effect=fake_license):
+        asyncio.run(opt.execute_validated_action(
+            {"chosen_action": "phys_opt_design", "action_parameters": {}},
+            {"delay_class": "logic_delay_bound"},
+        ))
+    assert calls[0][1]["directive"] == PHYS_OPT_DIRECTIVE_SWEEP[0]
+    assert opt.last_phys_opt_directive == PHYS_OPT_DIRECTIVE_SWEEP[0]
 
 
 def test_place_design_explore_unplaces_first(opt):
