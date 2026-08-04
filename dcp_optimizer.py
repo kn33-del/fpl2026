@@ -150,6 +150,12 @@ RECIPE_YIELD_MIN_ATTEMPTS = 3
 RECIPE_YIELD_LOW_RATE = 0.25
 RECIPE_YIELD_ALT_MIN_ATTEMPTS = 2
 RECIPE_YIELD_ALT_MIN_RATE = 0.5
+# Exploit-after-win materiality floor (see _sitting_on_fresh_win): the
+# banked best must exceed baseline by this fraction before the "protect the
+# win, demote fresh re-rolls" prior engages. 0.5% -- rosetta_optical-flow's
+# +0.13% marginal is comfortably below it; the +24-32% wins the prior was
+# actually measured on are far above.
+FRESH_WIN_MATERIALITY_FRACTION = 0.005
 # Fix #10 (score-aware stall stop): the contest score is
 # alpha - 0.1*alpha*cost - 0.1*alpha*(runtime/3600), so every iteration past
 # the last improvement is pure negative value. Run history showed runs
@@ -2039,23 +2045,34 @@ class DCPOptimizer(DCPOptimizerBase):
         # two were combinable was wrong; _run_phys_opt_tcl now drops
         # -directive entirely when critical_pin_opt is set.
         critical_pin_opt = bool(arguments.get("critical_pin_opt", False))
-        primary = await self._run_phys_opt_tcl(directive=directive, retime=True, critical_pin_opt=critical_pin_opt)
+        # See _run_phys_opt_tcl: these two were previously read by NOTHING in
+        # this interception layer, so replicate_register's critical_cell_opt
+        # (and any targeted replication request) was silently discarded on
+        # every call in the project's history.
+        critical_cell_opt = bool(arguments.get("critical_cell_opt", False))
+        force_replication_on_nets = arguments.get("force_replication_on_nets") or None
+        specific_opts = dict(
+            critical_pin_opt=critical_pin_opt,
+            critical_cell_opt=critical_cell_opt,
+            force_replication_on_nets=force_replication_on_nets,
+        )
+        primary = await self._run_phys_opt_tcl(directive=directive, retime=True, **specific_opts)
         if self._action_failure(primary, default_command="phys_opt_design").get("error_type") == "vivado_license_failure":
             return primary
         if self._vivado_output_has_error(primary) and directive != "Default":
             logger.warning("phys_opt directive %s unsupported or failed; falling back to Default", directive)
-            primary = await self._run_phys_opt_tcl(directive="Default", retime=True, critical_pin_opt=critical_pin_opt)
+            primary = await self._run_phys_opt_tcl(directive="Default", retime=True, **specific_opts)
 
         after_wns = await self._get_current_wns()
         output = [primary]
         if before_wns is not None and after_wns is not None and after_wns <= before_wns:
-            secondary = await self._run_phys_opt_tcl(directive=PHYS_OPT_SECONDARY_DIRECTIVE, retime=True, critical_pin_opt=critical_pin_opt)
+            secondary = await self._run_phys_opt_tcl(directive=PHYS_OPT_SECONDARY_DIRECTIVE, retime=True, **specific_opts)
             if self._action_failure(secondary, default_command="phys_opt_design").get("error_type") == "vivado_license_failure":
                 output.append(secondary)
                 return "\n\n".join(output)
             if self._vivado_output_has_error(secondary):
                 logger.warning("phys_opt directive %s unsupported or failed; falling back to Default", PHYS_OPT_SECONDARY_DIRECTIVE)
-                secondary = await self._run_phys_opt_tcl(directive="Default", retime=True, critical_pin_opt=critical_pin_opt)
+                secondary = await self._run_phys_opt_tcl(directive="Default", retime=True, **specific_opts)
             output.append(secondary)
         return "\n\n".join(output)
 
@@ -2103,26 +2120,47 @@ class DCPOptimizer(DCPOptimizerBase):
         return await self.call_tool("vivado_create_and_apply_pblock", computed_args, internal=True)
 
     async def _run_phys_opt_tcl(
-        self, directive: str = "Default", retime: bool = True, critical_pin_opt: bool = False
+        self,
+        directive: str = "Default",
+        retime: bool = True,
+        critical_pin_opt: bool = False,
+        critical_cell_opt: bool = False,
+        force_replication_on_nets: Optional[str] = None,
     ) -> str:
         if retime and self.phys_opt_retime_supported is False:
             logger.info("Skipping phys_opt -retime because a previous retime attempt was rejected.")
             retime = False
         retime_flag = " -retime" if retime else ""
         pin_swap_flag = " -critical_pin_opt" if critical_pin_opt else ""
-        # -critical_pin_opt is one of Vivado's "specific optimization options"
-        # and is genuinely incompatible with -directive (ERROR: [Vivado_Tcl
-        # 4-167]) -- drop -directive entirely in that case rather than
-        # sending a command guaranteed to fail.
-        directive_flag = "" if critical_pin_opt else f" -directive {directive}"
-        command = f"phys_opt_design{directive_flag}{retime_flag}{pin_swap_flag}"
+        # -critical_cell_opt / -force_replication_on_nets (pipeline audit,
+        # 20260804 sweep): replicate_register has ALWAYS sent
+        # {"critical_cell_opt": True} through call_tool, and this
+        # interception layer silently dropped it -- only directive and
+        # critical_pin_opt were ever read -- so "replicate_register" has
+        # never once actually run -critical_cell_opt; it ran a plain
+        # directive pass indistinguishable from phys_opt_design. That is
+        # exactly why it went 0-for-everything on the three excessive_fanout
+        # stalled designs (optical-flow/spam-filter/vexriscv_v2) while being
+        # the diagnosis layer's ONLY recommended response to that hypothesis.
+        cell_opt_flag = " -critical_cell_opt" if critical_cell_opt else ""
+        replication_flag = (
+            f" -force_replication_on_nets {force_replication_on_nets}"
+            if force_replication_on_nets else ""
+        )
+        # Any of Vivado's "specific optimization options" is genuinely
+        # incompatible with -directive (ERROR: [Vivado_Tcl 4-167]) -- drop
+        # -directive entirely in that case rather than sending a command
+        # guaranteed to fail.
+        has_specific_opts = critical_pin_opt or critical_cell_opt or bool(force_replication_on_nets)
+        directive_flag = "" if has_specific_opts else f" -directive {directive}"
+        command = f"phys_opt_design{directive_flag}{retime_flag}{pin_swap_flag}{cell_opt_flag}{replication_flag}"
         result = await self.call_tool("vivado_run_tcl", {"command": command, "timeout": self._implementation_timeout_s(kind="phys_opt")}, internal=True)
         if self._action_failure(result, default_command=command).get("error_type") == "vivado_license_failure":
             return result
         if self._vivado_output_has_error(result) and retime:
             self.phys_opt_retime_supported = False
             logger.warning("phys_opt retime failed with directive %s; retrying without -retime", directive)
-            command = f"phys_opt_design{directive_flag}{pin_swap_flag}"
+            command = f"phys_opt_design{directive_flag}{pin_swap_flag}{cell_opt_flag}{replication_flag}"
             result = await self.call_tool("vivado_run_tcl", {"command": command, "timeout": self._implementation_timeout_s(kind="phys_opt")}, internal=True)
         elif retime:
             self.phys_opt_retime_supported = True
@@ -2571,6 +2609,30 @@ class DCPOptimizer(DCPOptimizerBase):
             and action not in structural_allowed
         ]
         return structural_allowed + phys_opt_untried
+
+    def _phys_opt_exhausted_this_streak(self, allowed: list[str], high_spread: bool) -> bool:
+        """True if every phys_opt-family action currently on offer has
+        already appeared somewhere in the current stall streak -- i.e.
+        _widen_override_with_untried_phys_opt would have nothing left to add
+        back onto a structural-only menu.
+
+        Used to keep the structural override held through what would
+        otherwise be its decay window (pipeline audit, rosetta_optical-flow,
+        20260804 sweep): the decay timer releases the menu back to phys_opt
+        on a fixed schedule regardless of whether phys_opt has anything left
+        to offer. Confirmed on optical-flow: by iter 6 every phys_opt variant
+        had been tried this streak, but the timer decayed at iter 7 anyway
+        and handed the menu back to an already-exhausted phys_opt_design
+        instead of the place_design_explore/pblock attempt this design had
+        never gotten. If there's no structural action to fall back to
+        either, this returns False -- an empty menu is a worse failure mode
+        than releasing back to phys_opt, so don't force a dead end."""
+        structural_source = RAPIDWRIGHT_PLACEMENT_ACTIONS if high_spread else RAPIDWRIGHT_STRUCTURAL_ACTIONS
+        structural_allowed = [action for action in structural_source if action in allowed]
+        if not structural_allowed:
+            return False
+        widened = self._widen_override_with_untried_phys_opt(structural_allowed, allowed)
+        return widened == structural_allowed
 
     def _save_crossrun_priors(self) -> None:
         """Merge this run's outcomes into the persistent per-design store."""
@@ -3362,19 +3424,41 @@ class DCPOptimizer(DCPOptimizerBase):
         avg_spread = diagnosis.avg_spread
         delay_class = diagnosis.delay_class
         allowed, forbidden = self.analysis_engine.actions_for(diagnosis, current_wns)
-        structural_override_age = self.consecutive_no_improvement - STUCK_ITERATION_THRESHOLD
-        if structural_override_age >= 0:
-            cycle_len = STRUCTURAL_OVERRIDE_MAX_ITERS + STUCK_ITERATION_THRESHOLD
-            structural_override = (structural_override_age % cycle_len) < STRUCTURAL_OVERRIDE_MAX_ITERS
-        else:
-            structural_override = False
-        self.structural_override_active = structural_override
         high_spread = (
             avg_spread is not None
             and net_pct is not None
             and avg_spread > DECISION_SPREAD_TILE_THRESHOLD
             and net_pct > DECISION_SPREAD_NET_THRESHOLD
         )
+        structural_override_age = self.consecutive_no_improvement - STUCK_ITERATION_THRESHOLD
+        if structural_override_age >= 0:
+            cycle_len = STRUCTURAL_OVERRIDE_MAX_ITERS + STUCK_ITERATION_THRESHOLD
+            structural_override = (structural_override_age % cycle_len) < STRUCTURAL_OVERRIDE_MAX_ITERS
+            # Bug fix (pipeline audit, rosetta_optical-flow, 20260804 sweep):
+            # the decay above is a pure timer -- it releases the menu back to
+            # phys_opt every (STRUCTURAL_OVERRIDE_MAX_ITERS +
+            # STUCK_ITERATION_THRESHOLD) iterations regardless of whether
+            # phys_opt has anything left to offer. Confirmed on optical-flow:
+            # by iter 6 every phys_opt variant had been tried this streak
+            # (_widen_override_with_untried_phys_opt correctly narrowed to
+            # zero untried options), but the timer decayed at iter 7 anyway
+            # and handed the menu straight back to an already-exhausted
+            # phys_opt_design instead of the place_design_explore/pblock
+            # attempt this design had never gotten. Once phys_opt is provably
+            # exhausted for this streak, hold the override regardless of the
+            # timer -- there's nothing left in that family left to protect
+            # access to, so decaying just re-tries what already failed.
+            if not structural_override and self._phys_opt_exhausted_this_streak(allowed, high_spread):
+                structural_override = True
+                logger.warning(
+                    "Stuck detector: decay timer says off, but every phys_opt "
+                    "variant is exhausted this streak (%d iterations); holding "
+                    "structural override on instead of releasing it.",
+                    self.consecutive_no_improvement,
+                )
+        else:
+            structural_override = False
+        self.structural_override_active = structural_override
         if structural_override:
             # Even when forcing a structural action after repeated stalls,
             # still respect the spread-based ordering below - otherwise a
@@ -3576,17 +3660,32 @@ class DCPOptimizer(DCPOptimizerBase):
 
         Used by both the exploit-after-win demotion here and the diagnosis
         layer's promotion block (analysis_layer.actions_for), which must not
-        re-promote full re-rolls past this demotion."""
+        re-promote full re-rolls past this demotion.
+
+        Materiality floor (pipeline audit, rosetta_optical-flow, 20260804
+        sweep): the old check was `best > baseline + 1e-9`, so iter 1's
+        +0.42 MHz marginal (0.13% over baseline) counted as a "win worth
+        protecting" and kept place_design_explore/pblock_full_replace
+        demoted for the ENTIRE rest of the run -- the design then stalled
+        flat for 7 straight iterations without ever getting the one lever
+        (a real re-place) that its balanced logic/net profile hadn't tried.
+        The exploit-after-win evidence this demotion encodes came from runs
+        holding wins of +98 MHz, not +0.4; protecting a rounding-error gain
+        with the same authority is a category error. Require the banked win
+        to be material (FRESH_WIN_MATERIALITY_FRACTION over baseline) before
+        the demotion engages; below that, the run is treated as not yet
+        having found anything, leaving re-rolls at full rank."""
         cm = self.checkpoint_manager
         if cm is None or not cm.iterations:
             return False
+        if cm.best_fmax_mhz is None or cm.baseline_fmax_mhz is None:
+            return cm.stall_count == 0
+        material_floor = cm.baseline_fmax_mhz * (1.0 + FRESH_WIN_MATERIALITY_FRACTION)
+        if cm.best_fmax_mhz <= material_floor:
+            return False
         if cm.stall_count == 0:
             return True
-        return (
-            cm.best_fmax_mhz is not None
-            and cm.baseline_fmax_mhz is not None
-            and cm.best_fmax_mhz > cm.baseline_fmax_mhz + 1e-9
-        )
+        return cm.best_fmax_mhz > cm.baseline_fmax_mhz + 1e-9
 
     def _demote_actions(
         self,
@@ -6760,7 +6859,44 @@ class DCPOptimizer(DCPOptimizerBase):
             self.last_recipe = action
             self.last_targets = [str(timing_context["worst_path"].get("end_cell"))]
             self.last_batch_size = 1
-            return await self.call_tool("vivado_phys_opt_design", {"critical_cell_opt": True})
+            call_params: dict = {"critical_cell_opt": True}
+            # Targeted replication (pipeline audit, 20260804 sweep --
+            # rosetta_optical-flow / rosetta_spam-filter / vexriscv_re-place_v2):
+            # all three stalled designs diagnosed excessive_fanout at 0.80
+            # confidence with ONE named hotspot cell recurring across
+            # 65-95% of extracted candidates, every iteration -- and this
+            # action then ran a generic whole-design critical_cell_opt pass
+            # that never received the cell name and measurably did nothing
+            # (WNS bit-identical across every attempt on all three designs).
+            # Vivado's targeted lever for exactly this situation is
+            # -force_replication_on_nets, already registered in the MCP
+            # schema (VivadoMCP/vivado_mcp_server.py, a raw-string splice
+            # that accepts a [get_nets ...] expression) and never once used.
+            # When the live diagnosis names hotspot cells, replicate their
+            # output nets specifically instead of hoping the generic pass
+            # happens to pick the right cell.
+            diagnosis = self.last_diagnosis
+            if diagnosis is not None and diagnosis.primary_hypothesis.name == "excessive_fanout":
+                hotspots = []
+                for cluster in diagnosis.clusters:
+                    if cluster.id == diagnosis.primary_cluster_id:
+                        hotspots = [str(c) for c in (cluster.fanout_hotspots or []) if c][:3]
+                        break
+                if hotspots:
+                    cell_list = " ".join("{" + cell + "}" for cell in hotspots)
+                    call_params["force_replication_on_nets"] = (
+                        f"[get_nets -quiet -of_objects [get_pins -quiet -filter "
+                        f"{{DIRECTION == OUT}} -of_objects [get_cells -quiet {cell_list}]]]"
+                    )
+                    self.last_targets = hotspots
+                    self.last_batch_size = len(hotspots)
+                    logger.info(
+                        "replicate_register: excessive_fanout diagnosis names hotspot "
+                        "cell(s) %s; forcing replication on their output nets instead "
+                        "of relying on the generic critical_cell_opt pass alone.",
+                        hotspots,
+                    )
+            return await self.call_tool("vivado_phys_opt_design", call_params)
         return self._failure_json(
             "unsupported_action",
             f"Action {action!r} is not implemented by the orchestrator dispatch layer.",

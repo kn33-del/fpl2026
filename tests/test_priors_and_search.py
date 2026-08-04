@@ -402,6 +402,138 @@ def test_structural_override_lookback_covers_the_whole_stall_streak(opt):
     assert "phys_opt_design_retime" in widened
 
 
+def test_replicate_register_actually_sends_critical_cell_opt(opt):
+    # Pipeline audit (20260804 sweep): _run_phys_opt_with_policy only ever
+    # read directive/critical_pin_opt from its arguments, so
+    # replicate_register's {"critical_cell_opt": True} was silently dropped
+    # on EVERY call in the project's history -- the action ran a plain
+    # directive pass indistinguishable from phys_opt_design, which is why it
+    # went 0-for-everything on the excessive_fanout-stalled designs. The
+    # final Tcl must now carry -critical_cell_opt and (per the Vivado_Tcl
+    # 4-167 specific-options rule) no -directive.
+    commands = []
+
+    async def fake_call_tool(tool_name, params, internal=False):
+        if tool_name == "vivado_phys_opt_design" and not internal:
+            return await opt._run_phys_opt_with_policy(params)
+        if tool_name == "vivado_run_tcl":
+            commands.append(params["command"])
+        return "ok"
+
+    async def fake_wns():
+        return -0.2
+
+    opt.design_state = "routed"
+    with patch.object(opt, "call_tool", side_effect=fake_call_tool), \
+         patch.object(opt, "_get_current_wns", side_effect=fake_wns):
+        asyncio.run(opt.execute_validated_action(
+            {"chosen_action": "replicate_register", "action_parameters": {}},
+            {"worst_path": {"end_cell": "some/cell"}, "delay_class": "mixed"},
+        ))
+    assert commands, "no phys_opt Tcl was ever issued"
+    assert "-critical_cell_opt" in commands[0]
+    assert "-directive" not in commands[0]
+
+
+def test_replicate_register_targets_diagnosed_fanout_hotspots(opt):
+    # Fix (20260804 sweep, optical-flow/spam-filter/vexriscv_v2): all three
+    # stalled designs diagnosed excessive_fanout with ONE named hotspot cell
+    # recurring across 65-95% of candidates, and the action never received
+    # it. When the live diagnosis names hotspots, the command must carry
+    # -force_replication_on_nets targeting their output nets.
+    hyp = RootCauseHypothesis(
+        name="excessive_fanout", cluster_id="c0", confidence=0.8,
+        supporting_evidence=[], contradicting_evidence=[],
+        recommended_actions=["replicate_register"], evidence_requests=[])
+    from analysis_layer import FailureCluster
+    cluster = FailureCluster(
+        id="c0", members=[], shared_cells={"top/hot_reg"},
+        fanout_hotspots=["top/hot_reg"])
+    diagnosis = _make_diagnosis(hyp)
+    diagnosis.clusters = [cluster]
+    opt.last_diagnosis = diagnosis
+
+    commands = []
+
+    async def fake_call_tool(tool_name, params, internal=False):
+        if tool_name == "vivado_phys_opt_design" and not internal:
+            return await opt._run_phys_opt_with_policy(params)
+        if tool_name == "vivado_run_tcl":
+            commands.append(params["command"])
+        return "ok"
+
+    async def fake_wns():
+        return -0.2
+
+    opt.design_state = "routed"
+    with patch.object(opt, "call_tool", side_effect=fake_call_tool), \
+         patch.object(opt, "_get_current_wns", side_effect=fake_wns):
+        asyncio.run(opt.execute_validated_action(
+            {"chosen_action": "replicate_register", "action_parameters": {}},
+            {"worst_path": {"end_cell": "some/cell"}, "delay_class": "mixed"},
+        ))
+    assert commands
+    assert "-force_replication_on_nets" in commands[0]
+    assert "top/hot_reg" in commands[0]
+    assert opt.last_targets == ["top/hot_reg"]
+
+
+def test_fresh_win_requires_material_gain(opt, tmp_path):
+    # Fix (rosetta_optical-flow, 20260804 sweep): a +0.42 MHz marginal at
+    # iter 1 (0.13% over baseline) used to count as a "win worth protecting"
+    # and kept place_design_explore/pblock_full_replace demoted for the
+    # entire rest of the run. Sub-materiality gains must not engage the
+    # exploit-after-win demotion.
+    opt.checkpoint_manager = CheckpointManager(
+        input_dcp="in.dcp", output_dir=str(tmp_path / "ckpt"), clock_name="clk")
+    opt.checkpoint_manager.start_baseline(wns=-1.078, period_ns=2.0)
+    opt.checkpoint_manager.iterations = [
+        {"llm_chosen_action": "replicate_register", "status": "marginal"}]
+    baseline = opt.checkpoint_manager.baseline_fmax_mhz
+
+    # optical-flow's actual situation: +0.13% -- below the floor.
+    opt.checkpoint_manager.best_fmax_mhz = baseline * 1.0013
+    opt.checkpoint_manager.stall_count = 3
+    assert opt._sitting_on_fresh_win() is False
+
+    # A real win -- comfortably above the floor -- still protected.
+    opt.checkpoint_manager.best_fmax_mhz = baseline * 1.05
+    assert opt._sitting_on_fresh_win() is True
+
+
+def test_phys_opt_exhausted_this_streak(opt):
+    # Fix (pipeline audit, rosetta_optical-flow, 20260804 sweep): the
+    # structural override's decay timer used to release the menu back to
+    # phys_opt on a fixed schedule even when every phys_opt variant had
+    # already been tried this streak -- confirmed on optical-flow, where the
+    # decay handed the menu back to an exhausted phys_opt_design instead of
+    # ever forcing place_design_explore/pblock. This helper is what lets the
+    # override hold through the decay window in that case.
+    opt.checkpoint_manager = CheckpointManager(
+        input_dcp="in.dcp", output_dir="ckpt", clock_name="clk")
+    opt.checkpoint_manager.iterations = [
+        {"llm_chosen_action": "replicate_register", "status": "no_improvement"},
+        {"llm_chosen_action": "phys_opt_design", "status": "no_improvement"},
+        {"llm_chosen_action": "phys_opt_design_retime", "status": "no_improvement"},
+        {"llm_chosen_action": "phys_opt_design_pin_swap", "status": "no_improvement"},
+    ]
+    opt.consecutive_no_improvement = 4
+    allowed = [
+        "pblock", "place_design_explore", "phys_opt_design",
+        "phys_opt_design_retime", "phys_opt_design_pin_swap", "replicate_register",
+    ]
+    # All four variants tried -- nothing left for the widen step to add.
+    assert opt._phys_opt_exhausted_this_streak(allowed, high_spread=False) is True
+
+    # One variant genuinely untried -- not exhausted yet.
+    opt.checkpoint_manager.iterations.pop()  # phys_opt_design_pin_swap never tried
+    assert opt._phys_opt_exhausted_this_streak(allowed, high_spread=False) is False
+
+    # No structural fallback on offer at all -- refuse to force a dead end.
+    no_structural_allowed = ["phys_opt_design", "phys_opt_design_retime", "phys_opt_design_pin_swap"]
+    assert opt._phys_opt_exhausted_this_streak(no_structural_allowed, high_spread=False) is False
+
+
 def test_critical_pin_opt_drops_directive_flag(opt):
     # ERROR: [Vivado_Tcl 4-167] "Cannot specify '-critical_pin_opt' when
     # '-directive' is specified" -- seen identically across corescore x2,
