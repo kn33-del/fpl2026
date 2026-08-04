@@ -2545,8 +2545,25 @@ class DCPOptimizer(DCPOptimizerBase):
         recent stalls were pblock/route_explore/phys_opt_design_pin_swap --
         pin_swap correctly stays excluded as "already tried", but plain
         phys_opt_design and phys_opt_design_retime, never attempted, get
-        added back onto a menu that would otherwise have been placement-only)."""
-        recent_stall_actions = self._recent_stall_action_families(STUCK_ITERATION_THRESHOLD)
+        added back onto a menu that would otherwise have been placement-only).
+
+        Bug fix (pipeline audit, rosetta_optical-flow/rosetta_spam-filter,
+        20260804 sweep): the "recent" window here was a fixed 3 iterations
+        (STUCK_ITERATION_THRESHOLD), so a phys_opt variant tried earlier than
+        that aged out of "recent" and got treated as untried all over again.
+        optical-flow's override activated at iter 5 (consecutive_no_
+        improvement=3); iter 6's "recent" window (the 3 iterations before it)
+        no longer included iters 1-2's replicate_register attempts, so this
+        function re-offered it as "genuinely untried" and the LLM picked it
+        again -- never once forcing place_design_explore/pblock across 6
+        straight phys_opt-only stalled iterations. Looking back across the
+        WHOLE current stall streak instead of a fixed 3 fixes this directly:
+        as the streak grows, every phys_opt variant that's actually been
+        tried during it stays excluded, and once all of them have (there are
+        only 4), phys_opt_untried empties out on its own and the override
+        reverts to pure structural -- no separate cutoff needed."""
+        lookback = max(self.consecutive_no_improvement, STUCK_ITERATION_THRESHOLD)
+        recent_stall_actions = self._recent_stall_action_families(lookback)
         phys_opt_untried = [
             action for action in PHYS_OPT_INCREMENTAL_ACTIONS
             if action in allowed

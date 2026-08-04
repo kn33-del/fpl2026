@@ -368,6 +368,40 @@ def test_structural_override_does_not_widen_when_a_stall_was_phys_opt(opt):
     assert widened == structural_allowed
 
 
+def test_structural_override_lookback_covers_the_whole_stall_streak(opt):
+    # Fix (pipeline audit, rosetta_optical-flow, 20260804 sweep): the old
+    # fixed 3-iteration lookback let an action tried at the START of a
+    # longer stall streak "age out" and get re-offered as genuinely untried
+    # once the streak grew past 3 -- optical-flow's override re-picked
+    # replicate_register at iter 6 even though it had already failed at
+    # iters 1-2, because by then those were outside the last-3 window.
+    # Across a 5-iteration streak, an action tried at iterations 1-2 must
+    # stay excluded; one that's never appeared anywhere in the streak is
+    # still offered.
+    opt.checkpoint_manager = CheckpointManager(
+        input_dcp="in.dcp", output_dir="ckpt", clock_name="clk")
+    opt.checkpoint_manager.iterations = [
+        {"llm_chosen_action": "replicate_register", "status": "no_improvement"},
+        {"llm_chosen_action": "replicate_register", "status": "no_improvement"},
+        {"llm_chosen_action": "phys_opt_design", "status": "no_improvement"},
+        {"llm_chosen_action": "phys_opt_design", "status": "no_improvement"},
+        {"llm_chosen_action": "phys_opt_design_pin_swap", "status": "no_improvement"},
+    ]
+    opt.consecutive_no_improvement = 5
+    allowed = [
+        "pblock", "place_design_explore", "phys_opt_design",
+        "phys_opt_design_retime", "phys_opt_design_pin_swap", "replicate_register",
+    ]
+    structural_allowed = ["pblock", "place_design_explore"]
+    widened = opt._widen_override_with_untried_phys_opt(structural_allowed, allowed)
+    # Tried 3+ iterations ago -- a fixed 3-window would have missed this.
+    assert "replicate_register" not in widened
+    # Tried within the last 3 either way -- excluded regardless of window.
+    assert "phys_opt_design_pin_swap" not in widened
+    # Genuinely never tried anywhere in the streak -- still offered.
+    assert "phys_opt_design_retime" in widened
+
+
 def test_critical_pin_opt_drops_directive_flag(opt):
     # ERROR: [Vivado_Tcl 4-167] "Cannot specify '-critical_pin_opt' when
     # '-directive' is specified" -- seen identically across corescore x2,
