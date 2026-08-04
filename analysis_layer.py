@@ -445,7 +445,14 @@ def _rule_placement_already_compact(cluster: FailureCluster, evidence: dict) -> 
         # or, even fixed to substitute, had an empty list to substitute
         # with. Name the logic-level actions this hypothesis actually
         # implies so a confident veto can hand the LLM something real.
-        recommended_actions=["phys_opt_design", "phys_opt_design_retime", "lut_opt", "logic_restructure"],
+        # "logic_restructure" removed (pipeline audit, logic_delay_bound
+        # paths improved only 1/17 times across the 20260802-20260804
+        # sweep): dcp_optimizer.py hard-forbids it -- "not implemented by
+        # the dispatcher" -- so this hypothesis, whose entire purpose is
+        # pointing the LLM at the logic-side levers that actually work, was
+        # diluting its own recommendation with one the LLM could never
+        # execute. lut_opt/phys_opt_design_retime are the real levers here.
+        recommended_actions=["phys_opt_design", "phys_opt_design_retime", "lut_opt"],
         evidence_requests=["cluster_avg_spread", "logic_pct"],
         veto_actions=["pblock", "rapidwright_optimize_cell_placement"],
     )

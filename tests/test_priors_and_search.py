@@ -39,7 +39,10 @@ except ImportError:  # pragma: no cover
     sys.modules.setdefault("openai", openai_stub)
 
 import dcp_optimizer as dcp  # noqa: E402
-from dcp_optimizer import DCPOptimizer, PLACE_DIRECTIVE_SWEEP, PHYS_OPT_DIRECTIVE_SWEEP  # noqa: E402
+from dcp_optimizer import (  # noqa: E402
+    DCPOptimizer, PLACE_DIRECTIVE_SWEEP, PHYS_OPT_DIRECTIVE_SWEEP,
+    PHYS_OPT_SECONDARY_DIRECTIVE,
+)
 from analysis_layer import (  # noqa: E402
     AnalysisEngine,
     Diagnosis,
@@ -91,6 +94,92 @@ def test_logic_delay_bound_demotes_placement(opt):
     assert allowed[0] == "lut_opt"
     assert "pblock" in allowed and "pblock" in opt.last_action_guidance
     assert "logic_restructure" in forbidden
+
+
+def test_low_yield_recipe_demoted_below_this_run_winner(opt, tmp_path):
+    # Fix 3 (pipeline audit, 20260802-20260804 sweep): vivado_phys_opt's
+    # family was attempted 46% of the time across that sweep yet only 20%
+    # improved, while place_design_explore hit 68% on a fifth as many
+    # tries -- but the cross-run "0 wins" kill switch never catches
+    # phys_opt_design since it does win sometimes. This-run tallies should
+    # demote it below a clearly-outperforming alternative once both have
+    # enough attempts to be signal.
+    opt.checkpoint_manager = CheckpointManager(
+        input_dcp="dummy.dcp", output_dir=tmp_path, clock_name="clk")
+    # Keep _sitting_on_fresh_win() False (best_fmax_mhz stays None with a
+    # nonzero stall_count) so its own place_design_explore demotion doesn't
+    # confound what this test is isolating.
+    opt.checkpoint_manager.stall_count = 1
+    for status in ("no_improvement", "no_improvement", "failed"):
+        opt.checkpoint_manager.iterations.append(
+            {"llm_chosen_action": "phys_opt_design", "status": status})
+    for status in ("improved", "improved"):
+        opt.checkpoint_manager.iterations.append(
+            {"llm_chosen_action": "place_design_explore", "status": status})
+
+    allowed, _ = opt._allowed_forbidden_actions(
+        "net_delay_bound", "REGISTER", 0.82, 5.0, -0.2)
+
+    assert allowed.index("place_design_explore") < allowed.index("phys_opt_design")
+    assert "this run" in opt.last_action_guidance["phys_opt_design"]
+    assert "place_design_explore" in opt.last_action_guidance["phys_opt_design"]
+
+
+def test_low_yield_recipe_not_demoted_without_a_proven_alternative(opt, tmp_path):
+    # The same laggard record should NOT be demoted if nothing currently
+    # allowed has actually earned a better rate this run yet -- otherwise
+    # the LLM would be steered away from every real lever on a hard design
+    # where nothing has worked well so far.
+    opt.checkpoint_manager = CheckpointManager(
+        input_dcp="dummy.dcp", output_dir=tmp_path, clock_name="clk")
+    for status in ("no_improvement", "no_improvement", "failed"):
+        opt.checkpoint_manager.iterations.append(
+            {"llm_chosen_action": "phys_opt_design", "status": status})
+
+    allowed, _ = opt._allowed_forbidden_actions(
+        "net_delay_bound", "REGISTER", 0.82, 5.0, -0.2)
+
+    assert "phys_opt_design" not in opt.last_action_guidance
+
+
+def test_lut_opt_defaults_pins_from_worst_path_candidates(opt):
+    # Pipeline audit (20260802-20260804 sweep): hierarchical_input_pins is a
+    # REQUIRED, design-specific parameter the LLM has no way to invent, and
+    # lut_opt was offered 105 times / chosen 0 across that sweep. Falling
+    # back to the current worst-path candidates' own endpoint pins gives the
+    # LLM a usable default instead of a guaranteed missing_action_parameters
+    # failure whenever it omits the field.
+    calls = []
+
+    async def fake_call_tool(tool_name, params, internal=False):
+        calls.append((tool_name, dict(params)))
+        return "ok"
+
+    opt.current_target_candidates = [
+        {"endpoint": "top/sub/inst1/D", "startpoint": "top/sub/inst0/Q", "slack": -0.5},
+        {"endpoint": "top/sub/inst2/D", "startpoint": "top/sub/inst1/Q", "slack": -0.4},
+        {"endpoint": "top/sub/inst1/D", "startpoint": "top/sub/inst3/Q", "slack": -0.3},
+    ]
+    with patch.object(opt, "call_tool", side_effect=fake_call_tool):
+        result = asyncio.run(opt.execute_validated_action(
+            {"chosen_action": "lut_opt", "action_parameters": {}},
+            {"delay_class": "logic_delay_bound"},
+        ))
+    assert calls[0][0] == "rapidwright_optimize_lut_input_cone"
+    # Deduplicated, in candidate order.
+    assert calls[0][1]["hierarchical_input_pins"] == ["top/sub/inst1/D", "top/sub/inst2/D"]
+    assert result == "ok"
+
+
+def test_lut_opt_fails_when_no_candidates_to_derive_from(opt):
+    opt.current_target_candidates = []
+    result = asyncio.run(opt.execute_validated_action(
+        {"chosen_action": "lut_opt", "action_parameters": {}},
+        {"delay_class": "logic_delay_bound"},
+    ))
+    payload = json.loads(result)
+    assert payload["success"] is False
+    assert payload["error_type"] == "missing_action_parameters"
 
 
 # ---------------------------------------------------------------------------
@@ -333,6 +422,58 @@ def test_phys_opt_dispatch_defaults_to_untried_directive(opt):
         ))
     assert calls[0][1]["directive"] == PHYS_OPT_DIRECTIVE_SWEEP[0]
     assert opt.last_phys_opt_directive == PHYS_OPT_DIRECTIVE_SWEEP[0]
+
+
+def test_repeated_budget_refusal_exhausts_the_action(opt):
+    # Fix 2 (pipeline audit, 20260802-20260804 sweep): insufficient_budget
+    # refusals used to leave no memory at all -- the demotion in
+    # _allowed_forbidden_actions is soft, so a refused action could be
+    # re-proposed and re-refused indefinitely. ispd16_example2 burned its
+    # last 15 of 19 iterations exactly this way. A refusal should now feed
+    # the same cooldown machinery other repeat-failing actions use, so the
+    # action actually drops out of allowed_actions after
+    # ACTION_FAILURE_EXHAUSTION_THRESHOLD refusals on the same target set.
+    opt.current_target_candidates = [{"endpoint": "e", "startpoint": "s", "slack": -0.5}]
+
+    async def fake_call_tool(tool_name, params, internal=False):
+        return "ok"
+
+    with patch.object(opt, "call_tool", side_effect=fake_call_tool), \
+         patch.object(opt, "_time_remaining_s", return_value=60.0), \
+         patch.object(opt, "_estimated_action_cost_s", return_value=6000.0):
+        for _ in range(dcp.ACTION_FAILURE_EXHAUSTION_THRESHOLD):
+            result = asyncio.run(opt.execute_validated_action(
+                {"chosen_action": "route_explore", "action_parameters": {}}, {},
+            ))
+            assert json.loads(result)["error_type"] == "insufficient_budget"
+
+    assert "route_explore" in opt._active_exhausted_actions()
+
+
+def test_repeated_phys_opt_wns_refusal_exhausts_the_action(opt):
+    # Same mechanism, for the other self-refusal type (13/47 failures in the
+    # same sweep): phys_opt_below_useful_wns.
+    opt.current_target_candidates = [{"endpoint": "e", "startpoint": "s", "slack": -8.0}]
+    opt.path_delay_breakdown = {"logic_pct": 0.1}
+    opt.consecutive_no_improvement = 0
+
+    async def fake_wns():
+        return -8.0
+
+    # Deliberately NOT patching call_tool: the guard fires and returns
+    # before execute_validated_action's phys_opt branch ever reaches its
+    # own self.call_tool("vivado_phys_opt_design", ...) -- patching it here
+    # would bypass call_tool's own interception into _run_phys_opt_with_policy
+    # (the guard under test) entirely.
+    with patch.object(opt, "_get_current_wns", side_effect=fake_wns), \
+         patch.object(opt, "_active_exhausted_actions", side_effect=lambda: []):
+        for _ in range(dcp.ACTION_FAILURE_EXHAUSTION_THRESHOLD):
+            result = asyncio.run(opt.execute_validated_action(
+                {"chosen_action": "phys_opt_design", "action_parameters": {}}, {},
+            ))
+            assert json.loads(result)["error_type"] == "phys_opt_below_useful_wns"
+
+    assert "phys_opt_design" in opt._active_exhausted_actions()
 
 
 def test_place_design_explore_unplaces_first(opt):
@@ -861,6 +1002,73 @@ def test_reconstrain_focus_always_restores_contest_period(opt):
     # restored to the contest period 1.5 last.
     assert periods[0] == pytest.approx(9.975, abs=1e-3)
     assert periods[-1] == 1.5
+
+
+def test_phys_opt_secondary_directive_is_valid():
+    # "ExploreWithRemap" (the old value) isn't a real Vivado phys_opt_design
+    # directive -- run 20260803_153128's vivado.jou showed it always
+    # immediately followed by "-directive Default", the error-fallback
+    # firing every time. Guard against reintroducing an invalid name here.
+    valid_directives = {
+        "Default", "Explore", "ExploreWithHoldFix", "ExploreWithAggressiveHoldFix",
+        "AggressiveExplore", "AlternateReplication", "AggressiveFanoutOpt",
+        "AlternateFlowWithRetiming", "AddRetime", "RuntimeOptimized", "RQS",
+    }
+    assert PHYS_OPT_SECONDARY_DIRECTIVE in valid_directives
+    assert PHYS_OPT_SECONDARY_DIRECTIVE != "ExploreWithRemap"
+
+
+def test_post_route_physsynth_crash_detection(opt):
+    # Confirmed signature (fir_systolic_transposed_routed_2025.1, runs
+    # 20260801_195142 and 20260803_153128): routing completes cleanly, then
+    # Vivado's own post-route physical-synthesis re-optimization pass
+    # (Phase 15/15.1) throws this specific exception. A generic Vivado
+    # error ("ERROR: [Route ...]" from some other cause) must NOT match --
+    # only this pipeline's own crash signature should trigger a retry.
+    crash_log = (
+        "Phase 15 Physical Synthesis in Router\n"
+        "Phase 15.1 Physical Synthesis Initialization\n"
+        "ERROR: [Route 35-9] Router encountered a fatal exception of type "
+        "'13HDPLException' - 'Error in placer init in PSFlow '.\n"
+    )
+    assert opt._is_post_route_physsynth_crash(crash_log)
+    other_error = "ERROR: [Route 35-4] Router failed to route some nets.\n"
+    assert not opt._is_post_route_physsynth_crash(other_error)
+
+
+def test_pblock_route_crash_retries_with_default_directive(opt):
+    # Fix (evaluation follow-up, fir_systolic_transposed): the old behavior
+    # took pblock off the table for the rest of the run over a Vivado-side
+    # crash unrelated to the design. A single retry with -directive Default
+    # (which doesn't invoke the crashing pass) should recover the win
+    # instead of returning a terminal pblock_route_failed.
+    crash_text = (
+        "Phase 15.1 Physical Synthesis Initialization\n"
+        "ERROR: [Route 35-9] Router encountered a fatal exception of type "
+        "'13HDPLException' - 'Error in placer init in PSFlow '.\n"
+    )
+    calls = []
+
+    async def fake_call_tool(tool_name, params, internal=False):
+        calls.append((tool_name, dict(params)))
+        if tool_name == "vivado_route_design" and params.get("directive") == "Explore":
+            return crash_text
+        if tool_name == "vivado_create_and_apply_pblock":
+            return json.dumps({"cells_assigned": 5, "cells_matched": 5})
+        return "ok"
+
+    opt.current_target_candidates = []
+    with patch.object(opt, "call_tool", side_effect=fake_call_tool), \
+         patch.object(opt, "_compute_pblock_ranges", side_effect=lambda params, ctx: (
+             {**params, "ranges": "SLICE_X0Y0:SLICE_X10Y10", "pblock_name": "pb", "apply_to": "current_design", "is_soft": False}, None)):
+        result = asyncio.run(opt.execute_validated_action(
+            {"chosen_action": "pblock", "action_parameters": {}},
+            {"delay_class": "net_delay_bound", "cluster_clock_regions": []},
+        ))
+    route_calls = [c for c in calls if c[0] == "vivado_route_design"]
+    assert [c[1]["directive"] for c in route_calls] == ["Explore", "Default"]
+    # Recovered via the Default retry -- not the terminal failure path.
+    assert "pblock_route_failed" not in result
 
 
 def test_timeout_floor_drops_when_duration_known(opt):

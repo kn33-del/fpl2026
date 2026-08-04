@@ -8,6 +8,7 @@ Uses the rapidwright pip package for JPype integration, with RAPIDWRIGHT_PATH
 and CLASSPATH pointing to the local RapidWright git submodule for Java classes.
 """
 import logging
+import re
 from typing import Dict, Any, Optional
 
 logger = logging.getLogger(__name__)
@@ -2100,19 +2101,37 @@ def convert_fabric_region_to_pblock_ranges(
                     site_category = "URAM288"
                 
                 if site_category and site_category in site_bounds:
-                    # Get instance X/Y coordinates from the site
-                    try:
-                        x = site.getInstanceX()
-                        y = site.getInstanceY()
-                        
-                        bounds = site_bounds[site_category]
-                        bounds["min_x"] = min(bounds["min_x"], x)
-                        bounds["max_x"] = max(bounds["max_x"], x)
-                        bounds["min_y"] = min(bounds["min_y"], y)
-                        bounds["max_y"] = max(bounds["max_y"], y)
-                        bounds["count"] += 1
-                    except:
-                        pass
+                    # Bug fix (fpl2026 pipeline audit, run 20260803_164620 on
+                    # ispd16_example2): this used to read site.getInstanceX()/
+                    # getInstanceY() and plug them straight into the
+                    # "SLICE_X{x}Y{y}" range string below. Those instance
+                    # coordinates are NOT guaranteed to equal the X/Y in the
+                    # site's own Vivado name -- that run produced a computed
+                    # range of "SLICE_X0Y0:SLICE_X12614Y83861" (X/Y values far
+                    # beyond any real device's site count) for a region whose
+                    # own fabric analysis reported a sane 21x55-tile window,
+                    # and the resulting pblock's resource_validation then
+                    # failed with "FIFO: requires 768, only 120 available" --
+                    # consistent with the applied range actually covering (or
+                    # RapidWright/Vivado clamping to) far more of the die than
+                    # the small window that was intended. Parse X/Y straight
+                    # out of site.getName() instead: that name IS the exact
+                    # "SLICE_X55Y60"-style string Vivado's create_pblock
+                    # expects, so the range built from it can't drift from
+                    # what the site is actually called.
+                    site_name_str = str(site.getName())
+                    match = re.search(r"_X(\d+)Y(\d+)$", site_name_str)
+                    if match is None:
+                        continue
+                    x = int(match.group(1))
+                    y = int(match.group(2))
+
+                    bounds = site_bounds[site_category]
+                    bounds["min_x"] = min(bounds["min_x"], x)
+                    bounds["max_x"] = max(bounds["max_x"], x)
+                    bounds["min_y"] = min(bounds["min_y"], y)
+                    bounds["max_y"] = max(bounds["max_y"], y)
+                    bounds["count"] += 1
         
         # Build the pblock range string
         pblock_parts = []

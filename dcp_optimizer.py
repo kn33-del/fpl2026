@@ -57,7 +57,17 @@ CONSTRAINT_AUDIT_TOP_PATHS = 50
 CONSTRAINT_AUDIT_COMMON_PREFIX_FRACTION = 0.30
 TIME_BUDGET_RESERVE_S = 300
 PHYS_OPT_PRIMARY_DIRECTIVE = "AggressiveExplore"
-PHYS_OPT_SECONDARY_DIRECTIVE = "ExploreWithRemap"
+# "ExploreWithRemap" is not a real Vivado phys_opt_design directive (absent
+# from the full confirmed-valid set in VivadoMCP/vivado_mcp_server.py's own
+# schema: Default, Explore, ExploreWithHoldFix, ExploreWithAggressiveHoldFix,
+# AggressiveExplore, AlternateReplication, AggressiveFanoutOpt,
+# AlternateFlowWithRetiming, AddRetime, RuntimeOptimized, RQS). Confirmed via
+# run 20260803_153128's vivado.jou: every "-directive ExploreWithRemap" call
+# is immediately followed by "-directive Default" -- the error-fallback in
+# _run_phys_opt_with_policy firing every single time, silently wasting one
+# Vivado round-trip on every phys_opt attempt that didn't already improve
+# WNS, across the entire project's run history.
+PHYS_OPT_SECONDARY_DIRECTIVE = "ExploreWithHoldFix"
 # Directive sweep for phys_opt_design/phys_opt_design_retime/phys_opt_design_pin_swap,
 # mirroring PLACE_DIRECTIVE_SWEEP: without it, the LLM has no reason to move
 # off one directive string once it's typed it, and nothing tracks that it's
@@ -127,6 +137,19 @@ BLACKLIST_TTL_ITERS = 15
 # that's likely to succeed on the next retry.
 PBLOCK_OVERLAP_COOLDOWN_ITERS = 20
 ACTION_FAILURE_COOLDOWN_ITERS = 5
+# This-run recipe-yield demotion (pipeline audit, 20260802-20260804 sweep):
+# thresholds for the live win-rate prior in _allowed_forbidden_actions.
+# RECIPE_YIELD_MIN_ATTEMPTS/RECIPE_YIELD_LOW_RATE gate the laggard (enough
+# attempts this run to be signal, not noise, and a rate clearly below
+# chance); RECIPE_YIELD_ALT_MIN_ATTEMPTS/RECIPE_YIELD_ALT_MIN_RATE gate the
+# alternative it's compared against (has to actually be working this run,
+# not just untried). Demotion only, same as every other prior here -- see
+# DISCOURAGED_ACTION_MIN_CONFIDENCE for how a demoted pick still gets used
+# when the LLM's rebuttal is unconvincing.
+RECIPE_YIELD_MIN_ATTEMPTS = 3
+RECIPE_YIELD_LOW_RATE = 0.25
+RECIPE_YIELD_ALT_MIN_ATTEMPTS = 2
+RECIPE_YIELD_ALT_MIN_RATE = 0.5
 # Fix #10 (score-aware stall stop): the contest score is
 # alpha - 0.1*alpha*cost - 0.1*alpha*(runtime/3600), so every iteration past
 # the last improvement is pure negative value. Run history showed runs
@@ -424,6 +447,17 @@ RUN_RECIPE_STAGE_WHITELIST = {
 DEFAULT_PBLOCK_TARGET_LUT_COUNT = 20000
 DEFAULT_PBLOCK_TARGET_FF_COUNT = 40000
 DEFAULT_PBLOCK_NAME_PREFIX = "pblock_net_delay"
+# lut_opt auto-derivation cap (pipeline audit, 20260802-20260804 sweep):
+# hierarchical_input_pins is a REQUIRED, design-specific parameter
+# (real hierarchy names like "module/submodule/inst/pin") the LLM has no
+# principled way to invent, unlike every other action's parameters, which
+# are either optional or auto-derived when omitted. lut_opt was offered
+# 105 times across that sweep's 172 iterations and chosen 0 -- consistent
+# with the LLM consistently avoiding a REQUIRED field it cannot fill in
+# confidently. Default to the current worst-path candidates' own endpoint
+# pins (the same names already surfaced in worst_path/current_target_
+# candidates) instead of failing outright on missing_action_parameters.
+LUT_OPT_DEFAULT_MAX_PINS = 5
 # Fix #14: documents the valid `action_parameters` keys per action, shipped
 # to the LLM inside every timing context. Previously the decision prompt
 # showed `"action_parameters": { ... }` with no key documentation anywhere,
@@ -456,7 +490,10 @@ ACTION_PARAMETERS_SCHEMA = {
         "split_factor": "int, driver replication factor (default fanout/100, clamped 2-8)",
     },
     "lut_opt": {
-        "hierarchical_input_pins": "list[str], REQUIRED input pins of the LUT cone to collapse",
+        "hierarchical_input_pins": (
+            "list[str], input pins of the LUT cone to collapse; if omitted, defaults to the "
+            f"current worst-path candidates' own endpoint pins (up to {LUT_OPT_DEFAULT_MAX_PINS})"
+        ),
     },
     "phys_opt_design": {
         "directive": (
@@ -1971,6 +2008,19 @@ class DCPOptimizer(DCPOptimizerBase):
                     f"{PHYS_OPT_MIN_USEFUL_WNS_NS:.3f} ns; use structural placement actions first."
                 )
                 logger.info(message)
+                # Pipeline audit (20260802-20260804 sweep): this guard alone
+                # fired 13 times across 172 iterations, and the demotion in
+                # _allowed_forbidden_actions (same WNS check) is soft -- the
+                # LLM kept re-choosing a phys_opt variant it had already been
+                # refused for. Feed the refusal into the same cooldown
+                # machinery that already suppresses repeat no-action
+                # failures (_active_exhausted_actions), so after
+                # ACTION_FAILURE_EXHAUSTION_THRESHOLD refusals on this same
+                # target set the action is actually removed from
+                # allowed_actions for ACTION_FAILURE_COOLDOWN_ITERS instead
+                # of merely demoted.
+                refused_action = self.last_action_key if self.last_action_key in PHYS_OPT_INCREMENTAL_ACTIONS else "phys_opt_design"
+                self._remember_no_action_failure(refused_action, [])
                 return self._failure_json("phys_opt_below_useful_wns", message, command="phys_opt_design")
         if not await self._check_implementation_license():
             return self._failure_json(
@@ -2077,6 +2127,26 @@ class DCPOptimizer(DCPOptimizerBase):
         elif retime:
             self.phys_opt_retime_supported = True
         return result
+
+    def _is_post_route_physsynth_crash(self, text: str) -> bool:
+        """True if route_design died in its own post-route physical-synthesis
+        re-optimization pass, not in routing itself.
+
+        Confirmed signature (fir_systolic_transposed_routed_2025.1, runs
+        20260801_195142 and 20260803_153128, both post-pblock route_design
+        calls with directive 'Explore'): routing itself completes cleanly --
+        the log shows "Verifying routed nets: Verification completed
+        successfully" -- then Phase 15 "Physical Synthesis in Router" /
+        15.1 "Physical Synthesis Initialization" throws
+        "ERROR: [Route 35-9] Router encountered a fatal exception of type
+        '13HDPLException' - 'Error in placer init in PSFlow'". This is a
+        Vivado-side crash in a re-optimization pass that a plainer directive
+        doesn't invoke, not a placement/resource problem with the design or
+        the pblock -- treating it as a hard pblock/full-replace failure (the
+        prior behavior) permanently took the pblock avenue off the table for
+        the rest of the run over something a directive retry can route
+        around."""
+        return "13HDPLException" in text or "Error in placer init in PSFlow" in text
 
     def _vivado_output_has_error(self, text: str) -> bool:
         failure = self._action_failure(text)
@@ -3690,6 +3760,54 @@ class DCPOptimizer(DCPOptimizerBase):
                 f"{existing}; {note}" if existing else note
             )
 
+        # This-run yield prior (pipeline audit, 20260802-20260804 sweep):
+        # vivado_phys_opt's family was attempted 79/172 iterations across
+        # that sweep (46% of all attempts, the single most-used family) yet
+        # only 20% improved, while place_design_explore hit 68% on a fifth
+        # as many tries. The cross-run "0 wins" kill switch above never
+        # catches this because phys_opt_design *does* win sometimes (16/79
+        # there) -- it never hits good == 0, and rightly so, since fully
+        # excluding it would remove a lever that's genuinely useful ~1 time
+        # in 5. Surface each action's own live this-run win rate instead:
+        # once an action has enough attempts this run to be a real signal
+        # and a currently-allowed alternative is clearly outperforming it,
+        # demote (never remove) the laggard with the comparison as the
+        # reason, so it stops being the reflex default while remaining
+        # available if the better options are exhausted.
+        this_run_rates = {
+            action: tally["good"] / (tally["good"] + tally["bad"])
+            for action, tally in this_run_tallies.items()
+            if (tally["good"] + tally["bad"]) > 0
+        }
+        best_alternative = max(
+            (
+                (action, this_run_rates[action])
+                for action in allowed
+                if action in this_run_tallies
+                and (this_run_tallies[action]["good"] + this_run_tallies[action]["bad"]) >= RECIPE_YIELD_ALT_MIN_ATTEMPTS
+                and this_run_rates[action] >= RECIPE_YIELD_ALT_MIN_RATE
+            ),
+            key=lambda item: item[1],
+            default=None,
+        )
+        if best_alternative is not None:
+            best_action, best_rate = best_alternative
+            for action in list(allowed):
+                tally = this_run_tallies.get(action)
+                if not tally or action == best_action:
+                    continue
+                total = tally["good"] + tally["bad"]
+                rate = this_run_rates.get(action, 0.0)
+                if total >= RECIPE_YIELD_MIN_ATTEMPTS and rate < RECIPE_YIELD_LOW_RATE and rate < best_rate:
+                    best_total = this_run_tallies[best_action]["good"] + this_run_tallies[best_action]["bad"]
+                    allowed = self._demote_actions(
+                        allowed,
+                        [action],
+                        f"this run: {action} is {tally['good']}/{total} good ({rate:.0%}) so far, vs "
+                        f"{best_action} at {this_run_tallies[best_action]['good']}/{best_total} ({best_rate:.0%}) "
+                        f"-- prefer the higher-yield lever unless {best_action} is exhausted for this target",
+                    )
+
         # Exploit-after-win (run 20260712_051231, measured): from a fresh
         # improvement, full re-place re-rolls went 0/3 (AltSpreadLogic_high
         # -92 MHz, ExtraTimingOpt -91 MHz, Explore -26 MHz) while incremental
@@ -4202,7 +4320,18 @@ class DCPOptimizer(DCPOptimizerBase):
             for key in ("startpoint", "endpoint"):
                 name = str(candidate.get(key) or "").lower()
                 cell = name.rsplit("/", 1)[0] if "/" in name else name
-                if any(k in cell for k in ("ram_reg", "_bram", "ramb", "uram")):
+                # "fifo" added (pipeline audit, run 20260803_164620 on
+                # ispd16_example2): FIFO18E2/FIFO36E2 primitives occupy the
+                # same RAMB18/RAMB36 sites as plain BRAM, but this list only
+                # matched generic BRAM-ish names, so a candidate touching a
+                # FIFO cell never bumped target_bram_count. The pblock request
+                # then sailed through _check_pblock_utilization with a BRAM
+                # demand of 0, got applied, and only Vivado's own DRC caught
+                # the real shortage after the fact ("FIFO: requires 768, only
+                # 120 available" / "RAMB36E2: requires 384, only 60
+                # available") -- a pblock_region_too_small failure that a
+                # correct pre-check would have avoided entirely.
+                if any(k in cell for k in ("ram_reg", "_bram", "ramb", "uram", "fifo")):
                     bram_cells.add(cell)
                     touches_hard_block = True
                 if "dsp" in cell:
@@ -4948,6 +5077,24 @@ class DCPOptimizer(DCPOptimizerBase):
             {"directive": route_directive, "timeout": self._implementation_timeout_s(kind="route")},
             internal=True,
         )
+        if (
+            self._action_failure(route_result, default_command="vivado_route_design")
+            and route_directive != "Default"
+            and self._is_post_route_physsynth_crash(route_result)
+        ):
+            # See _is_post_route_physsynth_crash: Vivado's own post-route
+            # re-optimization pass crashing, not a real placement/routing
+            # failure -- retry once with Default before giving up.
+            logger.warning(
+                "pblock_full_replace route_design hit the post-route physical-synthesis "
+                "crash (13HDPLException) under -directive %s; retrying once with -directive Default.",
+                route_directive,
+            )
+            route_result = await self.call_tool(
+                "vivado_route_design",
+                {"directive": "Default", "timeout": self._implementation_timeout_s(kind="route")},
+                internal=True,
+            )
         if self._action_failure(route_result, default_command="vivado_route_design"):
             logger.error(f"pblock_full_replace route failed - full output:\n{route_result}")
             await _restore_best_after_failure()
@@ -5978,6 +6125,17 @@ class DCPOptimizer(DCPOptimizerBase):
             and estimated_cost is not None
             and remaining_budget < estimated_cost
         ):
+            # Pipeline audit (20260802-20260804 sweep): this is the single
+            # biggest failure cause (14/47 across that sweep) -- ispd16_
+            # example2 spent its LAST 15 OF 19 ITERATIONS re-proposing an
+            # action already refused here, because the demotion in
+            # _allowed_forbidden_actions (same threshold, 1.3x) is soft and
+            # the LLM kept choosing it anyway. Feed the refusal into the
+            # same cooldown machinery other repeat-failing actions already
+            # use, so it's actually removed from allowed_actions after
+            # ACTION_FAILURE_EXHAUSTION_THRESHOLD refusals instead of
+            # merely re-ranked with a reason the LLM can (and did) ignore.
+            self._remember_no_action_failure(str(action), [])
             return self._failure_json(
                 "insufficient_budget",
                 f"{action} is estimated to cost ~{estimated_cost / 60.0:.0f} min but only "
@@ -6239,6 +6397,21 @@ class DCPOptimizer(DCPOptimizerBase):
             route_result = await self.call_tool(
                 "vivado_route_design", {"directive": "Explore", "timeout": self._implementation_timeout_s(kind="route")}, internal=True
             )
+            if self._action_failure(route_result, default_command="vivado_route_design"):
+                if self._is_post_route_physsynth_crash(route_result):
+                    # See _is_post_route_physsynth_crash: this is Vivado's own
+                    # post-route re-optimization pass crashing, not the
+                    # design/pblock -- retry once with Default, which doesn't
+                    # invoke that pass, instead of taking pblock off the
+                    # table for the rest of the run over an unrelated crash.
+                    logger.warning(
+                        "pblock route_design hit the post-route physical-synthesis "
+                        "crash (13HDPLException) under -directive Explore; retrying "
+                        "once with -directive Default."
+                    )
+                    route_result = await self.call_tool(
+                        "vivado_route_design", {"directive": "Default", "timeout": self._implementation_timeout_s(kind="route")}, internal=True
+                    )
             if self._action_failure(route_result, default_command="vivado_route_design"):
                 logger.error(f"pblock_route_failed - full route_design output:\n{route_result}")
                 return self._failure_json(
@@ -6534,14 +6707,34 @@ class DCPOptimizer(DCPOptimizerBase):
             result += "\n\n" + await self.call_tool("vivado_route_design", {"directive": "Default", "timeout": self._implementation_timeout_s(kind="route")})
             return result
         if action == "lut_opt":
-            pins = params.get("hierarchical_input_pins") or []
+            pins = list(params.get("hierarchical_input_pins") or [])
             if not pins:
-                logger.warning("lut_opt selected but no pins provided; falling back to phys_opt retime.")
-                return self._failure_json(
-                    "missing_action_parameters",
-                    "lut_opt selected but no hierarchical_input_pins were provided.",
-                    command="lut_opt",
-                )
+                # Auto-derive from the current worst-path candidates' own
+                # endpoint pins (Vivado ENDPOINT_PIN, "/"-separated hierarchy
+                # -- the same format rapidwright's getHierPortInstFromName
+                # expects) instead of refusing outright: see
+                # LUT_OPT_DEFAULT_MAX_PINS above for why the LLM alone can't
+                # supply this.
+                pins = []
+                for candidate in self.current_target_candidates:
+                    endpoint = str(candidate.get("endpoint") or "").strip()
+                    if endpoint and endpoint not in pins:
+                        pins.append(endpoint)
+                    if len(pins) >= LUT_OPT_DEFAULT_MAX_PINS:
+                        break
+                if pins:
+                    logger.info(
+                        "lut_opt selected with no hierarchical_input_pins; defaulting to "
+                        "the current worst-path candidates' endpoint pins: %s", pins,
+                    )
+                else:
+                    logger.warning("lut_opt selected but no pins provided and none could be derived.")
+                    return self._failure_json(
+                        "missing_action_parameters",
+                        "lut_opt selected but no hierarchical_input_pins were provided and none "
+                        "could be derived from current_target_candidates.",
+                        command="lut_opt",
+                    )
             self.last_recipe = action
             self.last_targets = [str(pin) for pin in pins]
             self.last_batch_size = len(pins)
@@ -6745,6 +6938,7 @@ class DCPOptimizer(DCPOptimizerBase):
             outcomes.append({"stage": position, "action": stage_action, "status": "executed"})
 
         if not outcomes:
+            self._remember_no_action_failure("run_recipe", [])
             return self._failure_json(
                 "insufficient_budget",
                 f"run_recipe could not start: {stop_reason or 'no stages executed'}.",
