@@ -1,0 +1,25 @@
+{
+  "input_dcp": "/home/fpl2026/fpl26_contest_benchmarks/ispd16_example2_2025.1.dcp",
+  "clock_name": "clk_fpl26contest",
+  "clock_period_ns": 1.538,
+  "baseline_wns": -7.752,
+  "baseline_fmax_mhz": 107.64262648008612,
+  "best_wns": -7.752,
+  "best_fmax_mhz": 107.64262648008612,
+  "best_checkpoint": "/home/fpl2026/fpl26_contest_benchmarks/ispd16_example2_2025.1.dcp",
+  "current_iter": 0,
+  "stall_count": 0,
+  "cells_blacklisted": [],
+  "nets_blacklisted": [],
+  "iterations": [],
+  "started_at_epoch_s": 1785845596.0087345,
+  "llm_cost_usd": 0.0,
+  "benchmark_score": {
+    "formula": "alpha - (0.1*alpha)*beta - (0.1*alpha)*gamma",
+    "alpha_delta_fmax_mhz": 0.0,
+    "beta_openrouter_cost_usd": 0.0,
+    "gamma_runtime_hours": 3.708733452690972e-09,
+    "wall_clock_runtime_s": 1.33514404296875e-05,
+    "score": 0.0
+  }
+}

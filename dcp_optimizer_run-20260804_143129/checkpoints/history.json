@@ -1,0 +1,1366 @@
+{
+  "input_dcp": "/home/fpl2026/fpl26_contest_benchmarks/fir_systolic_transposed_routed_2025.1.dcp",
+  "clock_name": "clk_fpl26contest",
+  "clock_period_ns": 2.5,
+  "baseline_wns": -0.313,
+  "baseline_fmax_mhz": 355.4923569143263,
+  "best_wns": -0.216,
+  "best_fmax_mhz": 368.1885125184094,
+  "best_checkpoint": "/home/fpl2026/dcp_optimizer_run-20260804_143129/checkpoints/iter_007.dcp",
+  "current_iter": 14,
+  "stall_count": 7,
+  "cells_blacklisted": [],
+  "nets_blacklisted": [],
+  "iterations": [
+    {
+      "iter": 1,
+      "recipe": "place_design_explore",
+      "batch_size": 1,
+      "targets": [
+        "directive:Explore"
+      ],
+      "wns_before": -0.313,
+      "wns_after": -0.25,
+      "fmax_before": 355.4923569143263,
+      "fmax_after": 363.6363636363636,
+      "delta_fmax": 8.144006722037318,
+      "vivado_runtime_s": 202.71348333358765,
+      "status": "improved",
+      "checkpoint": "/home/fpl2026/dcp_optimizer_run-20260804_143129/checkpoints/iter_001.dcp",
+      "target_tier": "tier1_violating_paths",
+      "target_candidate_count": 20,
+      "path_delay_classification": "mixed",
+      "path_delay_breakdown": {
+        "logic_pct": 0.60651,
+        "net_pct": 0.39348999999999995,
+        "logic_delay_ns": 1.62,
+        "net_delay_ns": 1.051
+      },
+      "clock_period_ns": 2.5,
+      "achieved_fmax_mhz": 363.6363636363636,
+      "no_improvement_count": 0,
+      "consecutive_no_improvement": 0,
+      "action_failure_memory": {},
+      "action_failure_counts": {},
+      "delay_class": "mixed",
+      "endpoint_type": "DSP_CONTROL",
+      "allowed_actions": [
+        "place_design_explore",
+        "phys_opt_design_retime",
+        "phys_opt_design",
+        "phys_opt_design_pin_swap",
+        "route_explore",
+        "run_recipe",
+        "replicate_register",
+        "lut_opt",
+        "pblock",
+        "pblock_full_replace"
+      ],
+      "forbidden_actions": [
+        "logic_restructure"
+      ],
+      "action_guidance": {
+        "fanout_split": "endpoint is a DSP_CONTROL pin; routing to a hard-block control pin needs physical proximity, not net splitting",
+        "pblock": "0 wins / 7 losses across previous runs on this design",
+        "rapidwright_optimize_cell_placement": "0 wins / 3 losses across previous runs on this design",
+        "pblock_full_replace": "0 wins / 3 losses across previous runs on this design",
+        "place_design_explore": "directives with losing cross-run records on this design (never improved): ExtraTimingOpt (0/2) -- do not re-try these"
+      },
+      "congestion_level": null,
+      "cluster_clock_regions": [
+        "X1Y3",
+        "X1Y4"
+      ],
+      "llm_chosen_action": "place_design_explore",
+      "structural_override_active": false,
+      "stuck_iterations": 0,
+      "exhausted_actions": [],
+      "validation_result": "ok",
+      "reprompt_count": 0,
+      "why_not_top_forbidden_action": "phys_opt_design_retime is the next-ranked allowed action but was skipped because high tile spread on DSP_CONTROL paths indicates placement, not retiming, is the primary lever.",
+      "raw_response": "{\n  \"delay_class_acknowledged\": \"mixed\",\n  \"endpoint_type_acknowledged\": \"DSP_CONTROL\",\n  \"chosen_action\": \"place_design_explore\",\n  \"action_parameters\": {\"directive\": \"Explore\"},\n  \"why_this_fits_delay_class\": \"mixed delay (logic_pct 0.60651) with avg_tile_spread 332 and DSP_CONTROL endpoints requires placement exploration to shorten long interconnect before any retiming or pin-swap.\",\n  \"why_not_top_forbidden_action\": \"phys_opt_design_retime is the next-ranked allowed action but was skipped because high tile spread on DSP_CONTROL paths indicates placement, not retiming, is the primary lever.\",\n  \"confidence\": 4\n}",
+      "cluster_count": 2,
+      "primary_diagnosis": "long_interconnect",
+      "diagnosis_reasoning_trace": [
+        "normalized 20 timing-path candidate(s) from current_target_candidates",
+        "clustered into 2 cluster(s) via shared start/end cell name",
+        "primary cluster 'cluster_0' contains the current worst path (2 member(s), 1 cell(s) shared across all members)",
+        "scored hypotheses: long_interconnect=0.50, localized_congestion=0.30, excessive_fanout=0.30, placement_already_compact=0.25",
+        "primary hypothesis: long_interconnect (confidence 0.50)",
+        "  + cluster cells span 2 clock regions (['X1Y3', 'X1Y4']) -- crossings confirm real physical distance.",
+        "  - avg spread 100.0 tiles / net_pct 0.39348999999999995 doesn't clear the long-interconnect regime (spread > 30, net_pct > 0.6)."
+      ],
+      "diagnosis_action_adjustment": null
+    },
+    {
+      "iter": 2,
+      "recipe": "vivado_phys_opt",
+      "batch_size": 1,
+      "targets": [
+        "critical_cell_opt"
+      ],
+      "wns_before": -0.25,
+      "wns_after": -0.249,
+      "fmax_before": 363.6363636363636,
+      "fmax_after": 363.7686431429611,
+      "delta_fmax": 0.13227950659745602,
+      "vivado_runtime_s": 48.96060633659363,
+      "status": "marginal",
+      "checkpoint": "/home/fpl2026/dcp_optimizer_run-20260804_143129/checkpoints/iter_002.dcp",
+      "target_tier": "tier1_violating_paths",
+      "target_candidate_count": 20,
+      "path_delay_classification": "mixed",
+      "path_delay_breakdown": {
+        "logic_pct": 0.6264500000000001,
+        "net_pct": 0.37355,
+        "logic_delay_ns": 1.62,
+        "net_delay_ns": 0.966
+      },
+      "clock_period_ns": 2.5,
+      "achieved_fmax_mhz": 363.7686431429611,
+      "no_improvement_count": 0,
+      "consecutive_no_improvement": 0,
+      "action_failure_memory": {},
+      "action_failure_counts": {},
+      "delay_class": "mixed",
+      "endpoint_type": "DSP_CONTROL",
+      "allowed_actions": [
+        "replicate_register",
+        "phys_opt_design",
+        "route_explore",
+        "phys_opt_design_retime",
+        "phys_opt_design_pin_swap",
+        "run_recipe",
+        "lut_opt",
+        "place_design_explore",
+        "pblock_full_replace",
+        "pblock"
+      ],
+      "forbidden_actions": [
+        "logic_restructure"
+      ],
+      "action_guidance": {
+        "fanout_split": "endpoint is a DSP_CONTROL pin; routing to a hard-block control pin needs physical proximity, not net splitting",
+        "pblock": "0 wins / 7 losses across previous runs on this design; excessive_fanout (confidence 0.80) argues against this action: 2 cell(s) (['u_coeff/shadow_reg[336][15]_psdsp_20', 'w_reg[335]/DSP_OUTPUT_INST']) recur across 19/20 extracted candidates (95%) -- consistent with a shared high-fanout driver rather than independent placement issues.",
+        "rapidwright_optimize_cell_placement": "0 wins / 3 losses across previous runs on this design",
+        "pblock_full_replace": "0 wins / 3 losses across previous runs on this design; this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won",
+        "place_design_explore": "directives with losing cross-run records on this design (never improved): ExtraTimingOpt (0/2) -- do not re-try these; this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won"
+      },
+      "congestion_level": 0,
+      "cluster_clock_regions": [
+        "X1Y0",
+        "X1Y3"
+      ],
+      "llm_chosen_action": "replicate_register",
+      "structural_override_active": false,
+      "stuck_iterations": 0,
+      "exhausted_actions": [],
+      "validation_result": "ok",
+      "reprompt_count": 0,
+      "why_not_top_forbidden_action": "phys_opt_design is the next-ranked allowed action but was skipped because the current diagnosis explicitly prioritizes replication on the shared fanout drivers identified in 95% of candidates.",
+      "raw_response": "{\n  \"delay_class_acknowledged\": \"mixed\",\n  \"endpoint_type_acknowledged\": \"DSP_CONTROL\",\n  \"chosen_action\": \"replicate_register\",\n  \"action_parameters\": {},\n  \"why_this_fits_delay_class\": \"mixed delay (logic_pct 0.626) with excessive_fanout diagnosis (0.80 confidence, 19/20 paths share 2 drivers) requires replication to cut shared high-fanout nets before further phys_opt on DSP_CONTROL endpoints.\",\n  \"why_not_top_forbidden_action\": \"phys_opt_design is the next-ranked allowed action but was skipped because the current diagnosis explicitly prioritizes replication on the shared fanout drivers identified in 95% of candidates.\",\n  \"confidence\": 4\n}",
+      "cluster_count": 2,
+      "primary_diagnosis": "excessive_fanout",
+      "diagnosis_reasoning_trace": [
+        "normalized 20 timing-path candidate(s) from current_target_candidates",
+        "clustered into 2 cluster(s) via shared start/end cell name",
+        "primary cluster 'cluster_1' does NOT contain the current worst path -- reassigned to the largest non-trivial cluster in the pool since the worst path's own cluster was a singleton (19 member(s), 2 cell(s) shared across all members)",
+        "outcome history: long_interconnect's own prescriptions scored 1 win(s) / 0 loss(es) this run -> confidence +0.08",
+        "scored hypotheses: excessive_fanout=0.80, long_interconnect=0.58, placement_already_compact=0.25, localized_congestion=0.10",
+        "primary hypothesis: excessive_fanout (confidence 0.80)",
+        "  + 2 cell(s) (['u_coeff/shadow_reg[336][15]_psdsp_20', 'w_reg[335]/DSP_OUTPUT_INST']) recur across 19/20 extracted candidates (95%) -- consistent with a shared high-fanout driver rather than independent placement issues."
+      ],
+      "diagnosis_action_adjustment": "excessive_fanout (confidence 0.80) demoted ['pblock']; excessive_fanout (confidence 0.80) prioritized ['replicate_register']"
+    },
+    {
+      "iter": 3,
+      "recipe": "place_design_explore",
+      "batch_size": 1,
+      "targets": [
+        "directive:Explore"
+      ],
+      "wns_before": -0.249,
+      "wns_after": -0.305,
+      "fmax_before": 363.7686431429611,
+      "fmax_after": 356.50623885918003,
+      "delta_fmax": -7.262404283781052,
+      "vivado_runtime_s": 162.57388067245483,
+      "status": "regression",
+      "checkpoint": "/home/fpl2026/dcp_optimizer_run-20260804_143129/checkpoints/iter_003.dcp",
+      "target_tier": "tier1_violating_paths",
+      "target_candidate_count": 20,
+      "path_delay_classification": "net_delay_bound",
+      "path_delay_breakdown": {
+        "logic_pct": 0.27269,
+        "net_pct": 0.7273099999999999,
+        "logic_delay_ns": 0.766,
+        "net_delay_ns": 2.043
+      },
+      "clock_period_ns": 2.5,
+      "achieved_fmax_mhz": 356.50623885918003,
+      "no_improvement_count": 1,
+      "consecutive_no_improvement": 0,
+      "action_failure_memory": {},
+      "action_failure_counts": {},
+      "delay_class": "net_delay_bound",
+      "endpoint_type": "DSP_CONTROL",
+      "allowed_actions": [
+        "phys_opt_design",
+        "qor_suggestions",
+        "route_explore",
+        "phys_opt_design_retime",
+        "run_recipe",
+        "replicate_register",
+        "phys_opt_design_pin_swap",
+        "lut_opt",
+        "pblock",
+        "place_design_explore",
+        "pblock_full_replace"
+      ],
+      "forbidden_actions": [
+        "logic_restructure"
+      ],
+      "action_guidance": {
+        "fanout_split": "delay class is net_delay_bound (net_pct=0.7273099999999999); logic-side changes rarely fix routing-bound paths; endpoint is a DSP_CONTROL pin; routing to a hard-block control pin needs physical proximity, not net splitting",
+        "lut_opt": "delay class is net_delay_bound (net_pct=0.7273099999999999); logic-side changes rarely fix routing-bound paths",
+        "pblock": "0 wins / 7 losses across previous runs on this design",
+        "rapidwright_optimize_cell_placement": "0 wins / 3 losses across previous runs on this design",
+        "pblock_full_replace": "0 wins / 3 losses across previous runs on this design; this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won",
+        "place_design_explore": "directives with losing cross-run records on this design (never improved): ExtraTimingOpt (0/2) -- do not re-try these; this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won"
+      },
+      "congestion_level": 0,
+      "cluster_clock_regions": [
+        "X1Y0",
+        "X1Y3"
+      ],
+      "llm_chosen_action": "place_design_explore",
+      "structural_override_active": false,
+      "stuck_iterations": 0,
+      "exhausted_actions": [],
+      "validation_result": "ok",
+      "reprompt_count": 1,
+      "why_not_top_forbidden_action": "phys_opt_design is the highest-ranked allowed action but was skipped because net_delay_bound paths (73% net) are not improved by logic-level phys_opt changes per the delay-class priors.",
+      "raw_response": "{\n  \"delay_class_acknowledged\": \"net_delay_bound\",\n  \"endpoint_type_acknowledged\": \"DSP_CONTROL\",\n  \"chosen_action\": \"place_design_explore\",\n  \"action_parameters\": {\"directive\": \"Explore\"},\n  \"why_this_fits_delay_class\": \"net_delay_bound path (net_pct=0.727) with long_interconnect diagnosis and 332-tile spread requires placement exploration to reduce routing distance on DSP_CONTROL endpoints.\",\n  \"why_not_top_forbidden_action\": \"phys_opt_design is the highest-ranked allowed action but was skipped because net_delay_bound paths (73% net) are not improved by logic-level phys_opt changes per the delay-class priors.\",\n  \"confidence\": 4\n}",
+      "cluster_count": 1,
+      "primary_diagnosis": "long_interconnect",
+      "diagnosis_reasoning_trace": [
+        "normalized 20 timing-path candidate(s) from current_target_candidates",
+        "clustered into 1 cluster(s) via shared start/end cell name",
+        "primary cluster 'cluster_0' contains the current worst path (20 member(s), 2 cell(s) shared across all members)",
+        "outcome history: long_interconnect's own prescriptions scored 1 win(s) / 0 loss(es) this run -> confidence +0.08",
+        "outcome history: excessive_fanout's own prescriptions scored 1 win(s) / 0 loss(es) this run -> confidence +0.08",
+        "scored hypotheses: long_interconnect=0.98, excessive_fanout=0.88, placement_already_compact=0.25, localized_congestion=0.10",
+        "primary hypothesis: long_interconnect (confidence 0.98)",
+        "  + avg spread 244.0 tiles exceeds 30 on a net-delay-bound cluster (73% net delay) -- cells are genuinely far apart, not just congested.",
+        "  + cluster cells span 2 clock regions (['X1Y0', 'X1Y3']) -- crossings confirm real physical distance.",
+        "  + outcome history: long_interconnect's own prescriptions scored 1 win(s) / 0 loss(es) this run -> confidence +0.08"
+      ],
+      "diagnosis_action_adjustment": null
+    },
+    {
+      "iter": 4,
+      "recipe": "route_explore",
+      "batch_size": 1,
+      "targets": [
+        "directive:Explore"
+      ],
+      "wns_before": -0.249,
+      "wns_after": -0.244,
+      "fmax_before": 363.7686431429611,
+      "fmax_after": 364.4314868804665,
+      "delta_fmax": 0.6628437375053977,
+      "vivado_runtime_s": 98.38287830352783,
+      "status": "improved",
+      "checkpoint": "/home/fpl2026/dcp_optimizer_run-20260804_143129/checkpoints/iter_004.dcp",
+      "target_tier": "tier1_violating_paths",
+      "target_candidate_count": 20,
+      "path_delay_classification": "net_delay_bound",
+      "path_delay_breakdown": {
+        "logic_pct": 0.27269,
+        "net_pct": 0.7273099999999999,
+        "logic_delay_ns": 0.766,
+        "net_delay_ns": 2.043
+      },
+      "clock_period_ns": 2.5,
+      "achieved_fmax_mhz": 364.4314868804665,
+      "no_improvement_count": 0,
+      "consecutive_no_improvement": 1,
+      "action_failure_memory": {
+        "place_design_explore": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "directive:Explore"
+          ],
+          "last_failed_iter": 3,
+          "failed_on_current_targets": true
+        }
+      },
+      "action_failure_counts": {
+        "place_design_explore": 1
+      },
+      "delay_class": "net_delay_bound",
+      "endpoint_type": "DSP_CONTROL",
+      "allowed_actions": [
+        "phys_opt_design",
+        "qor_suggestions",
+        "route_explore",
+        "phys_opt_design_retime",
+        "run_recipe",
+        "replicate_register",
+        "phys_opt_design_pin_swap",
+        "lut_opt",
+        "pblock",
+        "place_design_explore",
+        "pblock_full_replace"
+      ],
+      "forbidden_actions": [
+        "logic_restructure"
+      ],
+      "action_guidance": {
+        "fanout_split": "delay class is net_delay_bound (net_pct=0.7273099999999999); logic-side changes rarely fix routing-bound paths; endpoint is a DSP_CONTROL pin; routing to a hard-block control pin needs physical proximity, not net splitting",
+        "lut_opt": "delay class is net_delay_bound (net_pct=0.7273099999999999); logic-side changes rarely fix routing-bound paths",
+        "pblock": "0 wins / 7 losses across previous runs on this design",
+        "rapidwright_optimize_cell_placement": "0 wins / 3 losses across previous runs on this design",
+        "pblock_full_replace": "0 wins / 3 losses across previous runs on this design; this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won",
+        "place_design_explore": "directives with losing cross-run records on this design (never improved): ExtraTimingOpt (0/2) -- do not re-try these; this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won"
+      },
+      "congestion_level": 0,
+      "cluster_clock_regions": [
+        "X1Y0",
+        "X1Y3"
+      ],
+      "llm_chosen_action": "route_explore",
+      "structural_override_active": false,
+      "stuck_iterations": 1,
+      "exhausted_actions": [],
+      "validation_result": "ok",
+      "reprompt_count": 0,
+      "why_not_top_forbidden_action": "phys_opt_design is the highest-ranked allowed action but was skipped because net_delay_bound paths (73% net) are not improved by logic-level phys_opt changes per the delay-class priors.",
+      "raw_response": "{\n  \"delay_class_acknowledged\": \"net_delay_bound\",\n  \"endpoint_type_acknowledged\": \"DSP_CONTROL\",\n  \"chosen_action\": \"route_explore\",\n  \"action_parameters\": {\"directive\": \"Explore\"},\n  \"why_this_fits_delay_class\": \"net_delay_bound path (net_pct=0.727) with long_interconnect diagnosis requires routing improvements on the current placement rather than logic or placement changes.\",\n  \"why_not_top_forbidden_action\": \"phys_opt_design is the highest-ranked allowed action but was skipped because net_delay_bound paths (73% net) are not improved by logic-level phys_opt changes per the delay-class priors.\",\n  \"confidence\": 4\n}",
+      "cluster_count": 1,
+      "primary_diagnosis": "long_interconnect",
+      "diagnosis_reasoning_trace": [
+        "normalized 20 timing-path candidate(s) from current_target_candidates",
+        "clustered into 1 cluster(s) via shared start/end cell name",
+        "primary cluster 'cluster_0' contains the current worst path (20 member(s), 2 cell(s) shared across all members)",
+        "outcome history: excessive_fanout's own prescriptions scored 1 win(s) / 0 loss(es) this run -> confidence +0.08",
+        "scored hypotheses: long_interconnect=0.90, excessive_fanout=0.88, placement_already_compact=0.25, localized_congestion=0.10",
+        "primary hypothesis: long_interconnect (confidence 0.90)",
+        "  + avg spread 254.0 tiles exceeds 30 on a net-delay-bound cluster (73% net delay) -- cells are genuinely far apart, not just congested.",
+        "  + cluster cells span 2 clock regions (['X1Y0', 'X1Y3']) -- crossings confirm real physical distance."
+      ],
+      "diagnosis_action_adjustment": null
+    },
+    {
+      "iter": 5,
+      "recipe": "vivado_phys_opt",
+      "batch_size": 1,
+      "targets": [
+        "AggressiveExplore"
+      ],
+      "wns_before": -0.244,
+      "wns_after": -0.242,
+      "fmax_before": 364.4314868804665,
+      "fmax_after": 364.69730123997084,
+      "delta_fmax": 0.26581435950436116,
+      "vivado_runtime_s": 49.13997268676758,
+      "status": "marginal",
+      "checkpoint": "/home/fpl2026/dcp_optimizer_run-20260804_143129/checkpoints/iter_005.dcp",
+      "target_tier": "tier1_violating_paths",
+      "target_candidate_count": 20,
+      "path_delay_classification": "mixed",
+      "path_delay_breakdown": {
+        "logic_pct": 0.62864,
+        "net_pct": 0.37136,
+        "logic_delay_ns": 1.62,
+        "net_delay_ns": 0.957
+      },
+      "clock_period_ns": 2.5,
+      "achieved_fmax_mhz": 364.69730123997084,
+      "no_improvement_count": 0,
+      "consecutive_no_improvement": 0,
+      "action_failure_memory": {
+        "place_design_explore": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "directive:Explore"
+          ],
+          "last_failed_iter": 3,
+          "failed_on_current_targets": false
+        }
+      },
+      "action_failure_counts": {
+        "place_design_explore": 1
+      },
+      "delay_class": "mixed",
+      "endpoint_type": "DSP_CONTROL",
+      "allowed_actions": [
+        "phys_opt_design",
+        "route_explore",
+        "phys_opt_design_retime",
+        "phys_opt_design_pin_swap",
+        "run_recipe",
+        "replicate_register",
+        "lut_opt",
+        "pblock",
+        "place_design_explore",
+        "pblock_full_replace"
+      ],
+      "forbidden_actions": [
+        "logic_restructure"
+      ],
+      "action_guidance": {
+        "fanout_split": "endpoint is a DSP_CONTROL pin; routing to a hard-block control pin needs physical proximity, not net splitting",
+        "pblock": "0 wins / 7 losses across previous runs on this design",
+        "rapidwright_optimize_cell_placement": "0 wins / 3 losses across previous runs on this design",
+        "pblock_full_replace": "0 wins / 3 losses across previous runs on this design; this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won",
+        "place_design_explore": "directives with losing cross-run records on this design (never improved): ExtraTimingOpt (0/2) -- do not re-try these; this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won"
+      },
+      "congestion_level": 0,
+      "cluster_clock_regions": [
+        "X1Y3",
+        "X1Y4"
+      ],
+      "llm_chosen_action": "phys_opt_design",
+      "structural_override_active": false,
+      "stuck_iterations": 0,
+      "exhausted_actions": [],
+      "validation_result": "ok",
+      "reprompt_count": 0,
+      "why_not_top_forbidden_action": "route_explore is the next-highest allowed action but was skipped because the current path still shows 63% logic delay that routing alone cannot reduce.",
+      "raw_response": "{\n  \"delay_class_acknowledged\": \"mixed\",\n  \"endpoint_type_acknowledged\": \"DSP_CONTROL\",\n  \"chosen_action\": \"phys_opt_design\",\n  \"action_parameters\": {\"directive\": \"AggressiveExplore\"},\n  \"why_this_fits_delay_class\": \"mixed delay class (logic_pct=0.62864) with DSP_CONTROL endpoints is best addressed by phys_opt_design logic-level restructuring before placement or routing changes.\",\n  \"why_not_top_forbidden_action\": \"route_explore is the next-highest allowed action but was skipped because the current path still shows 63% logic delay that routing alone cannot reduce.\",\n  \"confidence\": 4\n}",
+      "cluster_count": 3,
+      "primary_diagnosis": "long_interconnect",
+      "diagnosis_reasoning_trace": [
+        "normalized 20 timing-path candidate(s) from current_target_candidates",
+        "clustered into 3 cluster(s) via shared start/end cell name",
+        "primary cluster 'cluster_0' contains the current worst path (2 member(s), 1 cell(s) shared across all members)",
+        "outcome history: excessive_fanout's own prescriptions scored 1 win(s) / 0 loss(es) this run -> confidence +0.08",
+        "scored hypotheses: long_interconnect=0.50, excessive_fanout=0.38, placement_already_compact=0.25, localized_congestion=0.10",
+        "primary hypothesis: long_interconnect (confidence 0.50)",
+        "  + cluster cells span 2 clock regions (['X1Y3', 'X1Y4']) -- crossings confirm real physical distance.",
+        "  - avg spread 84.0 tiles / net_pct 0.37136 doesn't clear the long-interconnect regime (spread > 30, net_pct > 0.6)."
+      ],
+      "diagnosis_action_adjustment": null
+    },
+    {
+      "iter": 6,
+      "recipe": "vivado_phys_opt",
+      "batch_size": 1,
+      "targets": [
+        "critical_cell_opt"
+      ],
+      "wns_before": -0.242,
+      "wns_after": -0.233,
+      "fmax_before": 364.69730123997084,
+      "fmax_after": 365.89828027808267,
+      "delta_fmax": 1.200979038111825,
+      "vivado_runtime_s": 49.01280617713928,
+      "status": "improved",
+      "checkpoint": "/home/fpl2026/dcp_optimizer_run-20260804_143129/checkpoints/iter_006.dcp",
+      "target_tier": "tier1_violating_paths",
+      "target_candidate_count": 20,
+      "path_delay_classification": "mixed",
+      "path_delay_breakdown": {
+        "logic_pct": 0.6206900000000001,
+        "net_pct": 0.37931,
+        "logic_delay_ns": 1.62,
+        "net_delay_ns": 0.99
+      },
+      "clock_period_ns": 2.5,
+      "achieved_fmax_mhz": 365.89828027808267,
+      "no_improvement_count": 0,
+      "consecutive_no_improvement": 0,
+      "action_failure_memory": {
+        "place_design_explore": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "directive:Explore"
+          ],
+          "last_failed_iter": 3,
+          "failed_on_current_targets": false
+        }
+      },
+      "action_failure_counts": {
+        "place_design_explore": 1
+      },
+      "delay_class": "mixed",
+      "endpoint_type": "DSP_CONTROL",
+      "allowed_actions": [
+        "replicate_register",
+        "phys_opt_design",
+        "route_explore",
+        "phys_opt_design_retime",
+        "phys_opt_design_pin_swap",
+        "run_recipe",
+        "lut_opt",
+        "place_design_explore",
+        "pblock_full_replace",
+        "pblock"
+      ],
+      "forbidden_actions": [
+        "logic_restructure"
+      ],
+      "action_guidance": {
+        "fanout_split": "endpoint is a DSP_CONTROL pin; routing to a hard-block control pin needs physical proximity, not net splitting",
+        "pblock": "0 wins / 7 losses across previous runs on this design; excessive_fanout (confidence 0.88) argues against this action: 1 cell(s) (['w_reg[216]/DSP_A_B_DATA_INST']) recur across 6/20 extracted candidates (30%) -- consistent with a shared high-fanout driver rather than independent placement issues.",
+        "rapidwright_optimize_cell_placement": "0 wins / 3 losses across previous runs on this design",
+        "pblock_full_replace": "0 wins / 3 losses across previous runs on this design; this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won",
+        "place_design_explore": "directives with losing cross-run records on this design (never improved): ExtraTimingOpt (0/2) -- do not re-try these; this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won"
+      },
+      "congestion_level": 0,
+      "cluster_clock_regions": [
+        "X1Y3",
+        "X1Y4"
+      ],
+      "llm_chosen_action": "replicate_register",
+      "structural_override_active": false,
+      "stuck_iterations": 0,
+      "exhausted_actions": [],
+      "validation_result": "ok",
+      "reprompt_count": 0,
+      "why_not_top_forbidden_action": "phys_opt_design is the highest-ranked allowed action that was not chosen because the current primary diagnosis is excessive_fanout (0.88 confidence) rather than pure logic depth, making replication the targeted first step.",
+      "raw_response": "{\n  \"delay_class_acknowledged\": \"mixed\",\n  \"endpoint_type_acknowledged\": \"DSP_CONTROL\",\n  \"chosen_action\": \"replicate_register\",\n  \"action_parameters\": {},\n  \"why_this_fits_delay_class\": \"mixed delay class (logic_pct=0.62069) with excessive_fanout diagnosis is addressed by replicating the shared high-fanout DSP driver to reduce net delay on the 30% recurring cell paths.\",\n  \"why_not_top_forbidden_action\": \"phys_opt_design is the highest-ranked allowed action that was not chosen because the current primary diagnosis is excessive_fanout (0.88 confidence) rather than pure logic depth, making replication the targeted first step.\",\n  \"confidence\": 4\n}",
+      "cluster_count": 3,
+      "primary_diagnosis": "excessive_fanout",
+      "diagnosis_reasoning_trace": [
+        "normalized 20 timing-path candidate(s) from current_target_candidates",
+        "clustered into 3 cluster(s) via shared start/end cell name",
+        "primary cluster 'cluster_0' contains the current worst path (6 member(s), 1 cell(s) shared across all members)",
+        "outcome history: excessive_fanout's own prescriptions scored 1 win(s) / 0 loss(es) this run -> confidence +0.08",
+        "scored hypotheses: excessive_fanout=0.88, long_interconnect=0.50, placement_already_compact=0.25, localized_congestion=0.10",
+        "primary hypothesis: excessive_fanout (confidence 0.88)",
+        "  + 1 cell(s) (['w_reg[216]/DSP_A_B_DATA_INST']) recur across 6/20 extracted candidates (30%) -- consistent with a shared high-fanout driver rather than independent placement issues.",
+        "  + outcome history: excessive_fanout's own prescriptions scored 1 win(s) / 0 loss(es) this run -> confidence +0.08"
+      ],
+      "diagnosis_action_adjustment": "excessive_fanout (confidence 0.88) demoted ['pblock']; excessive_fanout (confidence 0.88) prioritized ['replicate_register']"
+    },
+    {
+      "iter": 7,
+      "recipe": "vivado_phys_opt",
+      "batch_size": 1,
+      "targets": [
+        "critical_cell_opt"
+      ],
+      "wns_before": -0.233,
+      "wns_after": -0.216,
+      "fmax_before": 365.89828027808267,
+      "fmax_after": 368.1885125184094,
+      "delta_fmax": 2.290232240326759,
+      "vivado_runtime_s": 66.44913625717163,
+      "status": "improved",
+      "checkpoint": "/home/fpl2026/dcp_optimizer_run-20260804_143129/checkpoints/iter_007.dcp",
+      "target_tier": "tier1_violating_paths",
+      "target_candidate_count": 20,
+      "path_delay_classification": "net_delay_bound",
+      "path_delay_breakdown": {
+        "logic_pct": 0.2717,
+        "net_pct": 0.7283,
+        "logic_delay_ns": 0.767,
+        "net_delay_ns": 2.056
+      },
+      "clock_period_ns": 2.5,
+      "achieved_fmax_mhz": 368.1885125184094,
+      "no_improvement_count": 0,
+      "consecutive_no_improvement": 0,
+      "action_failure_memory": {
+        "place_design_explore": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "directive:Explore"
+          ],
+          "last_failed_iter": 3,
+          "failed_on_current_targets": false
+        }
+      },
+      "action_failure_counts": {
+        "place_design_explore": 1
+      },
+      "delay_class": "net_delay_bound",
+      "endpoint_type": "DSP_CONTROL",
+      "allowed_actions": [
+        "replicate_register",
+        "phys_opt_design",
+        "qor_suggestions",
+        "route_explore",
+        "phys_opt_design_retime",
+        "run_recipe",
+        "phys_opt_design_pin_swap",
+        "lut_opt",
+        "place_design_explore",
+        "pblock_full_replace",
+        "pblock"
+      ],
+      "forbidden_actions": [
+        "logic_restructure"
+      ],
+      "action_guidance": {
+        "fanout_split": "delay class is net_delay_bound (net_pct=0.7283); logic-side changes rarely fix routing-bound paths; endpoint is a DSP_CONTROL pin; routing to a hard-block control pin needs physical proximity, not net splitting",
+        "lut_opt": "delay class is net_delay_bound (net_pct=0.7283); logic-side changes rarely fix routing-bound paths",
+        "pblock": "0 wins / 7 losses across previous runs on this design; excessive_fanout (confidence 0.96) argues against this action: 2 cell(s) (['u_coeff/shadow_reg[216][15]_psdsp_9', 'w_reg[215]/DSP_OUTPUT_INST']) recur across 17/20 extracted candidates (85%) -- consistent with a shared high-fanout driver rather than independent placement issues.",
+        "rapidwright_optimize_cell_placement": "0 wins / 3 losses across previous runs on this design",
+        "pblock_full_replace": "0 wins / 3 losses across previous runs on this design; this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won",
+        "place_design_explore": "directives with losing cross-run records on this design (never improved): ExtraTimingOpt (0/2) -- do not re-try these; this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won"
+      },
+      "congestion_level": 0,
+      "cluster_clock_regions": [
+        "X1Y0",
+        "X1Y3"
+      ],
+      "llm_chosen_action": "replicate_register",
+      "structural_override_active": false,
+      "stuck_iterations": 0,
+      "exhausted_actions": [],
+      "validation_result": "ok",
+      "reprompt_count": 0,
+      "why_not_top_forbidden_action": "phys_opt_design is the highest-ranked allowed action not chosen because the primary diagnosis is excessive_fanout rather than logic depth, making replication the targeted fix per the diagnosis_action_adjustment.",
+      "raw_response": "{\n  \"delay_class_acknowledged\": \"net_delay_bound\",\n  \"endpoint_type_acknowledged\": \"DSP_CONTROL\",\n  \"chosen_action\": \"replicate_register\",\n  \"action_parameters\": {},\n  \"why_this_fits_delay_class\": \"net_delay_bound path (net_pct=0.7283) with excessive_fanout diagnosis (0.96 confidence, 85% recurring cells) is addressed by replicating the shared high-fanout DSP drivers to cut net delay.\",\n  \"why_not_top_forbidden_action\": \"phys_opt_design is the highest-ranked allowed action not chosen because the primary diagnosis is excessive_fanout rather than logic depth, making replication the targeted fix per the diagnosis_action_adjustment.\",\n  \"confidence\": 4\n}",
+      "cluster_count": 3,
+      "primary_diagnosis": "excessive_fanout",
+      "diagnosis_reasoning_trace": [
+        "normalized 20 timing-path candidate(s) from current_target_candidates",
+        "clustered into 3 cluster(s) via shared start/end cell name",
+        "primary cluster 'cluster_0' contains the current worst path (17 member(s), 2 cell(s) shared across all members)",
+        "outcome history: excessive_fanout's own prescriptions scored 2 win(s) / 0 loss(es) this run -> confidence +0.16",
+        "scored hypotheses: excessive_fanout=0.96, long_interconnect=0.90, placement_already_compact=0.25, localized_congestion=0.10",
+        "primary hypothesis: excessive_fanout (confidence 0.96)",
+        "  + 2 cell(s) (['u_coeff/shadow_reg[216][15]_psdsp_9', 'w_reg[215]/DSP_OUTPUT_INST']) recur across 17/20 extracted candidates (85%) -- consistent with a shared high-fanout driver rather than independent placement issues.",
+        "  + outcome history: excessive_fanout's own prescriptions scored 2 win(s) / 0 loss(es) this run -> confidence +0.16"
+      ],
+      "diagnosis_action_adjustment": "excessive_fanout (confidence 0.96) demoted ['pblock']; excessive_fanout (confidence 0.96) prioritized ['replicate_register']"
+    },
+    {
+      "iter": 8,
+      "recipe": "vivado_phys_opt",
+      "batch_size": 1,
+      "targets": [
+        "critical_cell_opt"
+      ],
+      "wns_before": -0.216,
+      "wns_after": -0.216,
+      "fmax_before": 368.1885125184094,
+      "fmax_after": 368.1885125184094,
+      "delta_fmax": 0.0,
+      "vivado_runtime_s": 99.34820747375488,
+      "status": "no_improvement",
+      "checkpoint": "/home/fpl2026/dcp_optimizer_run-20260804_143129/checkpoints/iter_008.dcp",
+      "target_tier": "tier1_violating_paths",
+      "target_candidate_count": 20,
+      "path_delay_classification": "net_delay_bound",
+      "path_delay_breakdown": {
+        "logic_pct": 0.26898,
+        "net_pct": 0.73102,
+        "logic_delay_ns": 0.769,
+        "net_delay_ns": 2.09
+      },
+      "clock_period_ns": 2.5,
+      "achieved_fmax_mhz": 368.1885125184094,
+      "no_improvement_count": 1,
+      "consecutive_no_improvement": 0,
+      "action_failure_memory": {
+        "place_design_explore": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "directive:Explore"
+          ],
+          "last_failed_iter": 3,
+          "failed_on_current_targets": false
+        }
+      },
+      "action_failure_counts": {
+        "place_design_explore": 1
+      },
+      "delay_class": "net_delay_bound",
+      "endpoint_type": "DSP_CONTROL",
+      "allowed_actions": [
+        "replicate_register",
+        "phys_opt_design",
+        "qor_suggestions",
+        "route_explore",
+        "phys_opt_design_retime",
+        "run_recipe",
+        "phys_opt_design_pin_swap",
+        "lut_opt",
+        "place_design_explore",
+        "pblock_full_replace",
+        "pblock"
+      ],
+      "forbidden_actions": [
+        "logic_restructure"
+      ],
+      "action_guidance": {
+        "fanout_split": "delay class is net_delay_bound (net_pct=0.73102); logic-side changes rarely fix routing-bound paths; endpoint is a DSP_CONTROL pin; routing to a hard-block control pin needs physical proximity, not net splitting",
+        "lut_opt": "delay class is net_delay_bound (net_pct=0.73102); logic-side changes rarely fix routing-bound paths",
+        "pblock": "0 wins / 7 losses across previous runs on this design; excessive_fanout (confidence 1.00) argues against this action: 2 cell(s) (['u_coeff/shadow_reg[216][15]_psdsp_20', 'w_reg[215]/DSP_OUTPUT_INST']) recur across 20/20 extracted candidates (100%) -- consistent with a shared high-fanout driver rather than independent placement issues.",
+        "rapidwright_optimize_cell_placement": "0 wins / 3 losses across previous runs on this design",
+        "pblock_full_replace": "0 wins / 3 losses across previous runs on this design; this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won",
+        "place_design_explore": "directives with losing cross-run records on this design (never improved): ExtraTimingOpt (0/2) -- do not re-try these; this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won"
+      },
+      "congestion_level": 0,
+      "cluster_clock_regions": [
+        "X1Y0",
+        "X1Y4"
+      ],
+      "llm_chosen_action": "replicate_register",
+      "structural_override_active": false,
+      "stuck_iterations": 0,
+      "exhausted_actions": [],
+      "validation_result": "ok",
+      "reprompt_count": 0,
+      "why_not_top_forbidden_action": "phys_opt_design is the highest-ranked allowed action not chosen because the primary diagnosis is excessive_fanout (1.00) rather than logic depth, making replication the targeted fix per the diagnosis_action_adjustment.",
+      "raw_response": "{\n  \"delay_class_acknowledged\": \"net_delay_bound\",\n  \"endpoint_type_acknowledged\": \"DSP_CONTROL\",\n  \"chosen_action\": \"replicate_register\",\n  \"action_parameters\": {},\n  \"why_this_fits_delay_class\": \"net_delay_bound path (net_pct=0.73102) with excessive_fanout diagnosis (1.00 confidence, 100% recurring cells) is addressed by replicating the shared high-fanout DSP drivers to cut net delay.\",\n  \"why_not_top_forbidden_action\": \"phys_opt_design is the highest-ranked allowed action not chosen because the primary diagnosis is excessive_fanout (1.00) rather than logic depth, making replication the targeted fix per the diagnosis_action_adjustment.\",\n  \"confidence\": 4\n}",
+      "cluster_count": 1,
+      "primary_diagnosis": "excessive_fanout",
+      "diagnosis_reasoning_trace": [
+        "normalized 20 timing-path candidate(s) from current_target_candidates",
+        "clustered into 1 cluster(s) via shared start/end cell name",
+        "primary cluster 'cluster_0' contains the current worst path (20 member(s), 2 cell(s) shared across all members)",
+        "outcome history: excessive_fanout's own prescriptions scored 3 win(s) / 0 loss(es) this run -> confidence +0.24",
+        "scored hypotheses: excessive_fanout=1.00, long_interconnect=0.90, placement_already_compact=0.25, localized_congestion=0.10",
+        "primary hypothesis: excessive_fanout (confidence 1.00)",
+        "  + 2 cell(s) (['u_coeff/shadow_reg[216][15]_psdsp_20', 'w_reg[215]/DSP_OUTPUT_INST']) recur across 20/20 extracted candidates (100%) -- consistent with a shared high-fanout driver rather than independent placement issues.",
+        "  + outcome history: excessive_fanout's own prescriptions scored 3 win(s) / 0 loss(es) this run -> confidence +0.24"
+      ],
+      "diagnosis_action_adjustment": "excessive_fanout (confidence 1.00) demoted ['pblock']; excessive_fanout (confidence 1.00) prioritized ['replicate_register']"
+    },
+    {
+      "iter": 9,
+      "recipe": "vivado_phys_opt",
+      "batch_size": 1,
+      "targets": [
+        "AggressiveFanoutOpt"
+      ],
+      "wns_before": -0.216,
+      "wns_after": -0.216,
+      "fmax_before": 368.1885125184094,
+      "fmax_after": 368.1885125184094,
+      "delta_fmax": 0.0,
+      "vivado_runtime_s": 100.08090853691101,
+      "status": "no_improvement",
+      "checkpoint": "/home/fpl2026/dcp_optimizer_run-20260804_143129/checkpoints/iter_009.dcp",
+      "target_tier": "tier1_violating_paths",
+      "target_candidate_count": 20,
+      "path_delay_classification": "net_delay_bound",
+      "path_delay_breakdown": {
+        "logic_pct": 0.26898,
+        "net_pct": 0.73102,
+        "logic_delay_ns": 0.769,
+        "net_delay_ns": 2.09
+      },
+      "clock_period_ns": 2.5,
+      "achieved_fmax_mhz": 368.1885125184094,
+      "no_improvement_count": 2,
+      "consecutive_no_improvement": 1,
+      "action_failure_memory": {
+        "place_design_explore": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "directive:Explore"
+          ],
+          "last_failed_iter": 3,
+          "failed_on_current_targets": false
+        },
+        "replicate_register": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "critical_cell_opt"
+          ],
+          "last_failed_iter": 8,
+          "failed_on_current_targets": true
+        }
+      },
+      "action_failure_counts": {
+        "place_design_explore": 1,
+        "replicate_register": 1
+      },
+      "delay_class": "net_delay_bound",
+      "endpoint_type": "DSP_CONTROL",
+      "allowed_actions": [
+        "replicate_register",
+        "phys_opt_design",
+        "qor_suggestions",
+        "route_explore",
+        "phys_opt_design_retime",
+        "run_recipe",
+        "phys_opt_design_pin_swap",
+        "lut_opt",
+        "place_design_explore",
+        "pblock_full_replace",
+        "pblock"
+      ],
+      "forbidden_actions": [
+        "logic_restructure"
+      ],
+      "action_guidance": {
+        "fanout_split": "delay class is net_delay_bound (net_pct=0.73102); logic-side changes rarely fix routing-bound paths; endpoint is a DSP_CONTROL pin; routing to a hard-block control pin needs physical proximity, not net splitting",
+        "lut_opt": "delay class is net_delay_bound (net_pct=0.73102); logic-side changes rarely fix routing-bound paths",
+        "pblock": "0 wins / 7 losses across previous runs on this design; excessive_fanout (confidence 0.96) argues against this action: 2 cell(s) (['u_coeff/shadow_reg[216][15]_psdsp_20', 'w_reg[215]/DSP_OUTPUT_INST']) recur across 20/20 extracted candidates (100%) -- consistent with a shared high-fanout driver rather than independent placement issues.",
+        "rapidwright_optimize_cell_placement": "0 wins / 3 losses across previous runs on this design",
+        "pblock_full_replace": "0 wins / 3 losses across previous runs on this design; this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won",
+        "place_design_explore": "directives with losing cross-run records on this design (never improved): ExtraTimingOpt (0/2) -- do not re-try these; this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won"
+      },
+      "congestion_level": 0,
+      "cluster_clock_regions": [
+        "X1Y0",
+        "X1Y4"
+      ],
+      "llm_chosen_action": "phys_opt_design",
+      "structural_override_active": false,
+      "stuck_iterations": 1,
+      "exhausted_actions": [],
+      "validation_result": "ok",
+      "reprompt_count": 0,
+      "why_not_top_forbidden_action": "replicate_register is the highest-ranked allowed action but was just shown to fail on the current targets (consecutive_no_action_failures=1, failed_on_current_targets=true), so phys_opt_design with AggressiveFanoutOpt is the next targeted step.",
+      "raw_response": "{\n  \"delay_class_acknowledged\": \"net_delay_bound\",\n  \"endpoint_type_acknowledged\": \"DSP_CONTROL\",\n  \"chosen_action\": \"phys_opt_design\",\n  \"action_parameters\": {\"directive\": \"AggressiveFanoutOpt\"},\n  \"why_this_fits_delay_class\": \"net_delay_bound path (net_pct=0.73102) with excessive_fanout diagnosis (0.96 confidence) is addressed by AggressiveFanoutOpt to reduce net delay on the 100% recurring high-fanout DSP drivers.\",\n  \"why_not_top_forbidden_action\": \"replicate_register is the highest-ranked allowed action but was just shown to fail on the current targets (consecutive_no_action_failures=1, failed_on_current_targets=true), so phys_opt_design with AggressiveFanoutOpt is the next targeted step.\",\n  \"confidence\": 3\n}",
+      "cluster_count": 1,
+      "primary_diagnosis": "excessive_fanout",
+      "diagnosis_reasoning_trace": [
+        "normalized 20 timing-path candidate(s) from current_target_candidates",
+        "clustered into 1 cluster(s) via shared start/end cell name",
+        "primary cluster 'cluster_0' contains the current worst path (20 member(s), 2 cell(s) shared across all members)",
+        "outcome history: excessive_fanout's own prescriptions scored 3 win(s) / 1 loss(es) this run -> confidence +0.16",
+        "scored hypotheses: excessive_fanout=0.96, long_interconnect=0.90, placement_already_compact=0.25, localized_congestion=0.10",
+        "primary hypothesis: excessive_fanout (confidence 0.96)",
+        "  + 2 cell(s) (['u_coeff/shadow_reg[216][15]_psdsp_20', 'w_reg[215]/DSP_OUTPUT_INST']) recur across 20/20 extracted candidates (100%) -- consistent with a shared high-fanout driver rather than independent placement issues.",
+        "  + outcome history: excessive_fanout's own prescriptions scored 3 win(s) / 1 loss(es) this run -> confidence +0.16"
+      ],
+      "diagnosis_action_adjustment": "excessive_fanout (confidence 0.96) demoted ['pblock']; excessive_fanout (confidence 0.96) prioritized ['replicate_register']"
+    },
+    {
+      "iter": 10,
+      "recipe": "qor_suggestions",
+      "batch_size": 1,
+      "targets": [
+        "qor_suggestions"
+      ],
+      "wns_before": -0.216,
+      "wns_after": -0.216,
+      "fmax_before": 368.1885125184094,
+      "fmax_after": 368.1885125184094,
+      "delta_fmax": 0.0,
+      "vivado_runtime_s": 77.29194450378418,
+      "status": "no_improvement",
+      "checkpoint": "/home/fpl2026/dcp_optimizer_run-20260804_143129/checkpoints/iter_010.dcp",
+      "target_tier": "tier1_violating_paths",
+      "target_candidate_count": 20,
+      "path_delay_classification": "net_delay_bound",
+      "path_delay_breakdown": {
+        "logic_pct": 0.26898,
+        "net_pct": 0.73102,
+        "logic_delay_ns": 0.769,
+        "net_delay_ns": 2.09
+      },
+      "clock_period_ns": 2.5,
+      "achieved_fmax_mhz": 368.1885125184094,
+      "no_improvement_count": 3,
+      "consecutive_no_improvement": 2,
+      "action_failure_memory": {
+        "place_design_explore": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "directive:Explore"
+          ],
+          "last_failed_iter": 3,
+          "failed_on_current_targets": false
+        },
+        "replicate_register": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "critical_cell_opt"
+          ],
+          "last_failed_iter": 8,
+          "failed_on_current_targets": true
+        },
+        "phys_opt_design": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "AggressiveFanoutOpt"
+          ],
+          "last_failed_iter": 9,
+          "failed_on_current_targets": true
+        }
+      },
+      "action_failure_counts": {
+        "place_design_explore": 1,
+        "replicate_register": 1,
+        "phys_opt_design": 1
+      },
+      "delay_class": "net_delay_bound",
+      "endpoint_type": "DSP_CONTROL",
+      "allowed_actions": [
+        "replicate_register",
+        "phys_opt_design",
+        "qor_suggestions",
+        "route_explore",
+        "phys_opt_design_retime",
+        "run_recipe",
+        "phys_opt_design_pin_swap",
+        "lut_opt",
+        "place_design_explore",
+        "pblock_full_replace",
+        "pblock"
+      ],
+      "forbidden_actions": [
+        "logic_restructure"
+      ],
+      "action_guidance": {
+        "fanout_split": "delay class is net_delay_bound (net_pct=0.73102); logic-side changes rarely fix routing-bound paths; endpoint is a DSP_CONTROL pin; routing to a hard-block control pin needs physical proximity, not net splitting",
+        "lut_opt": "delay class is net_delay_bound (net_pct=0.73102); logic-side changes rarely fix routing-bound paths",
+        "pblock": "0 wins / 7 losses across previous runs on this design; excessive_fanout (confidence 0.96) argues against this action: 2 cell(s) (['u_coeff/shadow_reg[216][15]_psdsp_20', 'w_reg[215]/DSP_OUTPUT_INST']) recur across 20/20 extracted candidates (100%) -- consistent with a shared high-fanout driver rather than independent placement issues.",
+        "rapidwright_optimize_cell_placement": "0 wins / 3 losses across previous runs on this design",
+        "pblock_full_replace": "0 wins / 3 losses across previous runs on this design; this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won",
+        "place_design_explore": "directives with losing cross-run records on this design (never improved): ExtraTimingOpt (0/2) -- do not re-try these; this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won"
+      },
+      "congestion_level": 0,
+      "cluster_clock_regions": [
+        "X1Y0",
+        "X1Y4"
+      ],
+      "llm_chosen_action": "qor_suggestions",
+      "structural_override_active": false,
+      "stuck_iterations": 2,
+      "exhausted_actions": [],
+      "validation_result": "ok",
+      "reprompt_count": 0,
+      "why_not_top_forbidden_action": "replicate_register is the highest-ranked allowed action but already failed on current targets (consecutive_no_action_failures=1, failed_on_current_targets=true), so qor_suggestions is the next safe refinement.",
+      "raw_response": "{\n  \"delay_class_acknowledged\": \"net_delay_bound\",\n  \"endpoint_type_acknowledged\": \"DSP_CONTROL\",\n  \"chosen_action\": \"qor_suggestions\",\n  \"action_parameters\": {},\n  \"why_this_fits_delay_class\": \"net_delay_bound path (net_pct=0.73102) with stalled excessive_fanout diagnosis benefits from qor_suggestions' bounded, keep-best refinement before any re-roll.\",\n  \"why_not_top_forbidden_action\": \"replicate_register is the highest-ranked allowed action but already failed on current targets (consecutive_no_action_failures=1, failed_on_current_targets=true), so qor_suggestions is the next safe refinement.\",\n  \"confidence\": 4\n}",
+      "cluster_count": 1,
+      "primary_diagnosis": "excessive_fanout",
+      "diagnosis_reasoning_trace": [
+        "normalized 20 timing-path candidate(s) from current_target_candidates",
+        "clustered into 1 cluster(s) via shared start/end cell name",
+        "primary cluster 'cluster_0' contains the current worst path (20 member(s), 2 cell(s) shared across all members)",
+        "outcome history: excessive_fanout's own prescriptions scored 3 win(s) / 1 loss(es) this run -> confidence +0.16",
+        "scored hypotheses: excessive_fanout=0.96, long_interconnect=0.90, placement_already_compact=0.25, localized_congestion=0.10",
+        "primary hypothesis: excessive_fanout (confidence 0.96)",
+        "  + 2 cell(s) (['u_coeff/shadow_reg[216][15]_psdsp_20', 'w_reg[215]/DSP_OUTPUT_INST']) recur across 20/20 extracted candidates (100%) -- consistent with a shared high-fanout driver rather than independent placement issues.",
+        "  + outcome history: excessive_fanout's own prescriptions scored 3 win(s) / 1 loss(es) this run -> confidence +0.16"
+      ],
+      "diagnosis_action_adjustment": "excessive_fanout (confidence 0.96) demoted ['pblock']; excessive_fanout (confidence 0.96) prioritized ['replicate_register']"
+    },
+    {
+      "iter": 11,
+      "recipe": "vivado_phys_opt",
+      "batch_size": 1,
+      "targets": [
+        "Explore"
+      ],
+      "wns_before": -0.216,
+      "wns_after": -0.216,
+      "fmax_before": 368.1885125184094,
+      "fmax_after": 368.1885125184094,
+      "delta_fmax": 0.0,
+      "vivado_runtime_s": 91.04378604888916,
+      "status": "no_improvement",
+      "checkpoint": "/home/fpl2026/dcp_optimizer_run-20260804_143129/checkpoints/iter_011.dcp",
+      "target_tier": "tier1_violating_paths",
+      "target_candidate_count": 20,
+      "path_delay_classification": "net_delay_bound",
+      "path_delay_breakdown": {
+        "logic_pct": 0.26898,
+        "net_pct": 0.73102,
+        "logic_delay_ns": 0.769,
+        "net_delay_ns": 2.09
+      },
+      "clock_period_ns": 2.5,
+      "achieved_fmax_mhz": 368.1885125184094,
+      "no_improvement_count": 4,
+      "consecutive_no_improvement": 3,
+      "action_failure_memory": {
+        "place_design_explore": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "directive:Explore"
+          ],
+          "last_failed_iter": 3,
+          "failed_on_current_targets": false
+        },
+        "replicate_register": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "critical_cell_opt"
+          ],
+          "last_failed_iter": 8,
+          "failed_on_current_targets": true
+        },
+        "phys_opt_design": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "AggressiveFanoutOpt"
+          ],
+          "last_failed_iter": 9,
+          "failed_on_current_targets": true
+        },
+        "qor_suggestions": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "qor_suggestions"
+          ],
+          "last_failed_iter": 10,
+          "failed_on_current_targets": true
+        }
+      },
+      "action_failure_counts": {
+        "place_design_explore": 1,
+        "replicate_register": 1,
+        "phys_opt_design": 1,
+        "qor_suggestions": 1
+      },
+      "delay_class": "net_delay_bound",
+      "endpoint_type": "DSP_CONTROL",
+      "allowed_actions": [
+        "pblock_full_replace",
+        "place_design_explore",
+        "pblock",
+        "phys_opt_design_retime",
+        "phys_opt_design_pin_swap"
+      ],
+      "forbidden_actions": [
+        "logic_restructure"
+      ],
+      "action_guidance": {
+        "fanout_split": "delay class is net_delay_bound (net_pct=0.73102); logic-side changes rarely fix routing-bound paths; endpoint is a DSP_CONTROL pin; routing to a hard-block control pin needs physical proximity, not net splitting",
+        "lut_opt": "delay class is net_delay_bound (net_pct=0.73102); logic-side changes rarely fix routing-bound paths",
+        "pblock": "0 wins / 7 losses across previous runs on this design; excessive_fanout (confidence 0.96) argues against this action: 2 cell(s) (['u_coeff/shadow_reg[216][15]_psdsp_20', 'w_reg[215]/DSP_OUTPUT_INST']) recur across 20/20 extracted candidates (100%) -- consistent with a shared high-fanout driver rather than independent placement issues.",
+        "rapidwright_optimize_cell_placement": "0 wins / 3 losses across previous runs on this design",
+        "qor_suggestions": "0 wins / 2 losses across previous runs on this design, plus 1 more loss(es) already this run",
+        "pblock_full_replace": "0 wins / 3 losses across previous runs on this design; this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won",
+        "place_design_explore": "directives with losing cross-run records on this design (never improved): ExtraTimingOpt (0/2) -- do not re-try these; this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won"
+      },
+      "congestion_level": 0,
+      "cluster_clock_regions": [
+        "X1Y0",
+        "X1Y4"
+      ],
+      "llm_chosen_action": "phys_opt_design_pin_swap",
+      "structural_override_active": true,
+      "stuck_iterations": 3,
+      "exhausted_actions": [],
+      "validation_result": "ok",
+      "reprompt_count": 1,
+      "why_not_top_forbidden_action": "pblock_full_replace is the highest-ranked allowed action but carries 0 wins/3 losses and risks discarding the current best placement, while phys_opt_design_pin_swap is a zero-risk refinement that directly targets routing on net-delay-bound paths.",
+      "raw_response": "{\n  \"delay_class_acknowledged\": \"net_delay_bound\",\n  \"endpoint_type_acknowledged\": \"DSP_CONTROL\",\n  \"chosen_action\": \"phys_opt_design_pin_swap\",\n  \"action_parameters\": {\"directive\": \"Explore\"},\n  \"why_this_fits_delay_class\": \"net_delay_bound path (net_pct=0.73102) benefits from phys_opt_design_pin_swap to remap pins within SLICEs and reduce routing congestion on the critical high-fanout DSP nets without any cell movement.\",\n  \"why_not_top_forbidden_action\": \"pblock_full_replace is the highest-ranked allowed action but carries 0 wins/3 losses and risks discarding the current best placement, while phys_opt_design_pin_swap is a zero-risk refinement that directly targets routing on net-delay-bound paths.\",\n  \"confidence\": 4\n}",
+      "cluster_count": 1,
+      "primary_diagnosis": "excessive_fanout",
+      "diagnosis_reasoning_trace": [
+        "normalized 20 timing-path candidate(s) from current_target_candidates",
+        "clustered into 1 cluster(s) via shared start/end cell name",
+        "primary cluster 'cluster_0' contains the current worst path (20 member(s), 2 cell(s) shared across all members)",
+        "outcome history: excessive_fanout's own prescriptions scored 3 win(s) / 1 loss(es) this run -> confidence +0.16",
+        "scored hypotheses: excessive_fanout=0.96, long_interconnect=0.90, placement_already_compact=0.25, localized_congestion=0.10",
+        "primary hypothesis: excessive_fanout (confidence 0.96)",
+        "  + 2 cell(s) (['u_coeff/shadow_reg[216][15]_psdsp_20', 'w_reg[215]/DSP_OUTPUT_INST']) recur across 20/20 extracted candidates (100%) -- consistent with a shared high-fanout driver rather than independent placement issues.",
+        "  + outcome history: excessive_fanout's own prescriptions scored 3 win(s) / 1 loss(es) this run -> confidence +0.16"
+      ],
+      "diagnosis_action_adjustment": "excessive_fanout (confidence 0.96) demoted ['pblock']; excessive_fanout (confidence 0.96) prioritized ['replicate_register']"
+    },
+    {
+      "iter": 12,
+      "recipe": "vivado_phys_opt",
+      "batch_size": 1,
+      "targets": [
+        "critical_cell_opt"
+      ],
+      "wns_before": -0.216,
+      "wns_after": -0.216,
+      "fmax_before": 368.1885125184094,
+      "fmax_after": 368.1885125184094,
+      "delta_fmax": 0.0,
+      "vivado_runtime_s": 101.9036021232605,
+      "status": "no_improvement",
+      "checkpoint": "/home/fpl2026/dcp_optimizer_run-20260804_143129/checkpoints/iter_012.dcp",
+      "target_tier": "tier1_violating_paths",
+      "target_candidate_count": 20,
+      "path_delay_classification": "net_delay_bound",
+      "path_delay_breakdown": {
+        "logic_pct": 0.26898,
+        "net_pct": 0.73102,
+        "logic_delay_ns": 0.769,
+        "net_delay_ns": 2.09
+      },
+      "clock_period_ns": 2.5,
+      "achieved_fmax_mhz": 368.1885125184094,
+      "no_improvement_count": 5,
+      "consecutive_no_improvement": 4,
+      "action_failure_memory": {
+        "place_design_explore": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "directive:Explore"
+          ],
+          "last_failed_iter": 3,
+          "failed_on_current_targets": false
+        },
+        "replicate_register": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "critical_cell_opt"
+          ],
+          "last_failed_iter": 8,
+          "failed_on_current_targets": true
+        },
+        "phys_opt_design": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "AggressiveFanoutOpt"
+          ],
+          "last_failed_iter": 9,
+          "failed_on_current_targets": true
+        },
+        "qor_suggestions": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "qor_suggestions"
+          ],
+          "last_failed_iter": 10,
+          "failed_on_current_targets": true
+        },
+        "phys_opt_design_pin_swap": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "Explore"
+          ],
+          "last_failed_iter": 11,
+          "failed_on_current_targets": true
+        }
+      },
+      "action_failure_counts": {
+        "place_design_explore": 1,
+        "replicate_register": 1,
+        "phys_opt_design": 1,
+        "qor_suggestions": 1,
+        "phys_opt_design_pin_swap": 1
+      },
+      "delay_class": "net_delay_bound",
+      "endpoint_type": "DSP_CONTROL",
+      "allowed_actions": [
+        "pblock_full_replace",
+        "place_design_explore",
+        "pblock",
+        "replicate_register",
+        "phys_opt_design_retime"
+      ],
+      "forbidden_actions": [
+        "logic_restructure"
+      ],
+      "action_guidance": {
+        "fanout_split": "delay class is net_delay_bound (net_pct=0.73102); logic-side changes rarely fix routing-bound paths; endpoint is a DSP_CONTROL pin; routing to a hard-block control pin needs physical proximity, not net splitting",
+        "lut_opt": "delay class is net_delay_bound (net_pct=0.73102); logic-side changes rarely fix routing-bound paths",
+        "pblock": "0 wins / 7 losses across previous runs on this design; excessive_fanout (confidence 0.96) argues against this action: 2 cell(s) (['u_coeff/shadow_reg[216][15]_psdsp_20', 'w_reg[215]/DSP_OUTPUT_INST']) recur across 20/20 extracted candidates (100%) -- consistent with a shared high-fanout driver rather than independent placement issues.",
+        "rapidwright_optimize_cell_placement": "0 wins / 3 losses across previous runs on this design",
+        "qor_suggestions": "0 wins / 2 losses across previous runs on this design, plus 1 more loss(es) already this run",
+        "pblock_full_replace": "0 wins / 3 losses across previous runs on this design; this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won",
+        "place_design_explore": "directives with losing cross-run records on this design (never improved): ExtraTimingOpt (0/2) -- do not re-try these; this run holds an unbeaten best above baseline -- refine it (phys_opt, incremental pblock + re-route, qor_suggestions) instead of gambling it on a fresh whole-design re-place: measured re-rolls from a winning state lost 50-120 MHz far more often than they won"
+      },
+      "congestion_level": 0,
+      "cluster_clock_regions": [
+        "X1Y0",
+        "X1Y4"
+      ],
+      "llm_chosen_action": "replicate_register",
+      "structural_override_active": true,
+      "stuck_iterations": 4,
+      "exhausted_actions": [],
+      "validation_result": "ok",
+      "reprompt_count": 0,
+      "why_not_top_forbidden_action": "pblock_full_replace is the highest-ranked allowed action but has 0 wins/3 losses and risks discarding the unbeaten best placement (measured 50-120 MHz losses on prior re-rolls).",
+      "raw_response": "{\n  \"delay_class_acknowledged\": \"net_delay_bound\",\n  \"endpoint_type_acknowledged\": \"DSP_CONTROL\",\n  \"chosen_action\": \"replicate_register\",\n  \"action_parameters\": {},\n  \"why_this_fits_delay_class\": \"net_delay_bound path (net_pct=0.73102) is caused by excessive_fanout on the two cells shared by all 20 candidates; replicate_register directly reduces that shared net delay.\",\n  \"why_not_top_forbidden_action\": \"pblock_full_replace is the highest-ranked allowed action but has 0 wins/3 losses and risks discarding the unbeaten best placement (measured 50-120 MHz losses on prior re-rolls).\",\n  \"confidence\": 4\n}",
+      "cluster_count": 1,
+      "primary_diagnosis": "excessive_fanout",
+      "diagnosis_reasoning_trace": [
+        "normalized 20 timing-path candidate(s) from current_target_candidates",
+        "clustered into 1 cluster(s) via shared start/end cell name",
+        "primary cluster 'cluster_0' contains the current worst path (20 member(s), 2 cell(s) shared across all members)",
+        "outcome history: excessive_fanout's own prescriptions scored 3 win(s) / 1 loss(es) this run -> confidence +0.16",
+        "scored hypotheses: excessive_fanout=0.96, long_interconnect=0.90, placement_already_compact=0.25, localized_congestion=0.10",
+        "primary hypothesis: excessive_fanout (confidence 0.96)",
+        "  + 2 cell(s) (['u_coeff/shadow_reg[216][15]_psdsp_20', 'w_reg[215]/DSP_OUTPUT_INST']) recur across 20/20 extracted candidates (100%) -- consistent with a shared high-fanout driver rather than independent placement issues.",
+        "  + outcome history: excessive_fanout's own prescriptions scored 3 win(s) / 1 loss(es) this run -> confidence +0.16"
+      ],
+      "diagnosis_action_adjustment": "excessive_fanout (confidence 0.96) demoted ['pblock']; excessive_fanout (confidence 0.96) prioritized ['replicate_register']"
+    },
+    {
+      "iter": 13,
+      "recipe": "vivado_phys_opt",
+      "batch_size": 1,
+      "targets": [
+        "Explore"
+      ],
+      "wns_before": -0.216,
+      "wns_after": -0.216,
+      "fmax_before": 368.1885125184094,
+      "fmax_after": 368.1885125184094,
+      "delta_fmax": 0.0,
+      "vivado_runtime_s": 182.59066605567932,
+      "status": "no_improvement",
+      "checkpoint": "/home/fpl2026/dcp_optimizer_run-20260804_143129/checkpoints/iter_013.dcp",
+      "target_tier": "tier1_violating_paths",
+      "target_candidate_count": 20,
+      "path_delay_classification": "net_delay_bound",
+      "path_delay_breakdown": {
+        "logic_pct": 0.26898,
+        "net_pct": 0.73102,
+        "logic_delay_ns": 0.769,
+        "net_delay_ns": 2.09
+      },
+      "clock_period_ns": 2.5,
+      "achieved_fmax_mhz": 368.1885125184094,
+      "no_improvement_count": 6,
+      "consecutive_no_improvement": 6,
+      "action_failure_memory": {
+        "place_design_explore": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "directive:Explore"
+          ],
+          "target_fingerprint": "{\"candidates\": [{\"endpoint\": \"w_reg[335]/DSP_OUTPUT_INST/ALU_OUT[20]\", \"slack\": -0.249, \"startpoint\": \"u_coeff/shadow_reg[336][15]_psdsp_20/C\"}, {\"endpoint\": \"w_reg[335]/DSP_OUTPUT_INST/ALU_OUT[21]\", \"slack\": -0.249, \"startpoint\": \"u_coeff/shadow_reg[336][15]_psdsp_20/C\"}, {\"endpoint\": \"w_reg[335]/DSP_OUTPUT_INST/ALU_OUT[22]\", \"slack\": -0.249, \"startpoint\": \"u_coeff/shadow_reg[336][15]_psdsp_20/C\"}, {\"endpoint\": \"w_reg[335]/DSP_OUTPUT_INST/ALU_OUT[23]\", \"slack\": -0.249, \"startpoint\": \"u_coeff/shadow_reg[336][15]_psdsp_20/C\"}, {\"endpoint\": \"w_reg[335]/DSP_OUTPUT_INST/ALU_OUT[24]\", \"slack\": -0.249, \"startpoint\": \"u_coeff/shadow_reg[336][15]_psdsp_20/C\"}], \"delay_class\": \"net_delay_bound\", \"tier\": \"tier1_violating_paths\"}",
+          "last_failed_iter": 3
+        },
+        "replicate_register": {
+          "consecutive_no_action_failures": 2,
+          "failed_targets": [
+            "critical_cell_opt"
+          ],
+          "target_fingerprint": "{\"candidates\": [{\"endpoint\": \"w_reg[215]/DSP_OUTPUT_INST/ALU_OUT[20]\", \"slack\": -0.216, \"startpoint\": \"u_coeff/shadow_reg[216][15]_psdsp_20/C\"}, {\"endpoint\": \"w_reg[215]/DSP_OUTPUT_INST/ALU_OUT[21]\", \"slack\": -0.216, \"startpoint\": \"u_coeff/shadow_reg[216][15]_psdsp_20/C\"}, {\"endpoint\": \"w_reg[215]/DSP_OUTPUT_INST/ALU_OUT[22]\", \"slack\": -0.216, \"startpoint\": \"u_coeff/shadow_reg[216][15]_psdsp_20/C\"}, {\"endpoint\": \"w_reg[215]/DSP_OUTPUT_INST/ALU_OUT[23]\", \"slack\": -0.216, \"startpoint\": \"u_coeff/shadow_reg[216][15]_psdsp_20/C\"}, {\"endpoint\": \"w_reg[215]/DSP_OUTPUT_INST/ALU_OUT[24]\", \"slack\": -0.216, \"startpoint\": \"u_coeff/shadow_reg[216][15]_psdsp_20/C\"}], \"delay_class\": \"net_delay_bound\", \"tier\": \"tier1_violating_paths\"}",
+          "last_failed_iter": 12
+        },
+        "phys_opt_design": {
+          "consecutive_no_action_failures": 2,
+          "failed_targets": [
+            "AggressiveFanoutOpt",
+            "Explore"
+          ],
+          "target_fingerprint": "{\"candidates\": [{\"endpoint\": \"w_reg[215]/DSP_OUTPUT_INST/ALU_OUT[20]\", \"slack\": -0.216, \"startpoint\": \"u_coeff/shadow_reg[216][15]_psdsp_20/C\"}, {\"endpoint\": \"w_reg[215]/DSP_OUTPUT_INST/ALU_OUT[21]\", \"slack\": -0.216, \"startpoint\": \"u_coeff/shadow_reg[216][15]_psdsp_20/C\"}, {\"endpoint\": \"w_reg[215]/DSP_OUTPUT_INST/ALU_OUT[22]\", \"slack\": -0.216, \"startpoint\": \"u_coeff/shadow_reg[216][15]_psdsp_20/C\"}, {\"endpoint\": \"w_reg[215]/DSP_OUTPUT_INST/ALU_OUT[23]\", \"slack\": -0.216, \"startpoint\": \"u_coeff/shadow_reg[216][15]_psdsp_20/C\"}, {\"endpoint\": \"w_reg[215]/DSP_OUTPUT_INST/ALU_OUT[24]\", \"slack\": -0.216, \"startpoint\": \"u_coeff/shadow_reg[216][15]_psdsp_20/C\"}], \"delay_class\": \"net_delay_bound\", \"tier\": \"tier1_violating_paths\"}",
+          "last_failed_iter": 13
+        },
+        "qor_suggestions": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "qor_suggestions"
+          ],
+          "target_fingerprint": "{\"candidates\": [{\"endpoint\": \"w_reg[215]/DSP_OUTPUT_INST/ALU_OUT[20]\", \"slack\": -0.216, \"startpoint\": \"u_coeff/shadow_reg[216][15]_psdsp_20/C\"}, {\"endpoint\": \"w_reg[215]/DSP_OUTPUT_INST/ALU_OUT[21]\", \"slack\": -0.216, \"startpoint\": \"u_coeff/shadow_reg[216][15]_psdsp_20/C\"}, {\"endpoint\": \"w_reg[215]/DSP_OUTPUT_INST/ALU_OUT[22]\", \"slack\": -0.216, \"startpoint\": \"u_coeff/shadow_reg[216][15]_psdsp_20/C\"}, {\"endpoint\": \"w_reg[215]/DSP_OUTPUT_INST/ALU_OUT[23]\", \"slack\": -0.216, \"startpoint\": \"u_coeff/shadow_reg[216][15]_psdsp_20/C\"}, {\"endpoint\": \"w_reg[215]/DSP_OUTPUT_INST/ALU_OUT[24]\", \"slack\": -0.216, \"startpoint\": \"u_coeff/shadow_reg[216][15]_psdsp_20/C\"}], \"delay_class\": \"net_delay_bound\", \"tier\": \"tier1_violating_paths\"}",
+          "last_failed_iter": 10
+        },
+        "phys_opt_design_pin_swap": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "Explore"
+          ],
+          "target_fingerprint": "{\"candidates\": [{\"endpoint\": \"w_reg[215]/DSP_OUTPUT_INST/ALU_OUT[20]\", \"slack\": -0.216, \"startpoint\": \"u_coeff/shadow_reg[216][15]_psdsp_20/C\"}, {\"endpoint\": \"w_reg[215]/DSP_OUTPUT_INST/ALU_OUT[21]\", \"slack\": -0.216, \"startpoint\": \"u_coeff/shadow_reg[216][15]_psdsp_20/C\"}, {\"endpoint\": \"w_reg[215]/DSP_OUTPUT_INST/ALU_OUT[22]\", \"slack\": -0.216, \"startpoint\": \"u_coeff/shadow_reg[216][15]_psdsp_20/C\"}, {\"endpoint\": \"w_reg[215]/DSP_OUTPUT_INST/ALU_OUT[23]\", \"slack\": -0.216, \"startpoint\": \"u_coeff/shadow_reg[216][15]_psdsp_20/C\"}, {\"endpoint\": \"w_reg[215]/DSP_OUTPUT_INST/ALU_OUT[24]\", \"slack\": -0.216, \"startpoint\": \"u_coeff/shadow_reg[216][15]_psdsp_20/C\"}], \"delay_class\": \"net_delay_bound\", \"tier\": \"tier1_violating_paths\"}",
+          "last_failed_iter": 11
+        }
+      },
+      "action_failure_counts": {
+        "place_design_explore": 1,
+        "replicate_register": 2,
+        "phys_opt_design": 2,
+        "qor_suggestions": 1,
+        "phys_opt_design_pin_swap": 1
+      },
+      "llm_chosen_action": "phys_opt_design",
+      "endgame_polish": true,
+      "validation_result": "endgame_polish"
+    },
+    {
+      "iter": 14,
+      "recipe": "route_explore",
+      "batch_size": 1,
+      "targets": [
+        "directive:Explore"
+      ],
+      "wns_before": -0.216,
+      "wns_after": -0.216,
+      "fmax_before": 368.1885125184094,
+      "fmax_after": 368.1885125184094,
+      "delta_fmax": 0.0,
+      "vivado_runtime_s": 51.11564874649048,
+      "status": "no_improvement",
+      "checkpoint": "/home/fpl2026/dcp_optimizer_run-20260804_143129/checkpoints/iter_014.dcp",
+      "target_tier": "tier1_violating_paths",
+      "target_candidate_count": 20,
+      "path_delay_classification": "net_delay_bound",
+      "path_delay_breakdown": {
+        "logic_pct": 0.26898,
+        "net_pct": 0.73102,
+        "logic_delay_ns": 0.769,
+        "net_delay_ns": 2.09
+      },
+      "clock_period_ns": 2.5,
+      "achieved_fmax_mhz": 368.1885125184094,
+      "no_improvement_count": 7,
+      "consecutive_no_improvement": 7,
+      "action_failure_memory": {
+        "place_design_explore": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "directive:Explore"
+          ],
+          "target_fingerprint": "{\"candidates\": [{\"endpoint\": \"w_reg[335]/DSP_OUTPUT_INST/ALU_OUT[20]\", \"slack\": -0.249, \"startpoint\": \"u_coeff/shadow_reg[336][15]_psdsp_20/C\"}, {\"endpoint\": \"w_reg[335]/DSP_OUTPUT_INST/ALU_OUT[21]\", \"slack\": -0.249, \"startpoint\": \"u_coeff/shadow_reg[336][15]_psdsp_20/C\"}, {\"endpoint\": \"w_reg[335]/DSP_OUTPUT_INST/ALU_OUT[22]\", \"slack\": -0.249, \"startpoint\": \"u_coeff/shadow_reg[336][15]_psdsp_20/C\"}, {\"endpoint\": \"w_reg[335]/DSP_OUTPUT_INST/ALU_OUT[23]\", \"slack\": -0.249, \"startpoint\": \"u_coeff/shadow_reg[336][15]_psdsp_20/C\"}, {\"endpoint\": \"w_reg[335]/DSP_OUTPUT_INST/ALU_OUT[24]\", \"slack\": -0.249, \"startpoint\": \"u_coeff/shadow_reg[336][15]_psdsp_20/C\"}], \"delay_class\": \"net_delay_bound\", \"tier\": \"tier1_violating_paths\"}",
+          "last_failed_iter": 3
+        },
+        "replicate_register": {
+          "consecutive_no_action_failures": 2,
+          "failed_targets": [
+            "critical_cell_opt"
+          ],
+          "target_fingerprint": "{\"candidates\": [{\"endpoint\": \"w_reg[215]/DSP_OUTPUT_INST/ALU_OUT[20]\", \"slack\": -0.216, \"startpoint\": \"u_coeff/shadow_reg[216][15]_psdsp_20/C\"}, {\"endpoint\": \"w_reg[215]/DSP_OUTPUT_INST/ALU_OUT[21]\", \"slack\": -0.216, \"startpoint\": \"u_coeff/shadow_reg[216][15]_psdsp_20/C\"}, {\"endpoint\": \"w_reg[215]/DSP_OUTPUT_INST/ALU_OUT[22]\", \"slack\": -0.216, \"startpoint\": \"u_coeff/shadow_reg[216][15]_psdsp_20/C\"}, {\"endpoint\": \"w_reg[215]/DSP_OUTPUT_INST/ALU_OUT[23]\", \"slack\": -0.216, \"startpoint\": \"u_coeff/shadow_reg[216][15]_psdsp_20/C\"}, {\"endpoint\": \"w_reg[215]/DSP_OUTPUT_INST/ALU_OUT[24]\", \"slack\": -0.216, \"startpoint\": \"u_coeff/shadow_reg[216][15]_psdsp_20/C\"}], \"delay_class\": \"net_delay_bound\", \"tier\": \"tier1_violating_paths\"}",
+          "last_failed_iter": 12
+        },
+        "phys_opt_design": {
+          "consecutive_no_action_failures": 2,
+          "failed_targets": [
+            "AggressiveFanoutOpt",
+            "Explore"
+          ],
+          "target_fingerprint": "{\"candidates\": [{\"endpoint\": \"w_reg[215]/DSP_OUTPUT_INST/ALU_OUT[20]\", \"slack\": -0.216, \"startpoint\": \"u_coeff/shadow_reg[216][15]_psdsp_20/C\"}, {\"endpoint\": \"w_reg[215]/DSP_OUTPUT_INST/ALU_OUT[21]\", \"slack\": -0.216, \"startpoint\": \"u_coeff/shadow_reg[216][15]_psdsp_20/C\"}, {\"endpoint\": \"w_reg[215]/DSP_OUTPUT_INST/ALU_OUT[22]\", \"slack\": -0.216, \"startpoint\": \"u_coeff/shadow_reg[216][15]_psdsp_20/C\"}, {\"endpoint\": \"w_reg[215]/DSP_OUTPUT_INST/ALU_OUT[23]\", \"slack\": -0.216, \"startpoint\": \"u_coeff/shadow_reg[216][15]_psdsp_20/C\"}, {\"endpoint\": \"w_reg[215]/DSP_OUTPUT_INST/ALU_OUT[24]\", \"slack\": -0.216, \"startpoint\": \"u_coeff/shadow_reg[216][15]_psdsp_20/C\"}], \"delay_class\": \"net_delay_bound\", \"tier\": \"tier1_violating_paths\"}",
+          "last_failed_iter": 13
+        },
+        "qor_suggestions": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "qor_suggestions"
+          ],
+          "target_fingerprint": "{\"candidates\": [{\"endpoint\": \"w_reg[215]/DSP_OUTPUT_INST/ALU_OUT[20]\", \"slack\": -0.216, \"startpoint\": \"u_coeff/shadow_reg[216][15]_psdsp_20/C\"}, {\"endpoint\": \"w_reg[215]/DSP_OUTPUT_INST/ALU_OUT[21]\", \"slack\": -0.216, \"startpoint\": \"u_coeff/shadow_reg[216][15]_psdsp_20/C\"}, {\"endpoint\": \"w_reg[215]/DSP_OUTPUT_INST/ALU_OUT[22]\", \"slack\": -0.216, \"startpoint\": \"u_coeff/shadow_reg[216][15]_psdsp_20/C\"}, {\"endpoint\": \"w_reg[215]/DSP_OUTPUT_INST/ALU_OUT[23]\", \"slack\": -0.216, \"startpoint\": \"u_coeff/shadow_reg[216][15]_psdsp_20/C\"}, {\"endpoint\": \"w_reg[215]/DSP_OUTPUT_INST/ALU_OUT[24]\", \"slack\": -0.216, \"startpoint\": \"u_coeff/shadow_reg[216][15]_psdsp_20/C\"}], \"delay_class\": \"net_delay_bound\", \"tier\": \"tier1_violating_paths\"}",
+          "last_failed_iter": 10
+        },
+        "phys_opt_design_pin_swap": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "Explore"
+          ],
+          "target_fingerprint": "{\"candidates\": [{\"endpoint\": \"w_reg[215]/DSP_OUTPUT_INST/ALU_OUT[20]\", \"slack\": -0.216, \"startpoint\": \"u_coeff/shadow_reg[216][15]_psdsp_20/C\"}, {\"endpoint\": \"w_reg[215]/DSP_OUTPUT_INST/ALU_OUT[21]\", \"slack\": -0.216, \"startpoint\": \"u_coeff/shadow_reg[216][15]_psdsp_20/C\"}, {\"endpoint\": \"w_reg[215]/DSP_OUTPUT_INST/ALU_OUT[22]\", \"slack\": -0.216, \"startpoint\": \"u_coeff/shadow_reg[216][15]_psdsp_20/C\"}, {\"endpoint\": \"w_reg[215]/DSP_OUTPUT_INST/ALU_OUT[23]\", \"slack\": -0.216, \"startpoint\": \"u_coeff/shadow_reg[216][15]_psdsp_20/C\"}, {\"endpoint\": \"w_reg[215]/DSP_OUTPUT_INST/ALU_OUT[24]\", \"slack\": -0.216, \"startpoint\": \"u_coeff/shadow_reg[216][15]_psdsp_20/C\"}], \"delay_class\": \"net_delay_bound\", \"tier\": \"tier1_violating_paths\"}",
+          "last_failed_iter": 11
+        },
+        "route_explore": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "directive:Explore"
+          ],
+          "target_fingerprint": "{\"candidates\": [{\"endpoint\": \"w_reg[215]/DSP_OUTPUT_INST/ALU_OUT[20]\", \"slack\": -0.216, \"startpoint\": \"u_coeff/shadow_reg[216][15]_psdsp_20/C\"}, {\"endpoint\": \"w_reg[215]/DSP_OUTPUT_INST/ALU_OUT[21]\", \"slack\": -0.216, \"startpoint\": \"u_coeff/shadow_reg[216][15]_psdsp_20/C\"}, {\"endpoint\": \"w_reg[215]/DSP_OUTPUT_INST/ALU_OUT[22]\", \"slack\": -0.216, \"startpoint\": \"u_coeff/shadow_reg[216][15]_psdsp_20/C\"}, {\"endpoint\": \"w_reg[215]/DSP_OUTPUT_INST/ALU_OUT[23]\", \"slack\": -0.216, \"startpoint\": \"u_coeff/shadow_reg[216][15]_psdsp_20/C\"}, {\"endpoint\": \"w_reg[215]/DSP_OUTPUT_INST/ALU_OUT[24]\", \"slack\": -0.216, \"startpoint\": \"u_coeff/shadow_reg[216][15]_psdsp_20/C\"}], \"delay_class\": \"net_delay_bound\", \"tier\": \"tier1_violating_paths\"}",
+          "last_failed_iter": 14
+        }
+      },
+      "action_failure_counts": {
+        "place_design_explore": 1,
+        "replicate_register": 2,
+        "route_explore": 1,
+        "phys_opt_design": 2,
+        "qor_suggestions": 1,
+        "phys_opt_design_pin_swap": 1
+      },
+      "llm_chosen_action": "route_explore",
+      "endgame_polish": true,
+      "validation_result": "endgame_polish"
+    }
+  ],
+  "started_at_epoch_s": 1785853916.6448283,
+  "llm_cost_usd": 0.18372465,
+  "benchmark_score": {
+    "formula": "alpha - (0.1*alpha)*beta - (0.1*alpha)*gamma",
+    "alpha_delta_fmax_mhz": 12.696155604083117,
+    "beta_openrouter_cost_usd": 0.18372465,
+    "gamma_runtime_hours": 0.32394744204150305,
+    "wall_clock_runtime_s": 1166.210791349411,
+    "score": 12.051607216442184
+  }
+}
