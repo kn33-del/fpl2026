@@ -1,0 +1,424 @@
+{
+  "input_dcp": "/home/fpl2026/fpl26_contest_benchmarks/vexriscv_re-place_v2_2025.1.dcp",
+  "clock_name": "clk_fpl26contest",
+  "clock_period_ns": 1.57,
+  "baseline_wns": -0.946,
+  "baseline_fmax_mhz": 397.456279809221,
+  "best_wns": -0.935,
+  "best_fmax_mhz": 399.2015968063872,
+  "best_checkpoint": "/home/fpl2026/dcp_optimizer_run-20260805_084310/checkpoints/iter_004.dcp",
+  "current_iter": 4,
+  "stall_count": 1,
+  "cells_blacklisted": [],
+  "nets_blacklisted": [],
+  "iterations": [
+    {
+      "iter": 1,
+      "recipe": "vivado_phys_opt",
+      "batch_size": 1,
+      "targets": [
+        "critical_cell_opt"
+      ],
+      "wns_before": -0.946,
+      "wns_after": null,
+      "fmax_before": 397.456279809221,
+      "fmax_after": null,
+      "delta_fmax": 0.0,
+      "vivado_runtime_s": 28.103604316711426,
+      "status": "failed",
+      "reason": "Skipping phys_opt_design because current WNS -0.946 ns is below -0.500 ns; use structural placement actions first.",
+      "error_type": "phys_opt_below_useful_wns",
+      "checkpoint": null,
+      "rapidwright_edit_summary": null,
+      "action_failure_memory": {},
+      "action_failure_counts": {},
+      "delay_class": "mixed",
+      "endpoint_type": "REGISTER",
+      "allowed_actions": [
+        "replicate_register",
+        "pblock_full_replace",
+        "place_design_explore",
+        "route_explore",
+        "run_recipe",
+        "lut_opt",
+        "phys_opt_design_retime",
+        "phys_opt_design",
+        "phys_opt_design_pin_swap",
+        "pblock"
+      ],
+      "forbidden_actions": [
+        "logic_restructure"
+      ],
+      "action_guidance": {
+        "phys_opt_design_retime": "WNS -0.946 ns is below -0.500 ns; incremental phys_opt cannot close that gap while structural actions remain",
+        "phys_opt_design": "WNS -0.946 ns is below -0.500 ns; incremental phys_opt cannot close that gap while structural actions remain",
+        "phys_opt_design_pin_swap": "WNS -0.946 ns is below -0.500 ns; incremental phys_opt cannot close that gap while structural actions remain",
+        "pblock": "excessive_fanout (confidence 0.80) argues against this action: 1 cell(s) (['IBusCachedPlugin_cache/decodeStage_hit_tags_0_address_reg[14]']) recur across 19/20 extracted candidates (95%) -- consistent with a shared high-fanout driver rather than independent placement issues."
+      },
+      "congestion_level": null,
+      "cluster_clock_regions": [
+        "X4Y1"
+      ],
+      "llm_chosen_action": "replicate_register",
+      "structural_override_active": false,
+      "stuck_iterations": 0,
+      "consecutive_no_improvement": 0,
+      "exhausted_actions": [],
+      "validation_result": "ok",
+      "reprompt_count": 0,
+      "why_not_top_forbidden_action": "pblock_full_replace was not chosen because the primary diagnosis (excessive_fanout 0.80) and action_guidance both demote placement actions in favor of replication on a shared driver.",
+      "raw_response": "{\n  \"delay_class_acknowledged\": \"mixed\",\n  \"endpoint_type_acknowledged\": \"REGISTER\",\n  \"chosen_action\": \"replicate_register\",\n  \"action_parameters\": {},\n  \"why_this_fits_delay_class\": \"Replicate_register directly targets the diagnosed excessive_fanout driver (recur in 95% of candidates) that dominates the 0.569 net_pct on these mixed paths.\",\n  \"why_not_top_forbidden_action\": \"pblock_full_replace was not chosen because the primary diagnosis (excessive_fanout 0.80) and action_guidance both demote placement actions in favor of replication on a shared driver.\",\n  \"confidence\": 4\n}",
+      "cluster_count": 2,
+      "primary_diagnosis": "excessive_fanout",
+      "diagnosis_reasoning_trace": [
+        "normalized 20 timing-path candidate(s) from current_target_candidates",
+        "clustered into 2 cluster(s) via shared start/end cell name",
+        "primary cluster 'cluster_1' does NOT contain the current worst path -- reassigned to the largest non-trivial cluster in the pool since the worst path's own cluster was a singleton (19 member(s), 1 cell(s) shared across all members)",
+        "scored hypotheses: excessive_fanout=0.80, localized_congestion=0.50, placement_already_compact=0.45, long_interconnect=0.25",
+        "primary hypothesis: excessive_fanout (confidence 0.80)",
+        "  + 1 cell(s) (['IBusCachedPlugin_cache/decodeStage_hit_tags_0_address_reg[14]']) recur across 19/20 extracted candidates (95%) -- consistent with a shared high-fanout driver rather than independent placement issues."
+      ],
+      "diagnosis_action_adjustment": "excessive_fanout (confidence 0.80) demoted ['pblock']; excessive_fanout (confidence 0.80) prioritized ['replicate_register']"
+    },
+    {
+      "iter": 2,
+      "recipe": "pblock_full_replace",
+      "batch_size": 1,
+      "targets": [
+        "full_design",
+        "SLICE_X116Y75:SLICE_X122Y127 DSP48E2_X14Y30:DSP48E2_X14Y51 URAM288_X3Y20:URAM288_X3Y35"
+      ],
+      "wns_before": -0.946,
+      "wns_after": -1.118,
+      "fmax_before": 397.456279809221,
+      "fmax_after": 372.0238095238095,
+      "delta_fmax": -25.432470285411455,
+      "vivado_runtime_s": 160.72132444381714,
+      "status": "regression",
+      "checkpoint": "/home/fpl2026/dcp_optimizer_run-20260805_084310/checkpoints/iter_003.dcp",
+      "target_tier": "tier1_violating_paths",
+      "target_candidate_count": 20,
+      "path_delay_classification": "mixed",
+      "path_delay_breakdown": {
+        "logic_pct": 0.43091,
+        "net_pct": 0.56909,
+        "logic_delay_ns": 1.076,
+        "net_delay_ns": 1.421
+      },
+      "clock_period_ns": 1.57,
+      "achieved_fmax_mhz": 372.0238095238095,
+      "no_improvement_count": 2,
+      "consecutive_no_improvement": 1,
+      "action_failure_memory": {
+        "replicate_register": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [],
+          "last_failed_iter": 1,
+          "failed_on_current_targets": true
+        },
+        "phys_opt_design": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "critical_cell_opt"
+          ],
+          "last_failed_iter": 1,
+          "failed_on_current_targets": true
+        }
+      },
+      "action_failure_counts": {
+        "replicate_register": 1,
+        "phys_opt_design": 1
+      },
+      "delay_class": "mixed",
+      "endpoint_type": "REGISTER",
+      "allowed_actions": [
+        "pblock",
+        "pblock_full_replace",
+        "place_design_explore",
+        "route_explore",
+        "run_recipe",
+        "lut_opt",
+        "phys_opt_design_retime",
+        "phys_opt_design",
+        "phys_opt_design_pin_swap",
+        "replicate_register"
+      ],
+      "forbidden_actions": [
+        "logic_restructure"
+      ],
+      "action_guidance": {
+        "phys_opt_design_retime": "WNS -0.946 ns is below -0.500 ns; incremental phys_opt cannot close that gap while structural actions remain",
+        "phys_opt_design": "WNS -0.946 ns is below -0.500 ns; incremental phys_opt cannot close that gap while structural actions remain",
+        "phys_opt_design_pin_swap": "WNS -0.946 ns is below -0.500 ns; incremental phys_opt cannot close that gap while structural actions remain",
+        "replicate_register": "WNS -0.946 ns is below -0.500 ns; incremental phys_opt cannot close that gap while structural actions remain; 0 wins / 3 losses across previous runs on this design, plus 1 more loss(es) already this run"
+      },
+      "congestion_level": null,
+      "cluster_clock_regions": [
+        "X4Y1"
+      ],
+      "llm_chosen_action": "pblock_full_replace",
+      "structural_override_active": false,
+      "stuck_iterations": 1,
+      "exhausted_actions": [],
+      "validation_result": "ok",
+      "reprompt_count": 0,
+      "why_not_top_forbidden_action": "pblock was not chosen again because it was already attempted in iteration 2 with no timing improvement and the ranked list now prioritizes the full-replace variant.",
+      "raw_response": "{\n  \"delay_class_acknowledged\": \"mixed\",\n  \"endpoint_type_acknowledged\": \"REGISTER\",\n  \"chosen_action\": \"pblock_full_replace\",\n  \"action_parameters\": {},\n  \"why_this_fits_delay_class\": \"pblock_full_replace constrains placement of the shared high-fanout driver that dominates the 0.569 net_pct on these mixed paths after the lighter pblock produced no improvement.\",\n  \"why_not_top_forbidden_action\": \"pblock was not chosen again because it was already attempted in iteration 2 with no timing improvement and the ranked list now prioritizes the full-replace variant.\",\n  \"confidence\": 3\n}",
+      "cluster_count": 2,
+      "primary_diagnosis": "excessive_fanout",
+      "diagnosis_reasoning_trace": [
+        "normalized 20 timing-path candidate(s) from current_target_candidates",
+        "clustered into 2 cluster(s) via shared start/end cell name",
+        "primary cluster 'cluster_1' does NOT contain the current worst path -- reassigned to the largest non-trivial cluster in the pool since the worst path's own cluster was a singleton (19 member(s), 1 cell(s) shared across all members)",
+        "outcome history: excessive_fanout's own prescriptions scored 0 win(s) / 1 loss(es) this run -> confidence -0.08",
+        "scored hypotheses: excessive_fanout=0.72, localized_congestion=0.50, placement_already_compact=0.45, long_interconnect=0.25",
+        "primary hypothesis: excessive_fanout (confidence 0.72)",
+        "  + 1 cell(s) (['IBusCachedPlugin_cache/decodeStage_hit_tags_0_address_reg[14]']) recur across 19/20 extracted candidates (95%) -- consistent with a shared high-fanout driver rather than independent placement issues.",
+        "  - outcome history: excessive_fanout's own prescriptions scored 0 win(s) / 1 loss(es) this run -> confidence -0.08"
+      ],
+      "diagnosis_action_adjustment": null,
+      "rapidwright_edit_summary": {
+        "action": "pblock_full_replace",
+        "cells_moved": 0,
+        "nets_affected": 0,
+        "pblock_ranges": "SLICE_X116Y75:SLICE_X122Y127 DSP48E2_X14Y30:DSP48E2_X14Y51 URAM288_X3Y20:URAM288_X3Y35",
+        "fabric_region": {
+          "col_min": 477,
+          "col_max": 497,
+          "row_min": 178,
+          "row_max": 232,
+          "center_col": 334,
+          "center_row": 155,
+          "center_of_mass_col": 487,
+          "center_of_mass_row": 205,
+          "contiguous_columns": 21,
+          "contiguous_rows": 55
+        }
+      }
+    },
+    {
+      "iter": 3,
+      "recipe": "place_design_explore",
+      "batch_size": 1,
+      "targets": [
+        "directive:Explore"
+      ],
+      "wns_before": -0.946,
+      "wns_after": -0.935,
+      "fmax_before": 397.456279809221,
+      "fmax_after": 399.2015968063872,
+      "delta_fmax": 1.745316997166242,
+      "vivado_runtime_s": 136.3819296360016,
+      "status": "improved",
+      "checkpoint": "/home/fpl2026/dcp_optimizer_run-20260805_084310/checkpoints/iter_004.dcp",
+      "target_tier": "tier1_violating_paths",
+      "target_candidate_count": 20,
+      "path_delay_classification": "mixed",
+      "path_delay_breakdown": {
+        "logic_pct": 0.43091,
+        "net_pct": 0.56909,
+        "logic_delay_ns": 1.076,
+        "net_delay_ns": 1.421
+      },
+      "clock_period_ns": 1.57,
+      "achieved_fmax_mhz": 399.2015968063872,
+      "no_improvement_count": 0,
+      "consecutive_no_improvement": 2,
+      "action_failure_memory": {
+        "replicate_register": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [],
+          "last_failed_iter": 1,
+          "failed_on_current_targets": true
+        },
+        "phys_opt_design": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "critical_cell_opt"
+          ],
+          "last_failed_iter": 1,
+          "failed_on_current_targets": true
+        },
+        "pblock_full_replace": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "full_design",
+            "SLICE_X116Y75:SLICE_X122Y127 DSP48E2_X14Y30:DSP48E2_X14Y51 URAM288_X3Y20:URAM288_X3Y35"
+          ],
+          "last_failed_iter": 3,
+          "failed_on_current_targets": true
+        }
+      },
+      "action_failure_counts": {
+        "replicate_register": 1,
+        "phys_opt_design": 1,
+        "pblock_full_replace": 1
+      },
+      "delay_class": "mixed",
+      "endpoint_type": "REGISTER",
+      "allowed_actions": [
+        "pblock",
+        "pblock_full_replace",
+        "place_design_explore",
+        "route_explore",
+        "run_recipe",
+        "lut_opt",
+        "phys_opt_design_retime",
+        "phys_opt_design",
+        "phys_opt_design_pin_swap",
+        "replicate_register"
+      ],
+      "forbidden_actions": [
+        "logic_restructure"
+      ],
+      "action_guidance": {
+        "phys_opt_design_retime": "WNS -0.946 ns is below -0.500 ns; incremental phys_opt cannot close that gap while structural actions remain",
+        "phys_opt_design": "WNS -0.946 ns is below -0.500 ns; incremental phys_opt cannot close that gap while structural actions remain",
+        "phys_opt_design_pin_swap": "WNS -0.946 ns is below -0.500 ns; incremental phys_opt cannot close that gap while structural actions remain",
+        "replicate_register": "WNS -0.946 ns is below -0.500 ns; incremental phys_opt cannot close that gap while structural actions remain; 0 wins / 3 losses across previous runs on this design, plus 1 more loss(es) already this run"
+      },
+      "congestion_level": 0,
+      "cluster_clock_regions": [
+        "X4Y1"
+      ],
+      "llm_chosen_action": "place_design_explore",
+      "structural_override_active": false,
+      "stuck_iterations": 2,
+      "exhausted_actions": [],
+      "validation_result": "ok",
+      "reprompt_count": 0,
+      "why_not_top_forbidden_action": "pblock was not chosen because the prior pblock_full_replace already regressed (WNS -1.118 ns) on the same fanout cluster and a fresh placement directive sweep is the next-ranked option.",
+      "raw_response": "{\n  \"delay_class_acknowledged\": \"mixed\",\n  \"endpoint_type_acknowledged\": \"REGISTER\",\n  \"chosen_action\": \"place_design_explore\",\n  \"action_parameters\": {},\n  \"why_this_fits_delay_class\": \"place_design_explore directly reduces the dominant 0.569 net_pct by re-placing the shared high-fanout cluster after the pblock_full_replace regression.\",\n  \"why_not_top_forbidden_action\": \"pblock was not chosen because the prior pblock_full_replace already regressed (WNS -1.118 ns) on the same fanout cluster and a fresh placement directive sweep is the next-ranked option.\",\n  \"confidence\": 4\n}",
+      "cluster_count": 2,
+      "primary_diagnosis": "excessive_fanout",
+      "diagnosis_reasoning_trace": [
+        "normalized 20 timing-path candidate(s) from current_target_candidates",
+        "clustered into 2 cluster(s) via shared start/end cell name",
+        "primary cluster 'cluster_1' does NOT contain the current worst path -- reassigned to the largest non-trivial cluster in the pool since the worst path's own cluster was a singleton (19 member(s), 1 cell(s) shared across all members)",
+        "outcome history: excessive_fanout's own prescriptions scored 0 win(s) / 1 loss(es) this run -> confidence -0.08",
+        "scored hypotheses: excessive_fanout=0.72, placement_already_compact=0.45, localized_congestion=0.30, long_interconnect=0.25",
+        "primary hypothesis: excessive_fanout (confidence 0.72)",
+        "  + 1 cell(s) (['IBusCachedPlugin_cache/decodeStage_hit_tags_0_address_reg[14]']) recur across 19/20 extracted candidates (95%) -- consistent with a shared high-fanout driver rather than independent placement issues.",
+        "  - outcome history: excessive_fanout's own prescriptions scored 0 win(s) / 1 loss(es) this run -> confidence -0.08"
+      ],
+      "diagnosis_action_adjustment": null
+    },
+    {
+      "iter": 4,
+      "recipe": "place_design_explore",
+      "batch_size": 1,
+      "targets": [
+        "directive:ExtraPostPlacementOpt"
+      ],
+      "wns_before": -0.935,
+      "wns_after": -1.291,
+      "fmax_before": 399.2015968063872,
+      "fmax_after": 349.52813701502976,
+      "delta_fmax": -49.67345979135746,
+      "vivado_runtime_s": 2543.5628650188446,
+      "status": "regression",
+      "checkpoint": "/home/fpl2026/dcp_optimizer_run-20260805_084310/checkpoints/iter_023.dcp",
+      "target_tier": "tier1_violating_paths",
+      "target_candidate_count": 20,
+      "path_delay_classification": "mixed",
+      "path_delay_breakdown": {
+        "logic_pct": 0.42381,
+        "net_pct": 0.57619,
+        "logic_delay_ns": 1.054,
+        "net_delay_ns": 1.433
+      },
+      "clock_period_ns": 1.57,
+      "achieved_fmax_mhz": 349.52813701502976,
+      "no_improvement_count": 1,
+      "consecutive_no_improvement": 0,
+      "action_failure_memory": {
+        "replicate_register": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [],
+          "last_failed_iter": 1,
+          "failed_on_current_targets": false
+        },
+        "phys_opt_design": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "critical_cell_opt"
+          ],
+          "last_failed_iter": 1,
+          "failed_on_current_targets": false
+        },
+        "pblock_full_replace": {
+          "consecutive_no_action_failures": 1,
+          "failed_targets": [
+            "full_design",
+            "SLICE_X116Y75:SLICE_X122Y127 DSP48E2_X14Y30:DSP48E2_X14Y51 URAM288_X3Y20:URAM288_X3Y35"
+          ],
+          "last_failed_iter": 3,
+          "failed_on_current_targets": false
+        }
+      },
+      "action_failure_counts": {
+        "replicate_register": 1,
+        "phys_opt_design": 1,
+        "pblock_full_replace": 1
+      },
+      "delay_class": "mixed",
+      "endpoint_type": "REGISTER",
+      "allowed_actions": [
+        "pblock",
+        "pblock_full_replace",
+        "place_design_explore",
+        "route_explore",
+        "run_recipe",
+        "lut_opt",
+        "phys_opt_design_retime",
+        "phys_opt_design",
+        "phys_opt_design_pin_swap",
+        "replicate_register"
+      ],
+      "forbidden_actions": [
+        "logic_restructure"
+      ],
+      "action_guidance": {
+        "phys_opt_design_retime": "WNS -0.935 ns is below -0.500 ns; incremental phys_opt cannot close that gap while structural actions remain",
+        "phys_opt_design": "WNS -0.935 ns is below -0.500 ns; incremental phys_opt cannot close that gap while structural actions remain",
+        "phys_opt_design_pin_swap": "WNS -0.935 ns is below -0.500 ns; incremental phys_opt cannot close that gap while structural actions remain",
+        "replicate_register": "WNS -0.935 ns is below -0.500 ns; incremental phys_opt cannot close that gap while structural actions remain; 0 wins / 3 losses across previous runs on this design, plus 1 more loss(es) already this run"
+      },
+      "congestion_level": 0,
+      "cluster_clock_regions": [
+        "X3Y4"
+      ],
+      "llm_chosen_action": "place_design_explore",
+      "structural_override_active": false,
+      "stuck_iterations": 0,
+      "exhausted_actions": [],
+      "validation_result": "ok",
+      "reprompt_count": 0,
+      "why_not_top_forbidden_action": "pblock was not chosen because the prior pblock_full_replace regressed (WNS -1.118 ns) on the same fanout cluster and untried place directives remain available.",
+      "raw_response": "{\n  \"delay_class_acknowledged\": \"mixed\",\n  \"endpoint_type_acknowledged\": \"REGISTER\",\n  \"chosen_action\": \"place_design_explore\",\n  \"action_parameters\": {\"directive\": \"ExtraPostPlacementOpt\"},\n  \"why_this_fits_delay_class\": \"place_design_explore with ExtraPostPlacementOpt targets the dominant 0.576 net_pct on the excessive-fanout cluster after the prior Explore directive produced a small WNS gain.\",\n  \"why_not_top_forbidden_action\": \"pblock was not chosen because the prior pblock_full_replace regressed (WNS -1.118 ns) on the same fanout cluster and untried place directives remain available.\",\n  \"confidence\": 4\n}",
+      "cluster_count": 2,
+      "primary_diagnosis": "excessive_fanout",
+      "diagnosis_reasoning_trace": [
+        "normalized 20 timing-path candidate(s) from current_target_candidates",
+        "clustered into 2 cluster(s) via shared start/end cell name",
+        "primary cluster 'cluster_0' contains the current worst path (18 member(s), 1 cell(s) shared across all members)",
+        "outcome history: excessive_fanout's own prescriptions scored 0 win(s) / 1 loss(es) this run -> confidence -0.08",
+        "scored hypotheses: excessive_fanout=0.72, placement_already_compact=0.45, localized_congestion=0.30, long_interconnect=0.25",
+        "primary hypothesis: excessive_fanout (confidence 0.72)",
+        "  + 2 cell(s) (['IBusCachedPlugin_cache/banks_0_reg_bram_0', 'IBusCachedPlugin_cache/decodeStage_hit_tags_0_address_reg[7]']) recur across 18/20 extracted candidates (90%) -- consistent with a shared high-fanout driver rather than independent placement issues.",
+        "  - outcome history: excessive_fanout's own prescriptions scored 0 win(s) / 1 loss(es) this run -> confidence -0.08"
+      ],
+      "diagnosis_action_adjustment": null
+    }
+  ],
+  "started_at_epoch_s": 1785919417.6914406,
+  "llm_cost_usd": 0.35393985000000006,
+  "benchmark_score": {
+    "formula": "alpha - (0.1*alpha)*beta - (0.1*alpha)*gamma",
+    "alpha_delta_fmax_mhz": 1.745316997166242,
+    "beta_openrouter_cost_usd": 0.35393985000000006,
+    "gamma_runtime_hours": 0.813362207280265,
+    "wall_clock_runtime_s": 2928.103946208954,
+    "score": 1.541585785026405
+  }
+}
