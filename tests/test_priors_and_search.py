@@ -435,12 +435,14 @@ def test_replicate_register_actually_sends_critical_cell_opt(opt):
     assert "-directive" not in commands[0]
 
 
-def test_replicate_register_targets_diagnosed_fanout_hotspots(opt):
-    # Fix (20260804 sweep, optical-flow/spam-filter/vexriscv_v2): all three
-    # stalled designs diagnosed excessive_fanout with ONE named hotspot cell
-    # recurring across 65-95% of candidates, and the action never received
-    # it. When the live diagnosis names hotspots, the command must carry
-    # -force_replication_on_nets targeting their output nets.
+def test_replicate_register_never_sends_force_replication(opt):
+    # REVERSAL of the original targeted-replication fix: run 20260806_193354
+    # (rosetta_optical-flow iter 1) proved -force_replication_on_nets is
+    # rejected outright in post-route physical synthesis ("ERROR: [Vivado_Tcl
+    # 4-265] ... not supported yet for post-route physical synthesis"), and
+    # this pipeline only ever runs phys_opt post-route. Even with an
+    # excessive_fanout diagnosis naming hotspot cells, the command must NOT
+    # carry the option -- it would be a guaranteed hard failure.
     hyp = RootCauseHypothesis(
         name="excessive_fanout", cluster_id="c0", confidence=0.8,
         supporting_evidence=[], contradicting_evidence=[],
@@ -473,9 +475,58 @@ def test_replicate_register_targets_diagnosed_fanout_hotspots(opt):
             {"worst_path": {"end_cell": "some/cell"}, "delay_class": "mixed"},
         ))
     assert commands
-    assert "-force_replication_on_nets" in commands[0]
-    assert "top/hot_reg" in commands[0]
-    assert opt.last_targets == ["top/hot_reg"]
+    assert "-force_replication_on_nets" not in commands[0]
+    assert "-critical_cell_opt" in commands[0]
+
+
+def test_full_replace_grows_region_on_small_validation_shortage(opt):
+    # Run 20260806_193354 (rosetta_optical-flow iter 7): the design's
+    # first-ever pblock_full_replace failed pre-placement validation by a
+    # shortage of 2 FIFO sites ("FIFO: requires 122, only 120 available")
+    # and the recipe was abandoned. On a validation shortage with known
+    # region geometry, the flow must delete the too-small pblock, grow the
+    # window, re-convert, and re-apply -- succeeding when the grown region
+    # fits -- instead of returning full_replace_region_too_small on the
+    # first miss.
+    apply_attempts = []
+    convert_calls = []
+
+    async def fake_call_tool(tool_name, params, internal=False):
+        if tool_name == "vivado_report_utilization_for_pblock":
+            return "1.5x Multiplier\nLUTs: 1000\nFFs: 2000\nDSPs: 0\nBRAMs: 60"
+        if tool_name == "rapidwright_analyze_fabric_for_pblock":
+            return json.dumps({"recommended_region": {
+                "col_min": 100, "col_max": 120, "row_min": 50, "row_max": 90}})
+        if tool_name == "rapidwright_convert_fabric_region_to_pblock":
+            convert_calls.append(dict(params))
+            return json.dumps({"pblock_ranges": f"SLICE_X{params['col_min']}Y{params['row_min']}:SLICE_X{params['col_max']}Y{params['row_max']}"})
+        if tool_name == "vivado_create_and_apply_pblock":
+            apply_attempts.append(dict(params))
+            if len(apply_attempts) == 1:
+                return json.dumps({
+                    "cells_assigned": 5000, "cells_matched": 5000,
+                    "resource_validation": {"errors": [
+                        "FIFO: requires 122, only 120 available (shortage: 2)"]},
+                })
+            return json.dumps({"cells_assigned": 5000, "cells_matched": 5000,
+                               "resource_validation": {"errors": []}})
+        return "ok"
+
+    async def licensed():
+        return True
+
+    with patch.object(opt, "call_tool", side_effect=fake_call_tool), \
+         patch.object(opt, "_check_implementation_license", side_effect=licensed):
+        result = asyncio.run(opt._execute_pblock_full_replace({}))
+
+    # One failed apply, one successful re-apply of a strictly larger window.
+    assert len(apply_attempts) == 2
+    assert len(convert_calls) == 2
+    grown = convert_calls[1]
+    assert grown["col_min"] < 100 and grown["col_max"] > 120
+    assert grown["row_min"] < 50 and grown["row_max"] > 90
+    assert "full_replace_region_too_small" not in result
+    assert opt.last_rapidwright_edit_summary.get("region_grow_attempts") == 1
 
 
 def test_fresh_win_requires_material_gain(opt, tmp_path):

@@ -156,6 +156,14 @@ RECIPE_YIELD_ALT_MIN_RATE = 0.5
 # +0.13% marginal is comfortably below it; the +24-32% wins the prior was
 # actually measured on are far above.
 FRESH_WIN_MATERIALITY_FRACTION = 0.005
+# pblock_full_replace region-grow retry (run 20260806_193354,
+# rosetta_optical-flow iter 7): the design's first-ever full_replace failed
+# pre-placement validation by a shortage of 2 FIFO sites out of 122 and the
+# recipe was abandoned outright. On a validation shortage with known region
+# geometry, grow the window by this fraction per side and re-apply, up to
+# this many times, before declaring the region too small.
+FULL_REPLACE_REGION_GROW_RETRIES = 2
+FULL_REPLACE_REGION_GROW_FRACTION = 0.15
 # Fix #10 (score-aware stall stop): the contest score is
 # alpha - 0.1*alpha*cost - 0.1*alpha*(runtime/3600), so every iteration past
 # the last improvement is pure negative value. Run history showed runs
@@ -5126,50 +5134,129 @@ class DCPOptimizer(DCPOptimizerBase):
         # and place+route ran WITHOUT any pblock ever being created -- a
         # random whole-design re-place recorded as vivado_command_failure.
         # internal=True sends the call straight to the Vivado server.
-        apply_result = await self.call_tool(
-            "vivado_create_and_apply_pblock",
-            {
-                "pblock_name": pblock_name,
-                "ranges": ranges,
-                "apply_to": "current_design",
-                "is_soft": False,
-            },
-            internal=True,
-        )
-        apply_payload = self._parse_json_result(apply_result)
-        if self._result_has_error(apply_payload) or self._action_failure(
-            apply_result, default_command="vivado_create_and_apply_pblock"
-        ):
-            logger.error(f"pblock_full_replace apply failed - full result:\n{apply_result}")
-            await _restore_best_after_failure()
-            return self._failure_json(
-                apply_payload.get("error_type", "full_replace_pblock_failed"),
-                apply_payload.get("message", apply_result[-FAILURE_MESSAGE_CAPTURE_CHARS:]),
-                command="pblock_full_replace",
+        #
+        # Region-grow retry (run 20260806_193354, rosetta_optical-flow iter
+        # 7): the first full_replace this design ever attempted failed
+        # validation by a shortage of TWO FIFO sites ("FIFO: requires 122,
+        # only 120 available") and the whole recipe -- the same one that
+        # broke rosetta_spam-filter's zero-improvement streak -- was
+        # abandoned. When validation fails and we know the region geometry
+        # (auto-sized path, not LLM-supplied explicit ranges), grow the
+        # region and re-apply instead of giving up: every site type's
+        # capacity scales with the window, so a small shortage is almost
+        # always covered by one growth step.
+        for grow_attempt in range(FULL_REPLACE_REGION_GROW_RETRIES + 1):
+            apply_result = await self.call_tool(
+                "vivado_create_and_apply_pblock",
+                {
+                    "pblock_name": pblock_name,
+                    "ranges": ranges,
+                    "apply_to": "current_design",
+                    "is_soft": False,
+                },
+                internal=True,
             )
+            apply_payload = self._parse_json_result(apply_result)
+            if self._result_has_error(apply_payload) or self._action_failure(
+                apply_result, default_command="vivado_create_and_apply_pblock"
+            ):
+                logger.error(f"pblock_full_replace apply failed - full result:\n{apply_result}")
+                await _restore_best_after_failure()
+                return self._failure_json(
+                    apply_payload.get("error_type", "full_replace_pblock_failed"),
+                    apply_payload.get("message", apply_result[-FAILURE_MESSAGE_CAPTURE_CHARS:]),
+                    command="pblock_full_replace",
+                )
 
-        # History(16) iter 4: LLM-supplied explicit ranges packed 31370 LUTs
-        # into a region with 26880 -- the DRC flagged it BEFORE placement, but
-        # we placed anyway and burned minutes on a doomed run. The apply
-        # payload carries that DRC result; abort on it while the failure is
-        # still cheap.
-        resource_validation = apply_payload.get("resource_validation") or {}
-        validation_errors = list(resource_validation.get("errors") or [])
-        if validation_errors:
-            logger.error(
-                "pblock_full_replace resource validation failed pre-placement: %s",
-                validation_errors,
+            # History(16) iter 4: LLM-supplied explicit ranges packed 31370
+            # LUTs into a region with 26880 -- the DRC flagged it BEFORE
+            # placement, but we placed anyway and burned minutes on a doomed
+            # run. The apply payload carries that DRC result; act on it while
+            # the failure is still cheap.
+            resource_validation = apply_payload.get("resource_validation") or {}
+            validation_errors = list(resource_validation.get("errors") or [])
+            if not validation_errors:
+                break  # region fits -- proceed to place/route
+
+            can_grow = (
+                grow_attempt < FULL_REPLACE_REGION_GROW_RETRIES
+                and region is not None
+                and all(key in region for key in ("col_min", "col_max", "row_min", "row_max"))
             )
-            await _restore_best_after_failure()
-            return self._failure_json(
-                "full_replace_region_too_small",
-                (
-                    "Pblock resource validation failed before placement: "
-                    + "; ".join(str(err)[:200] for err in validation_errors[:3])
-                    + ". Increase the ranges (or target_lut_count/target_ff_count) and retry."
-                ),
-                command="pblock_full_replace",
+            if not can_grow:
+                logger.error(
+                    "pblock_full_replace resource validation failed pre-placement: %s",
+                    validation_errors,
+                )
+                await _restore_best_after_failure()
+                return self._failure_json(
+                    "full_replace_region_too_small",
+                    (
+                        "Pblock resource validation failed before placement: "
+                        + "; ".join(str(err)[:200] for err in validation_errors[:3])
+                        + f" (after {grow_attempt} region-grow retr{'y' if grow_attempt == 1 else 'ies'}). "
+                        "Increase the ranges (or target_lut_count/target_ff_count) and retry."
+                    ),
+                    command="pblock_full_replace",
+                )
+
+            # Delete the too-small pblock, expand the window, re-convert.
+            await self.call_tool(
+                "vivado_run_tcl",
+                {"command": f"if {{[llength [get_pblocks -quiet {pblock_name}]] > 0}} "
+                            f"{{delete_pblocks [get_pblocks {pblock_name}]}}"},
+                internal=True,
             )
+            row_span = int(region["row_max"]) - int(region["row_min"])
+            col_span = int(region["col_max"]) - int(region["col_min"])
+            row_pad = max(1, int(row_span * FULL_REPLACE_REGION_GROW_FRACTION))
+            col_pad = max(1, int(col_span * FULL_REPLACE_REGION_GROW_FRACTION))
+            region = {
+                **region,
+                "row_min": max(0, int(region["row_min"]) - row_pad),
+                "row_max": int(region["row_max"]) + row_pad,
+                "col_min": max(0, int(region["col_min"]) - col_pad),
+                "col_max": int(region["col_max"]) + col_pad,
+            }
+            logger.warning(
+                "pblock_full_replace region too small (%s); growing window to "
+                "cols %d-%d rows %d-%d and retrying (%d/%d).",
+                "; ".join(str(err)[:120] for err in validation_errors[:2]),
+                region["col_min"], region["col_max"], region["row_min"], region["row_max"],
+                grow_attempt + 1, FULL_REPLACE_REGION_GROW_RETRIES,
+            )
+            range_text = await self.call_tool(
+                "rapidwright_convert_fabric_region_to_pblock",
+                {
+                    "col_min": int(region["col_min"]),
+                    "col_max": int(region["col_max"]),
+                    "row_min": int(region["row_min"]),
+                    "row_max": int(region["row_max"]),
+                    "use_clock_regions": bool(params.get("use_clock_regions", False)),
+                },
+                internal=True,
+            )
+            range_payload = self._parse_json_result(range_text)
+            grown_ranges = None if self._result_has_error(range_payload) else range_payload.get("pblock_ranges")
+            if not grown_ranges:
+                logger.error(
+                    "pblock_full_replace region-grow re-conversion failed: %s", range_text[:300]
+                )
+                await _restore_best_after_failure()
+                return self._failure_json(
+                    "full_replace_region_too_small",
+                    (
+                        "Pblock resource validation failed before placement: "
+                        + "; ".join(str(err)[:200] for err in validation_errors[:3])
+                        + ". A region-grow retry was attempted but range re-conversion failed."
+                    ),
+                    command="pblock_full_replace",
+                )
+            ranges = grown_ranges
+            self.last_targets = ["full_design", str(ranges)]
+            self.last_rapidwright_edit_summary["pblock_ranges"] = ranges
+            self.last_rapidwright_edit_summary["fabric_region"] = region
+            self.last_rapidwright_edit_summary["region_grow_attempts"] = grow_attempt + 1
 
         place_result = await self.call_tool(
             "vivado_place_design",
@@ -6859,44 +6946,20 @@ class DCPOptimizer(DCPOptimizerBase):
             self.last_recipe = action
             self.last_targets = [str(timing_context["worst_path"].get("end_cell"))]
             self.last_batch_size = 1
-            call_params: dict = {"critical_cell_opt": True}
-            # Targeted replication (pipeline audit, 20260804 sweep --
-            # rosetta_optical-flow / rosetta_spam-filter / vexriscv_re-place_v2):
-            # all three stalled designs diagnosed excessive_fanout at 0.80
-            # confidence with ONE named hotspot cell recurring across
-            # 65-95% of extracted candidates, every iteration -- and this
-            # action then ran a generic whole-design critical_cell_opt pass
-            # that never received the cell name and measurably did nothing
-            # (WNS bit-identical across every attempt on all three designs).
-            # Vivado's targeted lever for exactly this situation is
-            # -force_replication_on_nets, already registered in the MCP
-            # schema (VivadoMCP/vivado_mcp_server.py, a raw-string splice
-            # that accepts a [get_nets ...] expression) and never once used.
-            # When the live diagnosis names hotspot cells, replicate their
-            # output nets specifically instead of hoping the generic pass
-            # happens to pick the right cell.
-            diagnosis = self.last_diagnosis
-            if diagnosis is not None and diagnosis.primary_hypothesis.name == "excessive_fanout":
-                hotspots = []
-                for cluster in diagnosis.clusters:
-                    if cluster.id == diagnosis.primary_cluster_id:
-                        hotspots = [str(c) for c in (cluster.fanout_hotspots or []) if c][:3]
-                        break
-                if hotspots:
-                    cell_list = " ".join("{" + cell + "}" for cell in hotspots)
-                    call_params["force_replication_on_nets"] = (
-                        f"[get_nets -quiet -of_objects [get_pins -quiet -filter "
-                        f"{{DIRECTION == OUT}} -of_objects [get_cells -quiet {cell_list}]]]"
-                    )
-                    self.last_targets = hotspots
-                    self.last_batch_size = len(hotspots)
-                    logger.info(
-                        "replicate_register: excessive_fanout diagnosis names hotspot "
-                        "cell(s) %s; forcing replication on their output nets instead "
-                        "of relying on the generic critical_cell_opt pass alone.",
-                        hotspots,
-                    )
-            return await self.call_tool("vivado_phys_opt_design", call_params)
+            # Targeted replication via -force_replication_on_nets was tried
+            # here (20260804) and REVERTED after run 20260806_193354
+            # (rosetta_optical-flow iter 1) failed with the definitive
+            # verdict: "ERROR: [Vivado_Tcl 4-265] Option
+            # -force_replication_on_nets is specified but not supported yet
+            # for post-route physical synthesis." This pipeline only ever
+            # runs phys_opt on routed designs (_run_phys_opt_with_policy
+            # refuses any other design_state), so the option is categorically
+            # unusable in this flow -- it turned a weak-but-harmless action
+            # into a guaranteed hard failure. -critical_cell_opt (which 4-265
+            # does NOT reject post-route, and which this action claimed to
+            # send all along but the policy layer used to silently drop) is
+            # the strongest replication lever actually available post-route.
+            return await self.call_tool("vivado_phys_opt_design", {"critical_cell_opt": True})
         return self._failure_json(
             "unsupported_action",
             f"Action {action!r} is not implemented by the orchestrator dispatch layer.",
