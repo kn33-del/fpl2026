@@ -479,6 +479,110 @@ def test_replicate_register_never_sends_force_replication(opt):
     assert "-critical_cell_opt" in commands[0]
 
 
+def test_coverage_ledger_tracks_offered_chosen_and_never_attempted(opt):
+    # First-contact/hidden-benchmark feature: "never attempted on this
+    # design" becomes a visible fact in the timing context. Everything found
+    # in the 20260804-06 audits (optical-flow/spam-filter never getting a
+    # full re-place) was invisible precisely because withheld actions leave
+    # no trace in any log.
+    ledger = opt._coverage_context(["pblock", "phys_opt_design"])
+    assert ledger["pblock"]["offered"] == 1
+    assert ledger["phys_opt_design"]["offered"] == 1
+
+    # Dispatch marks "chosen" even when the action is later refused.
+    with patch.object(opt, "_time_remaining_s", return_value=10.0), \
+         patch.object(opt, "_estimated_action_cost_s", return_value=6000.0):
+        asyncio.run(opt.execute_validated_action(
+            {"chosen_action": "phys_opt_design", "action_parameters": {}}, {},
+        ))
+    assert opt.action_coverage["phys_opt_design"]["chosen"] == 1
+    assert opt.action_coverage["pblock"]["chosen"] == 0
+
+    # Second menu: offered increments again; never-attempted derives from
+    # chosen == 0, exactly what _build_timing_context ships.
+    opt._coverage_context(["pblock", "phys_opt_design"])
+    never = [a for a in ["pblock", "phys_opt_design"]
+             if opt.action_coverage.get(a, {}).get("chosen", 0) == 0]
+    assert never == ["pblock"]
+
+
+def test_check_hold_safety_probe_and_single_fix(opt):
+    # Hidden-benchmark insurance: setup WNS is the score, but a submitted DCP
+    # with hold violations risks failing organizer validation. One probe per
+    # banked win; on the first violation, one hold-fix pass for the whole run.
+    calls = []
+
+    async def clean(tool_name, params, internal=False):
+        calls.append(params.get("command", ""))
+        return "WHS_OK"
+
+    with patch.object(opt, "call_tool", side_effect=clean):
+        assert asyncio.run(opt._check_hold_safety()) is True
+    assert len(calls) == 1  # no fix pass when clean
+
+    # Violated -> fix -> clean. Fix pass is spent for the rest of the run.
+    opt.hold_fix_attempted = False
+    seq = iter(["WHS_VIOLATED:-0.031", "phys_opt done", "WHS_OK"])
+
+    async def viol_then_fixed(tool_name, params, internal=False):
+        return next(seq)
+
+    with patch.object(opt, "call_tool", side_effect=viol_then_fixed):
+        assert asyncio.run(opt._check_hold_safety()) is True
+    assert opt.hold_fix_attempted is True
+
+    # Later violation with the fix already spent: fail fast, no second pass.
+    async def viol(tool_name, params, internal=False):
+        return "WHS_VIOLATED:-0.010"
+
+    with patch.object(opt, "call_tool", side_effect=viol):
+        assert asyncio.run(opt._check_hold_safety()) is False
+
+
+def test_pblock_cluster_shrink_retries_without_hard_block_candidates(opt):
+    # rosetta_3d-rendering (every run of the 20260802-20260806 sweep): both
+    # pblock attempts per run died terminally with "none of the 3 candidate
+    # regions had enough BRAM capacity; reduce the number of BRAM cells being
+    # clustered instead". The fix does what the message says: drop the
+    # BRAM-touching candidate paths, zero the BRAM demand, retry the fabric
+    # search with the LUT/FF-dominated subset.
+    opt.current_target_candidates = [
+        {"startpoint": "u0/ram_reg_bank/a/Q", "endpoint": "u0/proc/lut_a/D", "slack": -2.1},
+        {"startpoint": "u0/proc/lut_b/Q", "endpoint": "u0/proc/lut_c/D", "slack": -2.0},
+        {"startpoint": "u0/proc/lut_c/Q", "endpoint": "u0/proc/lut_d/D", "slack": -1.9},
+    ]
+    analysis_calls = []
+
+    async def fake_call_tool(tool_name, params, internal=False):
+        if tool_name == "rapidwright_analyze_fabric_for_pblock":
+            analysis_calls.append(dict(params))
+            return json.dumps({"recommended_region": {
+                "col_min": 10, "col_max": 30, "row_min": 5, "row_max": 45}})
+        if tool_name == "rapidwright_convert_fabric_region_to_pblock":
+            return json.dumps({
+                "pblock_ranges": "SLICE_X10Y5:SLICE_X30Y45",
+                # 30 RAMB sites available -- first pass demands 40 (short),
+                # second pass (post-shrink) demands 0 and passes.
+                "site_counts": {"SLICE": 500, "RAMB18": 20, "RAMB36": 10, "DSP48E2": 8},
+            })
+        return "ok"
+
+    # First-pass hard-block demand: pretend the DRC floor learned 40 BRAM.
+    opt.pblock_hard_block_demand = {"bram": 40, "dsp": 0}
+    with patch.object(opt, "call_tool", side_effect=fake_call_tool):
+        computed, error = asyncio.run(opt._compute_pblock_ranges({}, {}))
+
+    assert error is None, error
+    assert computed is not None and computed.get("ranges")
+    # Two fabric searches: original cluster, then the shrunken one.
+    assert len(analysis_calls) == 2
+    assert analysis_calls[0]["target_bram_count"] == 40
+    assert analysis_calls[1]["target_bram_count"] == 0
+    # The BRAM-touching candidate's cells are gone from the retry's anchors.
+    assert not any("ram_reg" in c for c in analysis_calls[1]["target_cell_names"])
+    assert opt.last_rapidwright_edit_summary["cluster_shrink"]["dropped_hard_block_candidates"] == 1
+
+
 def test_full_replace_grows_region_on_small_validation_shortage(opt):
     # Run 20260806_193354 (rosetta_optical-flow iter 7): the design's
     # first-ever pblock_full_replace failed pre-placement validation by a
@@ -639,6 +743,31 @@ def test_phys_opt_dispatch_defaults_to_untried_directive(opt):
         ))
     assert calls[0][1]["directive"] == PHYS_OPT_DIRECTIVE_SWEEP[0]
     assert opt.last_phys_opt_directive == PHYS_OPT_DIRECTIVE_SWEEP[0]
+
+
+def test_inert_action_exhausts_in_two_attempts_not_three(opt):
+    # Resolution-awareness fix (20260806 log audit): an action whose WNS came
+    # back bit-identical provably moved nothing, which is harder evidence
+    # than "it moved something that didn't pay". It is weighted double in the
+    # failure memory so an inert lever is suppressed after TWO attempts,
+    # rather than being re-picked until the ordinary 3-strike threshold --
+    # the dominant waste mode in the logs (182/341 measured iterations,
+    # 5.0 h of Vivado time).
+    opt.current_target_candidates = [{"endpoint": "e", "startpoint": "s", "slack": -0.5}]
+
+    opt._remember_no_action_failure("route_explore", [], weight=2)
+    assert "route_explore" not in opt._active_exhausted_actions()  # 2 < 3
+    opt._remember_no_action_failure("route_explore", [], weight=2)
+    assert "route_explore" in opt._active_exhausted_actions()      # 4 >= 3
+
+    # An ordinary (weight-1) failure still needs the full three strikes.
+    opt2_targets = [{"endpoint": "e2", "startpoint": "s2", "slack": -0.5}]
+    opt.current_target_candidates = opt2_targets
+    for _ in range(dcp.ACTION_FAILURE_EXHAUSTION_THRESHOLD - 1):
+        opt._remember_no_action_failure("pblock", [])
+    assert "pblock" not in opt._active_exhausted_actions()
+    opt._remember_no_action_failure("pblock", [])
+    assert "pblock" in opt._active_exhausted_actions()
 
 
 def test_repeated_budget_refusal_exhausts_the_action(opt):

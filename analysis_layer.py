@@ -676,7 +676,7 @@ class AnalysisEngine:
             status = record.get("status")
             if status in ("improved", "marginal"):
                 wins += 1
-            elif status in ("regression", "failed", "no_improvement"):
+            elif status in ("regression", "failed", "no_improvement", "design_unchanged"):
                 losses += 1
         if wins == losses:
             return 0.0, None

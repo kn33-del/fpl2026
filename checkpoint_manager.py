@@ -6,6 +6,38 @@ import shutil
 import time
 from pathlib import Path
 from typing import Any
+
+# Measurement resolution (pipeline audit, 20260806 logs). Vivado reports WNS
+# to 3 decimal places in ns, so 1 ps is the instrument's least significant
+# bit -- there is no such thing as a meaningful sub-picosecond WNS delta.
+# The classifier below used to compare *derived Fmax* against a 1e-9 MHz
+# dead-band, a resolution nine orders of magnitude finer than the number it
+# was measuring, so a single-LSB flutter between the banked best and the
+# reloaded design registered as a hard regression -> rollback -> repeat,
+# with no possible escape. Run 20260805_160738 (logicnets) died exactly this
+# way: iterations 5-11 each ran a genuinely different action (qor_suggestions,
+# pin_swap, phys_opt, pblock, replicate_register, route_explore) for 51-168 s
+# apiece and every single one recorded wns -0.462 -> -0.463, one LSB, all
+# classified "regression". 7 of 11 iterations and 701 s, structurally
+# incapable of progress.
+#
+# Compare in the measured quantity (WNS ns), not derived MHz, with a floor
+# just above the report quantum.
+#
+# The floor is applied ASYMMETRICALLY, and deliberately so. A symmetric
+# version was tried first and replaying the run history against it showed it
+# also swallowed 13 genuine +1 LSB wins worth 2.7 MHz -- including
+# rosetta_spam-filter 20260804_184322 iter 5, part of the only run that ever
+# broke that design's zero-improvement streak. The damage in the logs is
+# entirely on the *regression* side, because that is the side wired to
+# should_rollback(): a -1 LSB reading resets the design and repeats forever,
+# whereas a +1 LSB reading merely banks a checkpoint that is at worst
+# equivalent. So:
+#   - a sub-floor WORSENING is a tie: no rollback, no best update. This is
+#     what breaks the freeze loop -- the design is left free to keep evolving
+#     instead of being reset to the same checkpoint every iteration.
+#   - a sub-floor IMPROVEMENT is left alone, and still banks as marginal.
+WNS_NOISE_FLOOR_NS = 0.0015
 class CheckpointManager:
     """Track optimization checkpoints, timing history, and rollback state."""
     def __init__(
@@ -69,12 +101,35 @@ class CheckpointManager:
         fmax_before = float(self.best_fmax_mhz)
         fmax_after = 1000.0 / (self.clock_period_ns - float(wns_after))
         delta_fmax = fmax_after - fmax_before
+        delta_wns = float(wns_after) - wns_before
         # BUG FIX: this used to check delta_fmax > 0.5 / > 0.0 before checking
         # abs(delta_fmax) <= 1e-9, so a floating-point-noise delta like
         # +1e-12 was classified as "marginal" (a success that resets
         # stall_count and updates best_wns/best_checkpoint) instead of
         # "no_improvement". Check the near-zero case first.
-        if abs(delta_fmax) <= 1e-9:
+        #
+        # Resolution awareness (see WNS_NOISE_FLOOR_NS): the near-zero test is
+        # now done in WNS ns against the instrument's own quantum instead of
+        # in derived MHz against 1e-9.
+        #
+        # "design_unchanged" is split out from "no_improvement" because they
+        # are different findings that the old single label conflated: an
+        # EXACTLY bit-identical WNS means the action moved nothing measurable
+        # at all, whereas no_improvement means it perturbed the design and the
+        # perturbation didn't pay. Across the 20260719-20260806 logs, 182 of
+        # 341 measured iterations (53%, 5.0 h of Vivado wall-clock) were
+        # bit-identical -- and because they carried the same label as a real
+        # failed attempt, nothing downstream could tell "this lever is inert
+        # on this design" from "this lever might work next time", so the same
+        # family kept getting re-picked. Callers treat it as a stronger
+        # suppression signal; every existing `status in {...}` check that
+        # names "no_improvement" is unaffected because this is a NEW label,
+        # and the sites that must treat the two alike are updated explicitly.
+        # delta_wns > 0 means WNS got less negative, i.e. better.
+        if float(wns_after) == wns_before:
+            status = "design_unchanged"
+        elif -WNS_NOISE_FLOOR_NS <= delta_wns < 0:
+            # Sub-quantum worsening: a tie, not a regression. No rollback.
             status = "no_improvement"
         elif delta_fmax > 0.5:
             status = "improved"

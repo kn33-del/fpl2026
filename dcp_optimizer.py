@@ -612,6 +612,17 @@ HOW THE ACTION MENU WORKS:
   failed or regressed on these targets this run). Put the rebuttal in
   why_this_fits_delay_class.
 - forbidden_actions are hard blocks (unimplemented or license-blocked). Never choose them.
+- Iteration status "design_unchanged" means WNS came back BIT-IDENTICAL: that action
+  moved nothing measurable on this design. It is much stronger evidence than
+  "no_improvement" (which means the design did change and the change did not pay).
+  An action that has gone design_unchanged is inert HERE -- re-running it with a
+  different directive is very unlikely to help. Switch to a different action family.
+- action_coverage_this_run tallies, per action: offered / chosen / measured / moved.
+  never_attempted_actions lists allowed actions this run has NOT yet tried once.
+  When the run is stalled and never_attempted_actions is non-empty, trying an
+  untried family is usually worth more than re-running one whose record you can
+  already see -- especially structural actions (pblock_full_replace,
+  place_design_explore) on a design where only incremental passes have been tried.
 
 PRIORS (the reasoning behind the ranking -- use them, and notice when evidence contradicts them):
 - net_delay_bound (net_pct > 0.70): routing-bound paths usually need cell movement or
@@ -1353,6 +1364,25 @@ class DCPOptimizer(DCPOptimizerBase):
         self.last_recorded_wns: Optional[float] = None
         self.consecutive_no_improvement = 0
         self.structural_override_active = False
+        # Hold-safety at publish (hidden-benchmark insurance): whether the
+        # most recently PUBLISHED output was hold-clean, and whether the
+        # single per-run hold-fix pass has been spent. Setup WNS is the
+        # score, but a submitted DCP with hold violations risks failing the
+        # organizers' validation outright -- and the risk paths here are
+        # RapidWright manual edits + ECO/incremental routes, which unlike a
+        # full route_design fix nothing on the hold side.
+        self.last_published_hold_ok: bool = True
+        self.hold_fix_attempted: bool = False
+        # Coverage ledger (first-contact/hidden-benchmark feature): per
+        # action this run -- offered (appeared on the LLM's menu), chosen
+        # (dispatched), measured (produced a recorded timing result), moved
+        # (that result actually changed WNS). Shipped in every timing
+        # context so "never once attempted on this design" is a fact the
+        # model can see, instead of a gap nothing represents. Every blindspot
+        # found in the 20260804-06 audits (optical-flow/spam-filter never
+        # getting a full re-place) was invisible precisely because withheld
+        # actions leave no trace in any log.
+        self.action_coverage: dict[str, dict[str, int]] = {}
         self.action_failure_counts: dict[str, int] = {}
         self.action_failure_memory: dict[str, dict] = {}
         self.last_no_action_failure_key: Optional[tuple] = None
@@ -3595,6 +3625,14 @@ class DCPOptimizer(DCPOptimizerBase):
             "exhausted_actions": exhausted_actions,
             "allowed_actions": allowed,
             "forbidden_actions": forbidden,
+            # Coverage ledger: bump "offered" for everything on this menu,
+            # then ship the ledger plus the derived never-attempted list so
+            # untried families are a visible fact, not an absence.
+            "action_coverage_this_run": self._coverage_context(allowed),
+            "never_attempted_actions": [
+                a for a in allowed
+                if self.action_coverage.get(a, {}).get("chosen", 0) == 0
+            ],
             "recommendation": recommendation,
             # Fix #14: give the LLM the information it needs to pick
             # parameters instead of sending {} every turn: the actual error
@@ -4091,6 +4129,20 @@ class DCPOptimizer(DCPOptimizerBase):
                 exhausted.append(act)
         return exhausted
 
+    def _bump_coverage(self, action: str, field: str) -> None:
+        if not action:
+            return
+        entry = self.action_coverage.setdefault(
+            str(action), {"offered": 0, "chosen": 0, "measured": 0, "moved": 0}
+        )
+        entry[field] = entry.get(field, 0) + 1
+
+    def _coverage_context(self, offered_now: list[str]) -> dict:
+        """Bump 'offered' for the menu being shipped and return the ledger."""
+        for action in offered_now:
+            self._bump_coverage(action, "offered")
+        return {action: dict(entry) for action, entry in self.action_coverage.items()}
+
     def _llm_action_failure_memory(self) -> dict:
         """Compact, LLM-facing view of action failure memory (score item D).
 
@@ -4161,9 +4213,19 @@ class DCPOptimizer(DCPOptimizerBase):
         }
         return json.dumps(payload, sort_keys=True)
 
-    def _remember_no_action_failure(self, action: str, targets: list[str]) -> None:
+    def _remember_no_action_failure(self, action: str, targets: list[str], weight: int = 1) -> None:
+        """Penalize `action` in the failure/cooldown memory.
+
+        `weight` is how many ordinary failures this one counts as, so a
+        finding that is strictly more informative can suppress faster.
+        Used by the "design_unchanged" verdict (see checkpoint_manager's
+        classifier): an action whose WNS came back bit-identical provably
+        moved nothing, which is a harder fact than "it moved something and
+        that didn't help" -- weight 2 trips the exhaustion threshold after
+        two inert attempts instead of three."""
         if not action:
             return
+        weight = max(1, int(weight))
         actions_to_penalize = PBLOCK_ACTION_FAMILY if action in PBLOCK_ACTION_FAMILY else {action}
         for act in actions_to_penalize:
             fingerprint = self._target_fingerprint()
@@ -4178,8 +4240,8 @@ class DCPOptimizer(DCPOptimizerBase):
             for target in targets:
                 if target and target not in failed_targets:
                     failed_targets.append(target)
-            count = int(memory.get("consecutive_no_action_failures") or 0) + 1
-            self.action_failure_counts[act] = self.action_failure_counts.get(act, 0) + 1
+            count = int(memory.get("consecutive_no_action_failures") or 0) + weight
+            self.action_failure_counts[act] = self.action_failure_counts.get(act, 0) + weight
             memory.update({
                 "consecutive_no_action_failures": count,
                 "failed_targets": failed_targets,
@@ -4527,7 +4589,11 @@ class DCPOptimizer(DCPOptimizerBase):
                  if attempt.get("action") == "pblock"),
                 None,
             )
-            if last_pblock and last_pblock.get("status") in {"regression", "no_improvement"}:
+            # "design_unchanged" included alongside no_improvement: a pblock
+            # that came back bit-identical is the strongest possible evidence
+            # the region was too tight to move anything, which is exactly the
+            # case this grow-instead-of-repeat heuristic exists for.
+            if last_pblock and last_pblock.get("status") in {"regression", "no_improvement", "design_unchanged"}:
                 prev_lut = int(last_pblock.get("target_lut_count") or 0)
                 prev_ff = int(last_pblock.get("target_ff_count") or 0)
                 if prev_lut > 0:
@@ -4587,6 +4653,7 @@ class DCPOptimizer(DCPOptimizerBase):
         last_error: Optional[str] = None
         overlap_attempt = 0
         size_attempt = 0
+        cluster_shrink: Optional[dict] = None
 
         # Cluster anchoring (2026-08-01 multi-candidate audit): pass the
         # actual candidate-path cells so the fabric search centers on where
@@ -4774,12 +4841,69 @@ class DCPOptimizer(DCPOptimizerBase):
             # failed on BRAM/DSP, no amount of LUT/FF shrinking will help --
             # fail immediately instead of burning the remaining sizing attempts.
             if failing_label in ("BRAM", "DSP"):
+                # Cluster-shrink retry (rosetta_3d-rendering, every run: two
+                # pblock attempts per run died here with "none of the 3
+                # candidate regions had enough BRAM capacity; reduce the
+                # number of BRAM cells being clustered instead" -- the error
+                # message prescribed its own fix and nothing implemented it,
+                # 8 terminal failures across the 20260802-20260806 sweep).
+                # Do what the message says, once: drop the candidate paths
+                # that touch the scarce hard block, keep the LUT/FF-dominated
+                # subset, zero the hard-block demand, and retry the fabric
+                # search. A smaller cluster that actually fits and places
+                # beats a perfect cluster that can never be applied.
+                if cluster_shrink is None:
+                    is_bram = failing_label == "BRAM"
+                    keep_names: list[str] = []
+                    dropped = 0
+                    for candidate in self.current_target_candidates:
+                        touches = False
+                        for key in ("startpoint", "endpoint"):
+                            cell = str(candidate.get(key) or "").lower()
+                            cell = cell.rsplit("/", 1)[0] if "/" in cell else cell
+                            # Same name keys as _bram_dsp_bottleneck_evidence.
+                            if is_bram and any(k in cell for k in ("ram_reg", "_bram", "ramb", "uram", "fifo")):
+                                touches = True
+                            if not is_bram and "dsp" in cell:
+                                touches = True
+                        if touches:
+                            dropped += 1
+                            continue
+                        for key in ("startpoint", "endpoint"):
+                            name = str(candidate.get(key) or "")
+                            if "/" in name:
+                                name = name.rsplit("/", 1)[0]
+                            if name and name not in keep_names:
+                                keep_names.append(name)
+                    if dropped and keep_names:
+                        cluster_shrink = {
+                            "dropped_hard_block_candidates": dropped,
+                            "kept_cells": len(keep_names),
+                            "scarce_resource": failing_label,
+                        }
+                        target_cell_names = keep_names
+                        if is_bram:
+                            target_bram_count = 0
+                        else:
+                            target_dsp_count = 0
+                        logger.warning(
+                            "pblock cluster-shrink: %s capacity short in every candidate "
+                            "region; dropping %d hard-block candidate path(s), keeping "
+                            "%d LUT/FF cells, and retrying the fabric search.",
+                            failing_label, dropped, len(keep_names),
+                        )
+                        continue
                 last_error = (
                     f"{utilization_error} This is hard-block demand from cells that must "
                     f"be in the region, not a resizable estimate -- retrying with a smaller "
                     f"LUT/FF target cannot fix it, and none of the {len(region_candidates)} "
-                    f"candidate region(s) tried had enough {failing_label} capacity; reduce "
-                    f"the number of {failing_label} cells being clustered instead."
+                    f"candidate region(s) tried had enough {failing_label} capacity"
+                    + (
+                        f" (even after a cluster-shrink retry that dropped "
+                        f"{cluster_shrink['dropped_hard_block_candidates']} hard-block candidate(s))."
+                        if cluster_shrink else
+                        f"; reduce the number of {failing_label} cells being clustered instead."
+                    )
                 )
                 break
 
@@ -4825,6 +4949,8 @@ class DCPOptimizer(DCPOptimizerBase):
             "target_ff_count": target_ff_count,
             "site_counts": range_payload.get("site_counts"),
         }
+        if cluster_shrink:
+            self.last_rapidwright_edit_summary["cluster_shrink"] = cluster_shrink
         # Stash the raw fabric region alongside the computed params so the
         # caller can register it in applied_pblock_regions once the pblock
         # is actually, successfully applied (not just computed).
@@ -5516,6 +5642,37 @@ class DCPOptimizer(DCPOptimizerBase):
         if wns_measured is not None:
             await self._record_iteration_timing(wns_measured, self.iteration_tool_elapsed_s)
 
+    async def _check_hold_safety(self) -> bool:
+        """True if the live design has no hold violations (WHS >= 0).
+
+        On the first violation seen this run, spends one phys_opt hold-fix
+        pass and re-checks. Never raises; an unparseable report is treated
+        as 'unknown -> assume ok' so this safety net can never be the thing
+        that blocks publishing a good design."""
+        probe = (
+            'set hp [get_timing_paths -quiet -hold -max_paths 1 -slack_lesser_than 0]; '
+            'if {[llength $hp] == 0} {puts "WHS_OK"} else '
+            '{puts "WHS_VIOLATED:[get_property SLACK [lindex $hp 0]]"}'
+        )
+        raw = await self.call_tool("vivado_run_tcl", {"command": probe, "timeout": 300}, internal=True)
+        if "WHS_VIOLATED" not in raw:
+            return True
+        whs = raw.split("WHS_VIOLATED:", 1)[-1].splitlines()[0].strip()
+        logger.warning("Hold violation on the new best design (WHS %s).", whs)
+        if self.hold_fix_attempted:
+            return False
+        self.hold_fix_attempted = True
+        logger.warning("Attempting the run's single hold-fix pass (phys_opt_design -hold_fix).")
+        await self.call_tool(
+            "vivado_run_tcl",
+            {"command": "phys_opt_design -hold_fix", "timeout": self._implementation_timeout_s(kind="phys_opt")},
+            internal=True,
+        )
+        raw = await self.call_tool("vivado_run_tcl", {"command": probe, "timeout": 300}, internal=True)
+        fixed = "WHS_VIOLATED" not in raw
+        logger.warning("Hold-fix pass %s.", "cleared the violation" if fixed else "did NOT clear the violation")
+        return fixed
+
     def _publish_best_to_output(self) -> None:
         """Copy the best checkpoint so far to the contest output DCP path.
 
@@ -5635,8 +5792,31 @@ class DCPOptimizer(DCPOptimizerBase):
         self.consecutive_no_improvement = self.checkpoint_manager.stall_count
         self.last_recorded_wns = wns
         self._note_recipe_outcome(str(iteration.get("status")), wns)
+        coverage_key = self.last_action_key or self.last_recipe
+        self._bump_coverage(coverage_key, "measured")
+        if iteration.get("status") != "design_unchanged":
+            self._bump_coverage(coverage_key, "moved")
         if iteration.get("status") in {"improved", "marginal"}:
-            self._publish_best_to_output()
+            # Hold-safety gate: never replace a hold-clean published output
+            # with a hold-violating one. If the single per-run fix pass
+            # clears the violation, re-write the checkpoint so the published
+            # file contains the fixed netlist.
+            hold_ok = await self._check_hold_safety()
+            if hold_ok and self.hold_fix_attempted:
+                await self.call_tool(
+                    "vivado_write_checkpoint",
+                    {"dcp_path": str(checkpoint_path), "force": True, "timeout": 600},
+                    internal=True,
+                )
+            if hold_ok or not self.last_published_hold_ok:
+                self._publish_best_to_output()
+                self.last_published_hold_ok = hold_ok
+            else:
+                logger.critical(
+                    "New best (iter %d, WNS %.3f ns) has an unfixable hold violation; "
+                    "KEEPING the previous hold-clean output instead of publishing it.",
+                    self.iteration, wns,
+                )
         # Fix #1: gate the reset/remember-failure bookkeeping on
         # last_action_key (the never-renamed dispatch key), not last_recipe
         # (a display label _remember_recipe() may have rewritten). Before
@@ -5677,7 +5857,25 @@ class DCPOptimizer(DCPOptimizerBase):
             # Route it through the same failure-memory/cooldown mechanism
             # used for hard tool failures so it actually gets suppressed
             # after repeated regressions on the same targets.
-            self._remember_no_action_failure(action_key, self.last_targets)
+            #
+            # "design_unchanged" (bit-identical WNS -- the action provably
+            # moved nothing) is weighted double, so an inert lever is
+            # suppressed after two attempts rather than three. This is the
+            # dominant waste mode in the run history: 182 of 341 measured
+            # iterations across 20260719-20260806 came back bit-identical,
+            # 5.0 h of Vivado wall-clock, and because they were labelled
+            # plain "no_improvement" nothing downstream could tell an inert
+            # lever from one that simply hadn't paid off yet.
+            inert = iteration.get("status") == "design_unchanged"
+            self._remember_no_action_failure(
+                action_key, self.last_targets, weight=2 if inert else 1
+            )
+            if inert:
+                logger.info(
+                    "Action %s left WNS bit-identical (%.3f ns) -- it moved nothing "
+                    "measurable on this design; counting it double toward exhaustion.",
+                    action_key, wns,
+                )
 
         history_fields = {
             "target_tier": self.target_tier,
@@ -6311,6 +6509,7 @@ class DCPOptimizer(DCPOptimizerBase):
         # is still allowed to rewrite self.last_recipe for display purposes;
         # self.last_action_key is the one all gating logic should read.
         self.last_action_key = str(action)
+        self._bump_coverage(self.last_action_key, "chosen")
         # Item 4 (expensive-action cap): the demotion in
         # _allowed_forbidden_actions is rebuttable by design; this refusal is
         # not -- a third full re-place on a large design cannot fit the run
@@ -7125,6 +7324,9 @@ class DCPOptimizer(DCPOptimizerBase):
                 "llm_chosen_action": stage_action,
                 "run_recipe_stage": position,
                 "validation_result": "run_recipe",
+                # Same decision-time-frame consistency as _endgame_polish.
+                "consecutive_no_improvement": self.consecutive_no_improvement,
+                "structural_override_active": False,
             }
             response = await self.execute_validated_action(
                 {"chosen_action": stage_action, "action_parameters": stage_params},
@@ -7400,6 +7602,15 @@ class DCPOptimizer(DCPOptimizerBase):
                 "llm_chosen_action": polish_action,
                 "endgame_polish": True,
                 "validation_result": "endgame_polish",
+                # Anomaly closed (log audit): records from non-LLM iterations
+                # used to omit these two keys, so history fell back to the
+                # POST-record counter while LLM iterations record the
+                # decision-time value -- producing the "cni jumps 4->6,
+                # override=None" pattern in every stalled run tail that
+                # looked like (but wasn't) a double-increment bug. Write the
+                # decision-time frame explicitly so all writers agree.
+                "consecutive_no_improvement": self.consecutive_no_improvement,
+                "structural_override_active": False,
             }
             response = await self.execute_validated_action(
                 {"chosen_action": polish_action, "action_parameters": dict(polish_params)},

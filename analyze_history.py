@@ -19,7 +19,10 @@ REFINE_RECIPES = {"vivado_pblock", "pblock", "vivado_phys_opt", "phys_opt_design
                   "phys_opt_design_retime", "vivado_phys_opt_mixed_path", "route_explore"}
 
 GOOD = {"improved", "marginal"}
-BAD = {"regression", "no_improvement", "failed", "wns_parse_error"}
+# "design_unchanged": WNS came back bit-identical, i.e. the action provably
+# moved nothing measurable (distinct from no_improvement, where it did move
+# something that didn't pay).
+BAD = {"regression", "no_improvement", "design_unchanged", "failed", "wns_parse_error"}
 
 
 def fmt_wns(value):
