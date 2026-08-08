@@ -479,6 +479,49 @@ def test_replicate_register_never_sends_force_replication(opt):
     assert "-critical_cell_opt" in commands[0]
 
 
+def test_endgame_leads_with_untried_structural_action(opt, tmp_path):
+    # rosetta_optical-flow run 20260808_152933: 8 of 9 iterations came back
+    # design_unchanged (every incremental family inert), pblock_full_replace
+    # and place_design_explore were never chosen, and the run quit at 678 s
+    # of a 3500 s budget -- on a design whose own beta score (20.354, same
+    # DCP) proves ~20 MHz is available. The endgame must spend that leftover
+    # budget on the untried structural family, not re-run the inert chain.
+    opt.checkpoint_manager = CheckpointManager(
+        input_dcp="in.dcp", output_dir=str(tmp_path / "ck"), clock_name="clk")
+    opt.checkpoint_manager.start_baseline(wns=-1.078, period_ns=2.0)
+    opt.implementation_license_available = True
+    opt.action_coverage = {"phys_opt_design": {"offered": 9, "chosen": 9, "measured": 9, "moved": 0}}
+    dispatched = []
+
+    async def fake_execute(decision, timing_context):
+        dispatched.append(decision["chosen_action"])
+        return "ok"
+
+    async def noop_tool(tool_name, params, internal=False):
+        return "ok"
+
+    async def noop_restore(reason):
+        return None
+
+    async def noop_reconstrain():
+        return False
+
+    with patch.object(opt, "_time_remaining_s", return_value=2800.0), \
+         patch.object(opt, "execute_validated_action", side_effect=fake_execute), \
+         patch.object(opt, "call_tool", side_effect=noop_tool), \
+         patch.object(opt, "_restore_best_state", side_effect=noop_restore), \
+         patch.object(opt, "_reconstrain_focus_pass", side_effect=noop_reconstrain), \
+         patch.object(opt, "_at_logic_ceiling", return_value=None), \
+         patch.object(opt, "_full_replace_blocked_reason", return_value=None):
+        asyncio.run(opt._endgame_polish())
+
+    # Both untried structural actions lead, ahead of the incremental chain.
+    assert dispatched[:2] == ["pblock_full_replace", "place_design_explore"]
+    # And a flat structural step must not trip the 2-strike early stop that
+    # exists for the (weaker-variant) incremental directives.
+    assert "phys_opt_design" in dispatched
+
+
 def test_coverage_ledger_tracks_offered_chosen_and_never_attempted(opt):
     # First-contact/hidden-benchmark feature: "never attempted on this
     # design" becomes a visible fact in the timing context. Everything found

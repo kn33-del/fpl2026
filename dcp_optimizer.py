@@ -7586,13 +7586,52 @@ class DCPOptimizer(DCPOptimizerBase):
             ("route_explore", {"directive": "NoTimingRelaxation"}),
             ("phys_opt_design", {"directive": "Default"}),
         ]
+        # Guaranteed structural coverage before the incremental chain
+        # (rosetta_optical-flow run 20260808_152933, the run that forced
+        # this): 8 of 9 iterations came back design_unchanged -- every
+        # incremental family provably inert on this design -- while
+        # pblock_full_replace and place_design_explore ended the run with
+        # chosen == 0. The coverage ledger DID surface them in
+        # never_attempted_actions while the structural override was active,
+        # and the model picked a retread anyway; prompt guidance has now lost
+        # this argument twice. The run then quit at 678 s having spent 19% of
+        # its 3500 s budget, on a design the contest's own beta score
+        # (20.354, same DCP) proves has ~20 MHz / ~0.18 ns of WNS available
+        # that no local run has ever reached. The incremental chain below
+        # cannot reach it -- it is the same family that just went inert nine
+        # times. So: if a structural family has never been attempted this
+        # run, spend the leftover budget on it FIRST. This is the same lever
+        # whose first-ever execution broke rosetta_spam-filter's
+        # zero-improvement streak.
+        untried_structural = [
+            action for action in ("pblock_full_replace", "place_design_explore")
+            if self.action_coverage.get(action, {}).get("chosen", 0) == 0
+            and not self._full_replace_blocked_reason(action)
+        ]
+        structural_steps = [(action, {}) for action in untried_structural]
+        if structural_steps:
+            logger.warning(
+                "Endgame polish: %s never attempted this run and %.0f s of budget "
+                "remain; leading the chain with it instead of re-running the "
+                "incremental families that already went inert.",
+                ", ".join(untried_structural), remaining or 0,
+            )
+            polish_steps = structural_steps + polish_steps
         # Score item 2: stop the chain after two consecutive steps that don't
         # improve the best -- the later directives are weaker variants of the
         # earlier ones, so two failures in a row means the remaining steps are
-        # very unlikely to help and only cost runtime.
+        # very unlikely to help and only cost runtime. The structural steps
+        # prepended above are exempt: they are not weaker variants of each
+        # other, they are the only untried family left, and the whole point
+        # of adding them is that the incremental chain's flat record says
+        # nothing about whether a whole-design re-place will work.
         best_before_step = self.checkpoint_manager.best_fmax_mhz
         consecutive_flat = 0
+        structural_remaining = len(structural_steps)
         for polish_action, polish_params in polish_steps:
+            is_structural_step = structural_remaining > 0
+            if is_structural_step:
+                structural_remaining -= 1
             remaining = self._time_remaining_s()
             if remaining is not None and remaining < ENDGAME_MIN_REMAINING_S:
                 logger.info("Endgame polish: %.0f s left, stopping the polish chain.", remaining or 0)
@@ -7621,10 +7660,11 @@ class DCPOptimizer(DCPOptimizerBase):
                 self._record_failed_action(failure)
                 if self.last_action_mutated_design:
                     await self._restore_best_state("endgame polish step failed")
-                consecutive_flat += 1
-                if consecutive_flat >= 2:
-                    logger.info("Endgame polish: 2 consecutive steps without a new best; stopping the chain.")
-                    break
+                if not is_structural_step:
+                    consecutive_flat += 1
+                    if consecutive_flat >= 2:
+                        logger.info("Endgame polish: 2 consecutive steps without a new best; stopping the chain.")
+                        break
                 continue
             await self.call_tool("vivado_report_timing_summary", {"timeout": 300})
             best_now = self.checkpoint_manager.best_fmax_mhz
@@ -7632,7 +7672,7 @@ class DCPOptimizer(DCPOptimizerBase):
             if improved:
                 consecutive_flat = 0
                 best_before_step = best_now
-            else:
+            elif not is_structural_step:
                 consecutive_flat += 1
                 if consecutive_flat >= 2:
                     logger.info("Endgame polish: 2 consecutive steps without a new best; stopping the chain.")
