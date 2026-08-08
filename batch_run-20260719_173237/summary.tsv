@@ -1,3 +1,0 @@
-benchmark	status	exit	wall_s	init_fmax	best_fmax	improvement	cost_usd	run_dir
-amd_mini-isp_2025.1	OK	0	522	307.13	404.20	97.08	0.04	dcp_optimizer_run-20260719_173238
-boom_soc_2025.1	OK	0	3799	48.24	84.57	36.33	0.14	dcp_optimizer_run-20260719_174120
