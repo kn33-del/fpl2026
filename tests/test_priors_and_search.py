@@ -255,9 +255,27 @@ def test_outcome_adjustment_reranks(opt, tmp_path):
 # ---------------------------------------------------------------------------
 
 def test_directive_sweep_advances(opt):
-    assert opt._next_place_directive() == PLACE_DIRECTIVE_SWEEP[0]
-    opt.place_directive_results["Explore"] = {"status": "improved", "wns_after": -0.493}
+    # Order-independent: this is about the sweep ADVANCING, not about which
+    # directive happens to sit at a given index. (The sweep was reordered in
+    # the 20260808 directive audit -- "Default" is now first on an 11/12
+    # cross-design record -- and hardcoding "Explore" as "the first one"
+    # made this test fail for a reason that had nothing to do with the
+    # behavior under test.)
+    first = opt._next_place_directive()
+    assert first == PLACE_DIRECTIVE_SWEEP[0]
+    opt.place_directive_results[first] = {"status": "improved", "wns_after": -0.493}
     assert opt._next_place_directive() == PLACE_DIRECTIVE_SWEEP[1]
+
+
+def test_place_directive_sweep_leads_with_best_evidenced_directive(opt):
+    # Directive audit (all logged runs, 20260713-20260808): Default was 11/12
+    # good with the biggest single gain on record (+114.5 MHz) yet was absent
+    # from the sweep entirely, so _next_place_directive() could never reach
+    # it. The two 0-for-9 directives must not outrank anything with a win.
+    assert PLACE_DIRECTIVE_SWEEP[0] == "Default"
+    for dead in ("ExtraPostPlacementOpt", "ExtraNetDelay_high"):
+        assert PLACE_DIRECTIVE_SWEEP.index(dead) > PLACE_DIRECTIVE_SWEEP.index("Explore")
+        assert PLACE_DIRECTIVE_SWEEP.index(dead) > PLACE_DIRECTIVE_SWEEP.index("ExtraTimingOpt")
 
 
 def test_directive_sweep_reuses_best_when_exhausted(opt):
@@ -477,6 +495,30 @@ def test_replicate_register_never_sends_force_replication(opt):
     assert commands
     assert "-force_replication_on_nets" not in commands[0]
     assert "-critical_cell_opt" in commands[0]
+
+
+def test_first_contact_structural_probe_is_not_priced_out(opt):
+    # vtr_mcml forensics (20260808): iteration 1's place_design_explore IS
+    # that design's entire score (62.2 -> 74.4 MHz, ~12.2 of 12.6), it really
+    # costs ~480 s, and with nothing measured yet the gate priced it at
+    # 2 x UNKNOWN_EXPENSIVE_ACTION_MIN_S = 1800 s -- demoted at 2340 s,
+    # refused at 1800 s. The contest's beta score for this DCP (1.681, alpha
+    # ~1.87 MHz vs ~13.6 local) is exactly what iteration 1 never running
+    # looks like.
+    opt.design_scale = "large"
+    opt.action_durations = {}          # nothing measured yet
+    # Ample budget: don't gate on a guess -- let the probe run and MEASURE.
+    with patch.object(opt, "_time_remaining_s", return_value=3200.0):
+        assert opt._estimated_action_cost_s("place_design_explore") is None
+    # Budget genuinely tight: the pessimistic guard is still in force, so the
+    # original incident (long place, budget-killed route) cannot recur.
+    with patch.object(opt, "_time_remaining_s", return_value=1200.0):
+        cost = opt._estimated_action_cost_s("place_design_explore")
+        assert cost == 2 * dcp.UNKNOWN_EXPENSIVE_ACTION_MIN_S
+    # Once a real duration is known, the measurement always wins over both.
+    opt.action_durations = {"place": [300.0], "route": [120.0]}
+    with patch.object(opt, "_time_remaining_s", return_value=3200.0):
+        assert opt._estimated_action_cost_s("place_design_explore") == 420.0
 
 
 def test_endgame_leads_with_untried_structural_action(opt, tmp_path):

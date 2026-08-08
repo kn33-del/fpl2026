@@ -305,6 +305,20 @@ PHYS_OPT_INCREMENTAL_ACTIONS = {
 # implementation engineer would run, timing-focused first, then the
 # spread-logic variants that help congestion-bound designs.
 PLACE_DIRECTIVE_SWEEP = [
+    # "Default" added and placed FIRST (directive audit over every logged run,
+    # 20260713-20260808). Measured place_design_explore record per directive,
+    # across all designs:
+    #     Default                11/12 good, best single gain +114.5 MHz
+    #     Explore                17/26 good, best single gain  +53.6 MHz
+    #     ExtraTimingOpt          6/13 good, best single gain  +79.2 MHz
+    #     ExtraPostPlacementOpt    0/7 good
+    #     ExtraNetDelay_high       0/2 good
+    # Default was the single best directive by both win rate and best gain --
+    # and it was NOT IN THIS LIST, so _next_place_directive() could never
+    # reach it; it only ever ran when the LLM happened to name it explicitly
+    # or via warm start. The logicnets forensics reached the same conclusion
+    # independently ("only Default ever won, +98 MHz").
+    "Default",
     "Explore",
     "ExtraTimingOpt",
     # BUG FIX (run 20260714_182751 iter 9): "AggressiveExplore" was in this
@@ -312,9 +326,15 @@ PLACE_DIRECTIVE_SWEEP = [
     # ("not a recognized directive"), so the slot was a guaranteed cheap
     # failure that also poisoned the sweep memory. ExtraPostPlacementOpt is
     # the timing-focused place directive it was standing in for.
+    #
+    # These two are 0-for-9 combined across every run in project history at
+    # ~300 s per attempt (rosetta_optical-flow 20260806_204810 alone burned
+    # 676 s on them at iters 23 and 25, both regressions). Kept for sweep
+    # completeness but demoted below every directive with a winning record,
+    # so they are only ever reached once the productive ones are exhausted.
+    "AltSpreadLogic_high",
     "ExtraPostPlacementOpt",
     "ExtraNetDelay_high",
-    "AltSpreadLogic_high",
 ]
 # The full set of directives place_design actually accepts on UltraScale+
 # (2025.1). Anything else from the LLM is rejected at validation time and
@@ -413,6 +433,14 @@ ACTION_COST_DEMOTE_FACTOR = 1.3
 # large/unknown-scale design: 2x the longest known duration, at least this.
 # Small designs keep the pre-cost-model behavior (no gate) instead.
 UNKNOWN_EXPENSIVE_ACTION_MIN_S = 900
+# First-contact probe exemption (see _estimated_action_cost_s): while NOTHING
+# has been measured on this design yet, the budget gate is skipped as long as
+# at least this much wall-clock remains. Set above the largest place+route
+# actually observed in the run history (boom_soc ~1500 s) so the exemption
+# only ever fires when the action genuinely has room to finish, and the
+# original motivating incident (a 15.5 min place followed by a budget-killed
+# route) still cannot recur -- there, remaining had already fallen below this.
+FIRST_CONTACT_PROBE_MIN_REMAINING_S = 2000
 CHEAP_ACTION_COST_S = 120
 # On a large design, full re-places (place_design_explore +
 # pblock_full_replace, warm start included) are capped per run: warm start +
@@ -2917,6 +2945,30 @@ class DCPOptimizer(DCPOptimizerBase):
             if known is not None:
                 return known
             if self.design_scale == "small":
+                return None
+            # First-contact exemption (vtr_mcml forensics, 20260808). The
+            # pessimistic default below prices an UNMEASURED place+route at
+            # 2 x UNKNOWN_EXPENSIVE_ACTION_MIN_S = 1800 s. On vtr_mcml the
+            # real cost is ~480 s, and iteration 1's place_design_explore IS
+            # that design's entire score: 62.2 -> 74.4 MHz, ~12.2 of its 12.6
+            # points, with every later iteration adding 0.4. A 3.75x-inflated
+            # guess demotes it at 1.3x (2340 s) and refuses it outright at
+            # 1800 s -- so on any box where startup + diagnostics eat enough
+            # of the 3500 s budget, the single highest-value action of the
+            # run is priced out before it is ever tried. The contest's own
+            # beta score for this design (1.681, alpha ~1.87 MHz vs our
+            # ~13.6 MHz local, same DCP) is exactly the signature of
+            # iteration 1 never running.
+            #
+            # The gate's purpose is to avoid STARTING something that cannot
+            # FINISH. Early in a run with most of the budget intact that risk
+            # is near zero, and refusing on a guess costs far more than it
+            # saves -- so while nothing has been measured yet and ample budget
+            # remains, don't gate at all (pre-cost-model behavior). The very
+            # first dispatch then MEASURES the true duration, and every
+            # subsequent estimate is real rather than guessed.
+            remaining_now = self._time_remaining_s()
+            if remaining_now is not None and remaining_now >= FIRST_CONTACT_PROBE_MIN_REMAINING_S:
                 return None
             longest = max(
                 (d for d in (self._estimated_duration(k) for k in ("place", "route", "phys_opt")) if d is not None),
@@ -7608,7 +7660,14 @@ class DCPOptimizer(DCPOptimizerBase):
             if self.action_coverage.get(action, {}).get("chosen", 0) == 0
             and not self._full_replace_blocked_reason(action)
         ]
-        structural_steps = [(action, {}) for action in untried_structural]
+        # Directive pinned to "Default" rather than left to the sweep: it is
+        # 11/12 good with the largest single gain on record (+114.5 MHz)
+        # across every design, and this is a one-shot last-chance attempt --
+        # spend it on the best-evidenced directive, not the next untried one.
+        structural_steps = [
+            (action, {"directive": "Default"} if action == "place_design_explore" else {})
+            for action in untried_structural
+        ]
         if structural_steps:
             logger.warning(
                 "Endgame polish: %s never attempted this run and %.0f s of budget "
