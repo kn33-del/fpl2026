@@ -497,6 +497,42 @@ def test_replicate_register_never_sends_force_replication(opt):
     assert "-critical_cell_opt" in commands[0]
 
 
+def test_consecutive_budget_refusals_are_counted_and_reset(opt):
+    # vtr_mcml run 20260808_173907, iterations 21-31: once remaining
+    # wall-clock fell below the cheapest action's cost, ELEVEN consecutive
+    # actions were refused at dispatch -- ~1 s each, 33 s of Vivado work in
+    # total, yet every one still paid for a full LLM round-trip (that run's
+    # beta reached ~$0.61 = 0.91 of score penalty) and the spin carried
+    # wall-clock to 3635 s, past the 3500 s cap. The budget only shrinks, so
+    # this is terminal, not a stall.
+    opt.current_target_candidates = [{"endpoint": "e", "startpoint": "s", "slack": -0.5}]
+
+    async def fake_call_tool(tool_name, params, internal=False):
+        return "ok"
+
+    # Budget exhausted: every dispatch refused, and the counter climbs.
+    with patch.object(opt, "call_tool", side_effect=fake_call_tool), \
+         patch.object(opt, "_time_remaining_s", return_value=30.0), \
+         patch.object(opt, "_estimated_action_cost_s", return_value=6000.0):
+        for expected in range(1, dcp.CONSECUTIVE_BUDGET_REFUSAL_LIMIT + 1):
+            result = asyncio.run(opt.execute_validated_action(
+                {"chosen_action": "route_explore", "action_parameters": {}}, {},
+            ))
+            assert json.loads(result)["error_type"] == "insufficient_budget"
+            assert opt.consecutive_budget_refusals == expected
+    assert opt.consecutive_budget_refusals >= dcp.CONSECUTIVE_BUDGET_REFUSAL_LIMIT
+
+    # An action that actually reaches dispatch clears the terminal state --
+    # a single refusal mid-run must not end an otherwise healthy run.
+    with patch.object(opt, "call_tool", side_effect=fake_call_tool), \
+         patch.object(opt, "_time_remaining_s", return_value=3000.0), \
+         patch.object(opt, "_estimated_action_cost_s", return_value=60.0):
+        asyncio.run(opt.execute_validated_action(
+            {"chosen_action": "route_explore", "action_parameters": {}}, {},
+        ))
+    assert opt.consecutive_budget_refusals == 0
+
+
 def test_first_contact_structural_probe_is_not_priced_out(opt):
     # vtr_mcml forensics (20260808): iteration 1's place_design_explore IS
     # that design's entire score (62.2 -> 74.4 MHz, ~12.2 of 12.6), it really
@@ -622,6 +658,139 @@ def test_check_hold_safety_probe_and_single_fix(opt):
 
     with patch.object(opt, "call_tool", side_effect=viol):
         assert asyncio.run(opt._check_hold_safety()) is False
+
+
+def test_check_pulse_width_safety_gates_and_fails_open(opt):
+    # docs/benchmarks.md attribute 2: every contest input already meets its
+    # pulse-width constraints, and a solution that does not scores ZERO for
+    # that benchmark -- the same cliff as hold. There is no repair pass, so
+    # the gate's only job is to answer clean/dirty honestly.
+    async def clean(tool_name, params, internal=False):
+        return "WPWS_OK"
+
+    with patch.object(opt, "call_tool", side_effect=clean):
+        assert asyncio.run(opt._check_pulse_width_safety()) is True
+
+    async def violated(tool_name, params, internal=False):
+        return "WPWS_VIOLATED:-0.042"
+
+    with patch.object(opt, "call_tool", side_effect=violated):
+        assert asyncio.run(opt._check_pulse_width_safety()) is False
+
+    # Neither Tcl probe supported: fail OPEN, exactly like the hold gate's
+    # unparseable-report path. This safety net must never be the thing that
+    # blocks publishing a good design.
+    async def unsupported(tool_name, params, internal=False):
+        return "WPWS_UNKNOWN"
+
+    with patch.object(opt, "call_tool", side_effect=unsupported):
+        assert asyncio.run(opt._check_pulse_width_safety()) is True
+
+
+def test_stall_exit_deferred_while_budget_remains(opt):
+    # rosetta_optical-flow 20260808_152933/160956: the stall counter fired at
+    # iteration 9 and ended both runs with ~45 min of the hour unspent, scoring
+    # 0.41 where same-code siblings that kept going scored 21.39 and 10.71.
+    # A stall must not end a run the clock can still pay for.
+    from dcp_optimizer import TIME_BUDGET_RESERVE_S
+
+    opt.design_scale = "small"  # keeps _estimated_action_cost_s off the
+    # pessimistic path so the fallback cost is used
+
+    with patch.object(opt, "_time_remaining_s", return_value=2400.0):
+        reason = opt._stall_exit_deferral_reason()
+    assert reason is not None and "still remain" in reason
+
+    # Budget genuinely exhausted -> exit now. The endgame reserve is part of
+    # what has to fit, so "just under the reserve" must not defer.
+    with patch.object(opt, "_time_remaining_s", return_value=float(TIME_BUDGET_RESERVE_S) - 1.0):
+        assert opt._stall_exit_deferral_reason() is None
+
+    # No budget information at all: preserve the pre-fix behavior (exit).
+    with patch.object(opt, "_time_remaining_s", return_value=None):
+        assert opt._stall_exit_deferral_reason() is None
+
+
+def test_hard_block_regs_dispatch_sends_flags_and_no_directive(opt):
+    # Vivado treats phys_opt_design's -directive and its individual optimization
+    # flags as mutually exclusive, and VivadoMCP builds the flags only in the
+    # `else` branch of `if directive:`. A flag-driven variant that also carries a
+    # directive therefore silently degrades to a plain directive run.
+    from dcp_optimizer import PHYS_OPT_HARD_BLOCK_REG_FLAGS
+
+    sent = {}
+
+    async def capture(tool_name, params, internal=False):
+        sent["tool"] = tool_name
+        sent["params"] = dict(params)
+        return "phys_opt done"
+
+    async def licensed():
+        return True
+
+    with patch.object(opt, "call_tool", side_effect=capture), \
+            patch.object(opt, "_check_implementation_license", side_effect=licensed):
+        asyncio.run(opt.execute_validated_action(
+            {"chosen_action": "phys_opt_design_hard_block_regs", "action_parameters": {}}, {}
+        ))
+
+    assert sent["tool"] == "vivado_phys_opt_design"
+    assert "directive" not in sent["params"]
+    for flag in PHYS_OPT_HARD_BLOCK_REG_FLAGS:
+        assert sent["params"][flag] is True
+
+    # Regression guard for the same bug on pin_swap, which shipped setting both.
+    sent.clear()
+    with patch.object(opt, "call_tool", side_effect=capture), \
+            patch.object(opt, "_check_implementation_license", side_effect=licensed):
+        asyncio.run(opt.execute_validated_action(
+            {"chosen_action": "phys_opt_design_pin_swap",
+             "action_parameters": {"directive": "Explore"}}, {}
+        ))
+    assert "directive" not in sent["params"]
+    assert sent["params"]["critical_pin_opt"] is True
+
+    # The directive-driven variants must keep sweeping directives.
+    sent.clear()
+    with patch.object(opt, "call_tool", side_effect=capture), \
+            patch.object(opt, "_check_implementation_license", side_effect=licensed):
+        asyncio.run(opt.execute_validated_action(
+            {"chosen_action": "phys_opt_design", "action_parameters": {"directive": "Explore"}}, {}
+        ))
+    assert sent["params"]["directive"] == "Explore"
+
+
+def test_hard_block_bottleneck_promotes_hard_block_regs(opt):
+    # The diagnosis existed and went nowhere: _bram_dsp_bottleneck_evidence's
+    # only consumer was pblock region sizing, so "the critical path runs through
+    # a BRAM" was answered with a pblock (8 wins / 70 attempts lifetime).
+    action = "phys_opt_design_hard_block_regs"
+    others = ["phys_opt_design", "phys_opt_design_retime", "phys_opt_design_pin_swap"]
+
+    with patch.object(opt, "_bram_dsp_bottleneck_evidence",
+                      return_value={"is_bottleneck": True, "reason": "BRAM cells dominate",
+                                    "bram_cells": ["b0"], "dsp_cells": []}):
+        allowed, _forbidden = opt._allowed_forbidden_actions(
+            "net_delay_bound", "FF", 80.0, None, -1.0
+        )
+    # Ahead of every other phys_opt variant...
+    assert all(allowed.index(action) < allowed.index(other) for other in others)
+    assert "PREFERRED" in opt.last_action_guidance[action]
+    # ...but NOT ahead of the 47%-win-rate action that is 89% of all alpha.
+    # WNS -1.0 is below the incremental-phys_opt floor, so the structural
+    # actions must keep their priority.
+    assert allowed.index("place_design_explore") < allowed.index(action)
+
+    # Not a hard-block path: still on the menu, but not hoisted past the
+    # ordinary phys_opt pack.
+    with patch.object(opt, "_bram_dsp_bottleneck_evidence",
+                      return_value={"is_bottleneck": False, "reason": "below the bar",
+                                    "bram_cells": [], "dsp_cells": []}):
+        allowed, _forbidden = opt._allowed_forbidden_actions(
+            "net_delay_bound", "FF", 80.0, None, -1.0
+        )
+    assert action in allowed
+    assert allowed.index("phys_opt_design") < allowed.index(action)
 
 
 def test_pblock_cluster_shrink_retries_without_hard_block_candidates(opt):

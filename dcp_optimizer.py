@@ -172,6 +172,43 @@ FULL_REPLACE_REGION_GROW_FRACTION = 0.15
 # enough to have tried every strategy family at least once given the
 # deadlock fixes (#11/#12) that keep the action menu from collapsing.
 ABSOLUTE_STALL_HARD_LIMIT = 5
+# Stall exits are deferred while the clock can still fund another attempt.
+#
+# ABSOLUTE_STALL_HARD_LIMIT was calibrated as "enough attempts to have tried
+# every strategy family once", but it is a pure counter with no notion of how
+# much budget is left, and it fires BEFORE the stuck-detector's structural
+# override (STUCK_ITERATION_THRESHOLD=3, STRUCTURAL_OVERRIDE_MAX_ITERS=6) can
+# finish its window -- the override gets 2 iterations of a 6-iteration escape
+# hatch before the run is killed underneath it.
+#
+# rosetta_optical-flow measured the cost twice on 2026-08-08. Runs 152933 and
+# 160956 spent iterations 1-6 on phys_opt variants that all returned
+# design_unchanged, tripped this limit, and ENDED at iteration 9 having used
+# 0.19 h and 0.24 h of a 0.97 h budget -- ~45 minutes of paid-for wall clock
+# abandoned. Both scored 0.41. Their siblings 162652 and 233516, same code and
+# same design, reached a full re-place and scored 21.39 and 10.71.
+#
+# Under the contest formula the trade is one-sided: gamma costs at most
+# 0.1*alpha for the entire hour, while the re-place that the extra iterations
+# buy is worth multiples of alpha. Since _publish_best_to_output() refreshes
+# the output on every improvement, an attempt that runs out of clock leaves
+# the previous best on disk -- the downside is bounded and the upside is not.
+#
+# So a stall only ends the run when the remaining budget genuinely cannot fund
+# another action plus the endgame reserve. When it can, the run keeps going and
+# the structural override finally gets its full window.
+STALL_EXIT_MIN_ACTION_COST_S = 120
+# Budget-exhaustion stop (vtr_mcml run 20260808_173907, iterations 21-31):
+# once the remaining wall-clock is below the cheapest action's estimated
+# cost, EVERY action is refused at dispatch -- eleven consecutive
+# insufficient_budget refusals there, ~1 s each, 33 s of Vivado work total,
+# yet each one still paid for a full LLM round-trip (that run's beta reached
+# ~$0.61, itself 0.91 of score penalty) and the spin pushed wall-clock to
+# 3635 s, past the 3500 s cap. Nothing can change while the budget only
+# shrinks, so this is a terminal state, not a stall: end the run cleanly.
+# Deliberately small -- there is no information in a fourth refusal that the
+# third did not already provide.
+CONSECUTIVE_BUDGET_REFUSAL_LIMIT = 3
 # Fix #13 (context cap): how many of the most recent conversation messages
 # (after the pinned system prompt + initial-analysis message) are kept
 # verbatim when pruning the LLM conversation each iteration. Older turns are
@@ -253,6 +290,7 @@ VIVADO_INCREMENTAL_IMPLEMENTATION_ACTIONS = {
     "phys_opt_design",
     "phys_opt_design_retime",
     "phys_opt_design_pin_swap",
+    "phys_opt_design_hard_block_regs",
     "replicate_register",
     "place_design_explore",
     "route_explore",
@@ -297,8 +335,38 @@ PHYS_OPT_INCREMENTAL_ACTIONS = {
     "phys_opt_design",
     "phys_opt_design_retime",
     "phys_opt_design_pin_swap",
+    "phys_opt_design_hard_block_regs",
     "replicate_register",
 }
+# Hard-block register optimization (repertoire audit, 2026-08-09).
+#
+# Across every run recorded in dcp_optimizer_run-*/checkpoints/history.json,
+# place_design_explore produced 1446.8 of the ~1750 MHz ever gained -- 89% of
+# all alpha from a single action. That action is hard-refused above
+# HIGH_UTILIZATION_FRACTION and priced out on large designs, so a dense or big
+# hidden benchmark leaves the menu with nothing that has ever moved a design
+# more than single-digit MHz.
+#
+# The gap this closes: _bram_dsp_bottleneck_evidence() already classifies when
+# the critical path is dominated by BRAM/DSP cells, but its ONLY consumer is
+# pblock region *sizing* -- the diagnosis never selects an action. So the
+# answer to "your critical path runs through a BRAM" was a pblock: 8 wins in
+# 70 attempts, 26.4 MHz lifetime.
+#
+# These flags are Vivado's own answer to that diagnosis. They pull a register
+# into (or out of) the DSP48/BRAM/URAM primitive and delete an entire hop from
+# the critical path, and they are incremental -- no re-place, so they cost
+# minutes and stay available exactly when the 89% action is not.
+#
+# Bundled into one dispatch rather than four: with ~15 iterations in an hour,
+# one measured pass over the whole family beats four separately-attributed
+# ones. memory_rewire_opt is deliberately absent -- Versal only, wrong device.
+PHYS_OPT_HARD_BLOCK_REG_FLAGS = (
+    "dsp_register_opt",
+    "bram_register_opt",
+    "uram_register_opt",
+    "shift_register_opt",
+)
 # Directive sweep for place_design_explore (item 3a: search within a recipe).
 # Once one directive has been tried on this design, the next attempt should
 # try a different one instead of repeating -- this is the sweep order an
@@ -479,6 +547,7 @@ RUN_RECIPE_STAGE_WHITELIST = {
     "phys_opt_design",
     "phys_opt_design_retime",
     "phys_opt_design_pin_swap",
+    "phys_opt_design_hard_block_regs",
     "pblock",
     # fanout_split removed (pipeline audit 2026-07-28): _execute_run_recipe
     # dispatches stages straight to execute_validated_action without
@@ -551,12 +620,18 @@ ACTION_PARAMETERS_SCHEMA = {
         ),
     },
     "phys_opt_design_pin_swap": {
-        "directive": (
-            "str, phys_opt directive used with LUT pin-swapping enabled (-critical_pin_opt: "
-            "remaps logical to physical pins within a SLICE to reduce routing congestion on "
-            "critical nets, without moving any cells); if omitted, the next untried entry of "
-            "phys_opt_directives_untried is chosen automatically"
-        ),
+        # No directive: Vivado's phys_opt_design treats -directive and the
+        # individual optimization flags as mutually exclusive, so this action
+        # takes no directive parameter (see the dispatch in
+        # execute_validated_action for why).
+    },
+    "phys_opt_design_hard_block_regs": {
+        # No tunable parameters. Runs phys_opt_design with
+        # PHYS_OPT_HARD_BLOCK_REG_FLAGS: pulls registers into/out of
+        # DSP48/BRAM/URAM primitives and extracts them from SRL chains,
+        # removing a hop from a hard-block-bound critical path. Incremental
+        # (no re-place), so it stays available on dense/large designs where
+        # place_design_explore is refused.
     },
     "place_design_explore": {
         "directive": (
@@ -587,7 +662,8 @@ ACTION_PARAMETERS_SCHEMA = {
             "sequentially with a per-stage budget check (the recipe stops cleanly "
             "when the next stage no longer fits) and per-stage keep-best/rollback. "
             "Allowed stage actions: place_design_explore, route_explore, "
-            "phys_opt_design, phys_opt_design_retime, phys_opt_design_pin_swap, pblock"
+            "phys_opt_design, phys_opt_design_retime, phys_opt_design_pin_swap, "
+            "phys_opt_design_hard_block_regs, pblock"
         ),
     },
 }
@@ -684,10 +760,22 @@ LEARN FROM THIS RUN'S RESULTS:
   placement. Zero placement risk, so it is a safe refinement to try alongside
   phys_opt_design/phys_opt_design_retime once those have stalled -- particularly on
   net-delay-bound paths where the bottleneck is routing, not logic depth.
+  It takes NO directive (Vivado treats -directive and the individual optimization
+  flags as mutually exclusive).
+- phys_opt_design_hard_block_regs runs phys_opt_design with the hard-block register
+  optimizations (-dsp_register_opt -bram_register_opt -uram_register_opt
+  -shift_register_opt). It pulls a register into or out of the DSP48/BRAM/URAM
+  primitive and extracts registers from SRL chains, which removes an entire hop from
+  a path whose delay is dominated by a hard block. Choose it when the endpoint is a
+  BRAM/DSP pin or when BRAM/DSP cells dominate the critical-path candidates -- that
+  is the case it exists for, and a pblock around a hard block usually is not. It is
+  incremental (no re-place), so it remains affordable on dense or large designs where
+  place_design_explore is refused. It takes NO directive, for the same reason as
+  pin_swap.
 - An action that regressed or failed on the same targets is worth less than its ranking.
 - When choosing a place directive, pick from place_directives_untried (in the timing
   state) rather than inventing one; place_directives_tried shows measured results.
-- Same for phys_opt_design/phys_opt_design_retime/phys_opt_design_pin_swap: pick from
+- Same for phys_opt_design/phys_opt_design_retime: pick from
   phys_opt_directives_untried rather than repeating one already in phys_opt_directives_tried.
   AggressiveFanoutOpt in particular replicates drivers to fix a shared high-fanout
   net -- try it before concluding a fanout-diagnosed path has no phys_opt lever left.
@@ -702,7 +790,8 @@ BUDGET AWARENESS:
 - run_recipe executes a full pipeline in one decision -- prefer it over issuing the
   same stages one iteration at a time. Stages are whitelisted (place_design_explore,
   route_explore, phys_opt_design, phys_opt_design_retime, phys_opt_design_pin_swap,
-  pblock), max 6; each stage is measured and kept-or-rolled-back individually, and
+  phys_opt_design_hard_block_regs, pblock), max 6; each stage is measured and
+  kept-or-rolled-back individually, and
   the recipe stops cleanly when the next stage no longer fits the remaining budget.
 """
 
@@ -1399,8 +1488,14 @@ class DCPOptimizer(DCPOptimizerBase):
         # organizers' validation outright -- and the risk paths here are
         # RapidWright manual edits + ECO/incremental routes, which unlike a
         # full route_design fix nothing on the hold side.
-        self.last_published_hold_ok: bool = True
+        # True while the currently published output is known to meet both the
+        # hold and pulse-width checks the contest zeroes a design for missing
+        # (docs/benchmarks.md, "Clock Domain of Interest" attribute 2).
+        self.last_published_timing_clean: bool = True
         self.hold_fix_attempted: bool = False
+        # Consecutive dispatch refusals for insufficient_budget. Reset by any
+        # iteration that actually runs; see CONSECUTIVE_BUDGET_REFUSAL_LIMIT.
+        self.consecutive_budget_refusals: int = 0
         # Coverage ledger (first-contact/hidden-benchmark feature): per
         # action this run -- offered (appeared on the LLM's menu), chosen
         # (dispatched), measured (produced a recorded timing result), moved
@@ -2993,6 +3088,30 @@ class DCPOptimizer(DCPOptimizerBase):
             return max(route / 3.0, float(CHEAP_ACTION_COST_S))
         return float(CHEAP_ACTION_COST_S)
 
+    def _stall_exit_deferral_reason(self) -> Optional[str]:
+        """Why a stall-triggered exit should be deferred, or None to exit now.
+
+        See STALL_EXIT_MIN_ACTION_COST_S. Returns a reason string while enough
+        wall clock remains to fund another action plus TIME_BUDGET_RESERVE_S
+        for the endgame polish, so the run keeps working instead of handing
+        back unspent budget. Returns None -- exit now -- once the clock cannot
+        fund anything, which is also what the budget-refusal path detects from
+        the dispatch side."""
+        remaining = self._time_remaining_s()
+        if remaining is None:
+            return None
+        cheapest = self._estimated_action_cost_s("phys_opt_design")
+        if cheapest is None or cheapest <= 0:
+            cheapest = float(STALL_EXIT_MIN_ACTION_COST_S)
+        needed = cheapest + float(TIME_BUDGET_RESERVE_S)
+        if remaining <= needed:
+            return None
+        return (
+            f"{remaining / 60.0:.0f} min of the budget still remain (an action costs "
+            f"~{cheapest / 60.0:.0f} min plus a {TIME_BUDGET_RESERVE_S / 60.0:.0f} min "
+            f"endgame reserve)"
+        )
+
     def _full_replace_blocked_reason(self, action: str) -> Optional[str]:
         """Per-run cap on full re-places for large designs (warm start plus at
         most one more, none past 50% of the budget). Returns the human-readable
@@ -3831,6 +3950,7 @@ class DCPOptimizer(DCPOptimizerBase):
             "phys_opt_design",
             "phys_opt_design_retime",
             "phys_opt_design_pin_swap",
+            "phys_opt_design_hard_block_regs",
             "qor_suggestions",
             "fanout_split",
             "lut_opt",
@@ -3865,6 +3985,7 @@ class DCPOptimizer(DCPOptimizerBase):
                 "phys_opt_design_retime",
                 "phys_opt_design",
                 "phys_opt_design_pin_swap",
+                "phys_opt_design_hard_block_regs",
                 "route_explore",
                 "run_recipe",
                 "replicate_register",
@@ -3890,6 +4011,7 @@ class DCPOptimizer(DCPOptimizerBase):
                 ["fanout_split"],
                 f"endpoint is a {endpoint_type} pin; routing to a hard-block control pin needs physical proximity, not net splitting",
             )
+
 
         if (
             avg_spread is not None
@@ -3927,6 +4049,52 @@ class DCPOptimizer(DCPOptimizerBase):
                 PHYS_OPT_INCREMENTAL_ACTIONS,
                 f"WNS {current_wns:.3f} ns is below {PHYS_OPT_MIN_USEFUL_WNS_NS:.3f} ns; "
                 f"incremental phys_opt cannot close that gap while structural actions remain",
+            )
+
+        # Repertoire audit 2026-08-09: answer the hard-block diagnosis with the
+        # hard-block action. _bram_dsp_bottleneck_evidence already concluded
+        # "the critical path runs through a BRAM/DSP", but its only consumer
+        # was pblock region sizing -- so the menu's best answer was a pblock
+        # (8 wins / 70 attempts, 26.4 MHz lifetime) or a full re-place, the
+        # action refused on exactly the dense designs where hard-block paths
+        # are most common.
+        #
+        # Ranked ahead of the OTHER incremental phys_opt actions, not ahead of
+        # the structural ones: place_design_explore is 47% win rate and 89% of
+        # all alpha ever gained, so it keeps its priority whenever it is
+        # available. This only redirects the phys_opt slot -- 224 dispatches
+        # for 5% of alpha -- toward the variant built for this path type.
+        #
+        # Deliberately applied AFTER the WNS demotion above and exempt from it.
+        # That demotion's premise is "incremental phys_opt cannot close the gap
+        # while structural actions remain", which is the generic-phys_opt case:
+        # pulling a register into a DSP48/BRAM removes a discrete hop that
+        # moving cells around does not, the same reasoning as the logic-heavy
+        # exemption right above it. Note the demotion is already skipped when
+        # no structural action is available, so on dense designs this ordering
+        # and that one agree.
+        hard_block_action = "phys_opt_design_hard_block_regs"
+        hard_block_evidence = self._bram_dsp_bottleneck_evidence()
+        hard_block_endpoint = endpoint_type in {"BRAM_CONTROL", "DSP_CONTROL"}
+        if (hard_block_endpoint or hard_block_evidence.get("is_bottleneck")) and hard_block_action in allowed:
+            others = PHYS_OPT_INCREMENTAL_ACTIONS - {hard_block_action}
+            rest = [candidate for candidate in allowed if candidate != hard_block_action]
+            insert_at = next(
+                (i for i, candidate in enumerate(rest) if candidate in others), len(rest)
+            )
+            allowed = rest[:insert_at] + [hard_block_action] + rest[insert_at:]
+            self.last_action_guidance.pop(hard_block_action, None)
+            self.last_action_guidance[hard_block_action] = (
+                "PREFERRED over the other phys_opt variants here: the critical path is "
+                "hard-block bound ("
+                + (
+                    f"endpoint is a {endpoint_type} pin"
+                    if hard_block_endpoint
+                    else str(hard_block_evidence.get("reason") or "BRAM/DSP cells dominate the candidates")
+                )
+                + "). Pulling the register into the DSP/BRAM primitive removes a hop from the "
+                "path, which moving cells around does not, and unlike a re-place it stays "
+                "affordable on dense designs."
             )
 
         # Cross-run priors: an action with zero wins and repeated losses on
@@ -5725,6 +5893,51 @@ class DCPOptimizer(DCPOptimizerBase):
         logger.warning("Hold-fix pass %s.", "cleared the violation" if fixed else "did NOT clear the violation")
         return fixed
 
+    async def _check_pulse_width_safety(self) -> bool:
+        """True if the live design has no pulse-width violations (WPWS >= 0).
+
+        docs/benchmarks.md guarantees every contest input already meets its
+        pulse-width constraints and states that a solution which does not
+        scores ZERO for that benchmark -- the same cliff as hold, which
+        _check_hold_safety already guards. Nothing in the action set repairs a
+        pulse-width violation the way phys_opt -hold_fix repairs hold (these
+        come from clock-path geometry, which a re-place can move), so there is
+        no fix pass to attempt: the only safe response is to decline to publish
+        and keep the previous clean output.
+
+        Two probes, because the exact Tcl surface differs across Vivado
+        versions: the get_timing_paths filter first, then report_pulse_width.
+        Like the hold gate, an unparseable or unsupported report is treated as
+        'unknown -> assume ok' so this safety net can never be the thing that
+        blocks publishing a good design."""
+        probe = (
+            'set verdict "WPWS_UNKNOWN"; '
+            'if {![catch {set pw [get_timing_paths -quiet -pulse_width '
+            '-max_paths 1 -slack_lesser_than 0]}]} { '
+            '  if {[llength $pw] == 0} { set verdict "WPWS_OK" } else '
+            '  { set verdict "WPWS_VIOLATED:[get_property SLACK [lindex $pw 0]]" } '
+            '} elseif {![catch {set rpt [report_pulse_width -quiet -all_violators '
+            '-return_string]}]} { '
+            '  if {[regexp {VIOLATED} $rpt]} { set verdict "WPWS_VIOLATED:report" } else '
+            '  { set verdict "WPWS_OK" } '
+            '}; '
+            'puts $verdict'
+        )
+        raw = await self.call_tool("vivado_run_tcl", {"command": probe, "timeout": 300}, internal=True)
+        if "WPWS_UNKNOWN" in raw:
+            # Neither probe was supported. Log loudly once so a real run's log
+            # says so plainly rather than silently leaving the gate inert.
+            logger.warning(
+                "Pulse-width probe returned no verdict (neither get_timing_paths "
+                "-pulse_width nor report_pulse_width was usable); treating as clean."
+            )
+            return True
+        if "WPWS_VIOLATED" not in raw:
+            return True
+        wpws = raw.split("WPWS_VIOLATED:", 1)[-1].splitlines()[0].strip()
+        logger.critical("Pulse-width violation on the new best design (WPWS %s).", wpws)
+        return False
+
     def _publish_best_to_output(self) -> None:
         """Copy the best checkpoint so far to the contest output DCP path.
 
@@ -5860,13 +6073,19 @@ class DCPOptimizer(DCPOptimizerBase):
                     {"dcp_path": str(checkpoint_path), "force": True, "timeout": 600},
                     internal=True,
                 )
-            if hold_ok or not self.last_published_hold_ok:
+            # Pulse width is the other zero-score cliff (docs/benchmarks.md
+            # attribute 2) and has no fix pass, so it gates publishing exactly
+            # as hold does. Only probed when hold already passed -- if hold
+            # failed we are not publishing this design either way.
+            timing_clean = hold_ok and await self._check_pulse_width_safety()
+            if timing_clean or not self.last_published_timing_clean:
                 self._publish_best_to_output()
-                self.last_published_hold_ok = hold_ok
+                self.last_published_timing_clean = timing_clean
             else:
                 logger.critical(
-                    "New best (iter %d, WNS %.3f ns) has an unfixable hold violation; "
-                    "KEEPING the previous hold-clean output instead of publishing it.",
+                    "New best (iter %d, WNS %.3f ns) violates hold or pulse width and "
+                    "could not be repaired; KEEPING the previous clean output instead "
+                    "of publishing it.",
                     self.iteration, wns,
                 )
         # Fix #1: gate the reset/remember-failure bookkeeping on
@@ -6590,6 +6809,7 @@ class DCPOptimizer(DCPOptimizerBase):
             # ACTION_FAILURE_EXHAUSTION_THRESHOLD refusals instead of
             # merely re-ranked with a reason the LLM can (and did) ignore.
             self._remember_no_action_failure(str(action), [])
+            self.consecutive_budget_refusals += 1
             return self._failure_json(
                 "insufficient_budget",
                 f"{action} is estimated to cost ~{estimated_cost / 60.0:.0f} min but only "
@@ -6597,11 +6817,19 @@ class DCPOptimizer(DCPOptimizerBase):
                 f"cheaper refinement action that fits.",
                 command=str(action),
             )
+        # Reached dispatch with budget to spare: not in the terminal
+        # budget-exhausted state (see CONSECUTIVE_BUDGET_REFUSAL_LIMIT).
+        self.consecutive_budget_refusals = 0
         if action in ("place_design_explore", "pblock_full_replace"):
             # Item 4: count every full re-place dispatch (warm start and
             # run_recipe stages included) toward the large-design cap.
             self.full_replace_attempts += 1
-        if action in {"phys_opt_design", "phys_opt_design_retime", "phys_opt_design_pin_swap"}:
+        if action in {
+            "phys_opt_design",
+            "phys_opt_design_retime",
+            "phys_opt_design_pin_swap",
+            "phys_opt_design_hard_block_regs",
+        }:
             if not await self._check_implementation_license():
                 return self._failure_json(
                     "vivado_license_failure",
@@ -6612,28 +6840,40 @@ class DCPOptimizer(DCPOptimizerBase):
             self.last_targets = [timing_context.get("delay_class", "timing_path")]
             self.last_batch_size = 1
             call_params = dict(params)
-            # Directive sweep (mirrors place_design_explore's _next_place_directive):
-            # default to the next untried PHYS_OPT_DIRECTIVE_SWEEP entry when the
-            # LLM omits one, and always record whichever directive actually ran
-            # so _note_recipe_outcome can track its result and the untried list
-            # stays accurate even when the LLM supplies its own directive string.
-            directive = str(call_params.get("directive") or self._next_phys_opt_directive())
-            call_params["directive"] = directive
-            self.last_phys_opt_directive = directive
-            if action == "phys_opt_design_pin_swap":
-                # LUT pin-swapping (remap logical to physical pins within a
-                # SLICE to reduce routing congestion on critical nets) --
-                # Vivado's -critical_pin_opt flag, registered in the MCP
-                # schema (VivadoMCP/vivado_mcp_server.py) but never
-                # exercised until now: every existing phys_opt call goes
-                # through _run_phys_opt_with_policy, which always builds a
-                # -directive-based Tcl command, and the server treats
-                # directive/bool-flags as mutually exclusive. Naming this as
-                # its own action (mirroring phys_opt_design_retime) forces
-                # critical_pin_opt=True through unconditionally, giving it
-                # its own trackable win/loss record instead of being a
-                # silent, invisible parameter on phys_opt_design.
-                call_params["critical_pin_opt"] = True
+            # BUG FIX (repertoire audit 2026-08-09): -directive and the
+            # individual optimization flags are MUTUALLY EXCLUSIVE in
+            # phys_opt_design, and VivadoMCP builds the flags only in the
+            # `else` branch of `if directive:` (vivado_mcp_server.py ~1871).
+            # phys_opt_design_pin_swap set BOTH -- it always assigned a
+            # directive here and then added critical_pin_opt=True, which the
+            # server then silently dropped. Every pin-swap dispatch on record
+            # therefore ran as a plain `phys_opt_design -directive <X>`,
+            # indistinguishable from phys_opt_design and consuming an entry
+            # from the shared directive sweep for a duplicate of it.
+            #
+            # Flag-driven variants must not carry a directive at all.
+            flag_driven = action in {"phys_opt_design_pin_swap", "phys_opt_design_hard_block_regs"}
+            if flag_driven:
+                call_params.pop("directive", None)
+                if action == "phys_opt_design_pin_swap":
+                    # LUT pin-swapping: remap logical to physical pins within a
+                    # SLICE to cut routing delay on critical nets, moving no cells.
+                    call_params["critical_pin_opt"] = True
+                else:
+                    # See PHYS_OPT_HARD_BLOCK_REG_FLAGS: the action that answers
+                    # _bram_dsp_bottleneck_evidence()'s diagnosis.
+                    for flag in PHYS_OPT_HARD_BLOCK_REG_FLAGS:
+                        call_params[flag] = True
+                self.last_targets = [action]
+            else:
+                # Directive sweep (mirrors place_design_explore's _next_place_directive):
+                # default to the next untried PHYS_OPT_DIRECTIVE_SWEEP entry when the
+                # LLM omits one, and always record whichever directive actually ran
+                # so _note_recipe_outcome can track its result and the untried list
+                # stays accurate even when the LLM supplies its own directive string.
+                directive = str(call_params.get("directive") or self._next_phys_opt_directive())
+                call_params["directive"] = directive
+                self.last_phys_opt_directive = directive
             return await self.call_tool("vivado_phys_opt_design", call_params)
         if action == "place_design_explore":
             # History(16) forensics: Vivado's place_design is INCREMENTAL over
@@ -8176,6 +8416,18 @@ Proceed by selecting exactly one validated action per timing-context turn."""
                         effective_stalls >= ABSOLUTE_STALL_HARD_LIMIT
                         or self.consecutive_no_improvement >= STALL_LIMIT_CHEAP_FAILURES
                     ):
+                        deferral = self._stall_exit_deferral_reason()
+                        if deferral is not None:
+                            logger.warning(
+                                "Hard stall limit reached (%d effective stalls, %d total "
+                                "consecutive failures of which %d were cheap), but %s -- "
+                                "continuing instead of abandoning the remaining budget.",
+                                effective_stalls,
+                                self.consecutive_no_improvement,
+                                self.cheap_failure_streak,
+                                deferral,
+                            )
+                            continue
                         logger.error(
                             "Hard stall limit reached (%d effective stalls, %d total "
                             "consecutive failures of which %d were cheap); "
@@ -8223,7 +8475,39 @@ Proceed by selecting exactly one validated action per timing-context turn."""
                     self._print_optimization_summary()
                     return True
 
+                if self.consecutive_budget_refusals >= CONSECUTIVE_BUDGET_REFUSAL_LIMIT:
+                    # Terminal, not a stall: the budget only shrinks, so every
+                    # further iteration is refused too and costs an LLM call
+                    # for nothing. Skip _endgame_polish -- it needs budget it
+                    # provably does not have -- and close out on the best.
+                    logger.error(
+                        "%d consecutive actions refused for insufficient budget; the "
+                        "remaining wall-clock cannot fit any action. Stopping on the "
+                        "best checkpoint instead of spinning.",
+                        self.consecutive_budget_refusals,
+                    )
+                    if self.checkpoint_manager is not None:
+                        best_ckpt = self.checkpoint_manager.get_best_checkpoint()
+                        if best_ckpt:
+                            await self.call_tool(
+                                "vivado_open_checkpoint", {"dcp_path": best_ckpt}, internal=True
+                            )
+                    self._publish_best_to_output()
+                    self.end_time = time.time()
+                    self._print_optimization_summary()
+                    return True
+
                 if self.consecutive_no_improvement >= ABSOLUTE_STALL_HARD_LIMIT:
+                    deferral = self._stall_exit_deferral_reason()
+                    if deferral is not None:
+                        logger.warning(
+                            "Hard stall limit (%d) reached with no improvement, but %s -- "
+                            "continuing instead of abandoning the remaining budget. The "
+                            "stuck detector's structural override stays engaged.",
+                            ABSOLUTE_STALL_HARD_LIMIT,
+                            deferral,
+                        )
+                        continue
                     logger.error(
                         "Hard stall limit (%d) reached with no improvement; "
                         "stopping and restoring best checkpoint.",
